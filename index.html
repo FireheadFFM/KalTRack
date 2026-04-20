@@ -371,8 +371,16 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <input type="number" id="set-steps" placeholder="10000" onchange="saveSettings()" />
       </div>
       <div class="settings-row">
-        <div><div class="settings-label">Claude API Key</div><div class="settings-sub">Für KI-Suche unbekannter Lebensmittel</div></div>
+        <div><div class="settings-label">Claude API Key</div><div class="settings-sub">Für KI-Suche (Stufe 4)</div></div>
         <input type="text" id="set-apikey" placeholder="sk-ant-..." onchange="saveSettings()" style="width:110px;font-size:11px;" />
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">Nutritionix App ID</div><div class="settings-sub">Kostenlos · nutritionix.com/api</div></div>
+        <input type="text" id="set-nx-id" placeholder="App ID" onchange="saveSettings()" style="width:110px;font-size:11px;" />
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">Nutritionix Key</div><div class="settings-sub">Für Restaurantketten (Stufe 3)</div></div>
+        <input type="text" id="set-nx-key" placeholder="App Key" onchange="saveSettings()" style="width:110px;font-size:11px;" />
       </div>
       <div class="settings-row">
         <div><div class="settings-label">KI-Suche</div><div class="settings-sub">Claude sucht Nährwerte im Web</div></div>
@@ -538,7 +546,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let state = {
   mode: 'track',
-  settings: { bmr: 2000, goal: 1800, stepsGoal: 10000, apiKey: '', aiSearchEnabled: false },
+  settings: { bmr: 2000, goal: 1800, stepsGoal: 10000, apiKey: '', aiSearchEnabled: false, nutritionixAppId: '', nutritionixKey: '' },
   todayLog: [],
   activityLog: [],
   steps: 0,
@@ -1085,6 +1093,8 @@ function renderSettings() {
   document.getElementById('set-goal').value = state.settings.goal || '';
   document.getElementById('set-steps').value = state.settings.stepsGoal || '';
   document.getElementById('set-apikey').value = state.settings.apiKey || '';
+  document.getElementById('set-nx-id').value = state.settings.nutritionixAppId || '';
+  document.getElementById('set-nx-key').value = state.settings.nutritionixKey || '';
   renderAiToggle();
 }
 
@@ -1093,6 +1103,8 @@ function saveSettings() {
   state.settings.goal = parseInt(document.getElementById('set-goal').value) || 1800;
   state.settings.stepsGoal = parseInt(document.getElementById('set-steps').value) || 10000;
   state.settings.apiKey = document.getElementById('set-apikey').value.trim();
+  state.settings.nutritionixAppId = document.getElementById('set-nx-id').value.trim();
+  state.settings.nutritionixKey = document.getElementById('set-nx-key').value.trim();
   saveStateAndSync();
   toast('Einstellungen gespeichert');
 }
@@ -1205,22 +1217,127 @@ async function processInput(text) {
   document.getElementById('mic-btn').classList.add('processing');
   document.getElementById('mic-status').textContent = 'Verarbeite…';
 
-  // Stufe 1: Lokaler Parser — immer zuerst
+  // Stufe 1: Lokale DB
   const localResult = tryLocalParser(text);
-
   if(localResult) {
     handleParsedInput(localResult, text);
-  } else if(state.settings.aiSearchEnabled && state.settings.apiKey && state.settings.apiKey.startsWith('sk-ant-')) {
-    // Stufe 2: Claude + Web-Search — nur wenn Toggle AN und Key vorhanden
-    document.getElementById('mic-status').textContent = 'Suche Nährwerte…';
-    await processWithClaudeSearch(text, state.settings.apiKey);
-  } else if(!state.settings.aiSearchEnabled) {
-    toast('Nicht in Datenbank — KI-Suche in Einstellungen aktivieren');
-  } else {
-    toast('Nicht erkannt — API Key in Einstellungen hinterlegen');
+    document.getElementById('mic-btn').classList.remove('processing');
+    document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+    return;
   }
+
+  // Stufe 2: Open Food Facts (kostenlos, keine Registrierung)
+  document.getElementById('mic-status').textContent = 'Suche in Open Food Facts…';
+  const offResult = await searchOpenFoodFacts(text);
+  if(offResult) {
+    showClaudeSearchResult(offResult, text);
+    document.getElementById('mic-btn').classList.remove('processing');
+    document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+    return;
+  }
+
+  // Stufe 3: Nutritionix (kostenlos bis 500/Tag, Restaurants)
+  if(state.settings.nutritionixAppId && state.settings.nutritionixKey) {
+    document.getElementById('mic-status').textContent = 'Suche in Nutritionix…';
+    const nxResult = await searchNutritionix(text);
+    if(nxResult) {
+      showClaudeSearchResult(nxResult, text);
+      document.getElementById('mic-btn').classList.remove('processing');
+      document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+      return;
+    }
+  }
+
+  // Stufe 4: Claude + Web-Search (nur wenn Toggle AN)
+  if(state.settings.aiSearchEnabled && state.settings.apiKey && state.settings.apiKey.startsWith('sk-ant-')) {
+    document.getElementById('mic-status').textContent = 'KI sucht Nährwerte…';
+    await processWithClaudeSearch(text, state.settings.apiKey);
+  } else {
+    toast('Nicht gefunden — Nutritionix-Key oder KI-Suche in Einstellungen aktivieren');
+  }
+
   document.getElementById('mic-btn').classList.remove('processing');
   document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+}
+
+// ─── OPEN FOOD FACTS ──────────────────────────────────────────────────────────
+async function searchOpenFoodFacts(text) {
+  try {
+    // Menge aus Text extrahieren für spätere Berechnung
+    const amountMatch = text.match(/(\d+(?:[,.]\d+)?)\s*(g|gramm|ml)/i);
+    const wordNums = [['einen',1],['eine',1],['ein',1],['zwei',2],['drei',3],['vier',4],['fünf',5]];
+    let amount = amountMatch ? parseFloat(amountMatch[1].replace(',','.')) : 100;
+    let amountUnit = amountMatch ? amountMatch[2] : 'g';
+
+    // Suchwort bereinigen
+    const query = text.replace(/\d+\s*(g|gramm|ml|stück|stuck|kcal|kalorien)/gi,'')
+                      .replace(/\b(einen?|eine?|zwei|drei|vier|fünf|halb[e]?)\b/gi,'')
+                      .trim();
+    if(query.length < 2) return null;
+
+    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=3&lc=de&cc=de`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if(!data.products || data.products.length === 0) return null;
+
+    // Bestes Ergebnis — mit Kalorienwert
+    const product = data.products.find(p => p.nutriments?.['energy-kcal_100g'] > 0);
+    if(!product) return null;
+
+    const kcalPer100 = Math.round(product.nutriments['energy-kcal_100g']);
+    const name = product.product_name_de || product.product_name || query;
+    const kcal = Math.round((amount * kcalPer100) / 100);
+
+    return {
+      items: [{
+        name, amount, amountUnit,
+        kcal,
+        detail: `${kcalPer100} kcal/100g · Open Food Facts`,
+        saveToDb: true,
+        kcalPer100
+      }],
+      totalKcal: kcal,
+      confidence: 'mittel',
+      source: 'Open Food Facts'
+    };
+  } catch(e) { return null; }
+}
+
+// ─── NUTRITIONIX ──────────────────────────────────────────────────────────────
+async function searchNutritionix(text) {
+  try {
+    const resp = await fetch('https://trackapi.nutritionix.com/v2/natural/nutrients', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-app-id': state.settings.nutritionixAppId,
+        'x-app-key': state.settings.nutritionixKey,
+        'x-remote-user-id': '0'
+      },
+      body: JSON.stringify({ query: text, locale: 'de_DE' })
+    });
+    if(!resp.ok) return null;
+    const data = await resp.json();
+    if(!data.foods || data.foods.length === 0) return null;
+
+    const items = data.foods.map(f => ({
+      name: f.food_name,
+      amount: Math.round(f.serving_qty),
+      amountUnit: f.serving_unit,
+      kcal: Math.round(f.nf_calories),
+      detail: `${f.serving_qty} ${f.serving_unit} · Nutritionix`,
+      saveToDb: false,
+      kcalPer100: null
+    }));
+    const total = items.reduce((s,i) => s+i.kcal, 0);
+
+    return {
+      items,
+      totalKcal: total,
+      confidence: 'hoch',
+      source: 'Nutritionix'
+    };
+  } catch(e) { return null; }
 }
 
 // Lokaler Parser gibt Ergebnis zurück oder null wenn nicht erkannt
