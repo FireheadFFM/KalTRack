@@ -370,19 +370,8 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <div><div class="settings-label">Tägliches Schrittziel</div><div class="settings-sub">Schritte</div></div>
         <input type="number" id="set-steps" placeholder="10000" onchange="saveSettings()" />
       </div>
-      <div class="settings-row">
-        <div><div class="settings-label">Claude API Key</div><div class="settings-sub">Für KI-Suche (Stufe 4)</div></div>
-        <input type="text" id="set-apikey" placeholder="sk-ant-..." onchange="saveSettings()" style="width:110px;font-size:11px;" />
-      </div>
-      <div class="settings-row">
-        <div><div class="settings-label">Nutritionix App ID</div><div class="settings-sub">Kostenlos · nutritionix.com/api</div></div>
-        <input type="text" id="set-nx-id" placeholder="App ID" onchange="saveSettings()" style="width:110px;font-size:11px;" />
-      </div>
-      <div class="settings-row">
-        <div><div class="settings-label">Nutritionix Key</div><div class="settings-sub">Für Restaurantketten (Stufe 3)</div></div>
-        <input type="text" id="set-nx-key" placeholder="App Key" onchange="saveSettings()" style="width:110px;font-size:11px;" />
-      </div>
     </div>
+
     <div class="card">
       <div class="card-label">Suchquellen</div>
       <div class="settings-row">
@@ -420,26 +409,40 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         </div>
       </div>
     </div>
+
     <div class="card">
-      <div class="card-label">Cloud-Sync (Supabase)</div>
+      <div class="card-label">Externe Dienste</div>
+      <div class="settings-row">
+        <div><div class="settings-label">Claude API Key</div><div class="settings-sub">Für KI-Suche (Stufe 4)</div></div>
+        <input type="text" id="set-apikey" placeholder="sk-ant-..." onchange="saveSettings()" style="width:110px;font-size:11px;" />
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">Nutritionix App ID</div><div class="settings-sub">nutritionix.com/business/api</div></div>
+        <input type="text" id="set-nx-id" placeholder="App ID" onchange="saveSettings()" style="width:110px;font-size:11px;" />
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">Nutritionix Key</div><div class="settings-sub">Für Restaurantketten (Stufe 3)</div></div>
+        <input type="text" id="set-nx-key" placeholder="App Key" onchange="saveSettings()" style="width:110px;font-size:11px;" />
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Cloud & Backup</div>
       <div id="sync-status" style="font-size:13px;color:var(--text2);margin-bottom:10px;min-height:18px;"></div>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
         <button class="btn btn-primary" style="flex:1;" onclick="syncToCloud()">↑ Hochladen</button>
         <button class="btn btn-secondary" style="flex:1;" onclick="syncFromCloud()">↓ Herunterladen</button>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5;">Hochladen überschreibt die Cloud mit deinen lokalen Daten. Herunterladen überschreibt deine lokalen Daten mit der Cloud.</div>
-    </div>
-    <div class="card">
-      <div class="card-label">Datensicherung</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.5;">Hochladen überschreibt die Cloud. Herunterladen überschreibt lokale Daten.</div>
       <button class="btn btn-primary btn-full" onclick="exportData()" style="margin-bottom:8px;">Daten exportieren (JSON)</button>
       <label class="btn btn-secondary btn-full" style="display:block;text-align:center;cursor:pointer;">
         Daten importieren
         <input type="file" accept=".json" onchange="importData(event)" style="display:none;" />
       </label>
-      <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5;">Export speichert alle Einträge, Datenbank, Gerichte und Einstellungen. Import überschreibt alle lokalen Daten.</div>
     </div>
+
     <div class="card">
-      <div class="card-label">Tageslog zurücksetzen</div>
+      <div class="card-label">Gefahrenzone</div>
       <button class="btn btn-danger btn-full" onclick="resetDay()">Heutigen Tag zurücksetzen</button>
     </div>
   </div>
