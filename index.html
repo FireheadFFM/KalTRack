@@ -371,8 +371,17 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <input type="number" id="set-steps" placeholder="10000" onchange="saveSettings()" />
       </div>
       <div class="settings-row">
-        <div><div class="settings-label">Claude API Key</div><div class="settings-sub">Für KI-Spracherkennung</div></div>
+        <div><div class="settings-label">Claude API Key</div><div class="settings-sub">Für KI-Suche unbekannter Lebensmittel</div></div>
         <input type="text" id="set-apikey" placeholder="sk-ant-..." onchange="saveSettings()" style="width:110px;font-size:11px;" />
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">KI-Suche</div><div class="settings-sub">Claude sucht Nährwerte im Web</div></div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <div id="ai-toggle" onclick="toggleAiSearch()" style="width:44px;height:24px;border-radius:12px;background:var(--bg2);border:1px solid var(--border);position:relative;cursor:pointer;transition:background 0.2s;">
+            <div id="ai-toggle-knob" style="width:20px;height:20px;border-radius:50%;background:white;position:absolute;top:1px;left:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
+          </div>
+          <span id="ai-toggle-label" style="font-size:13px;color:var(--text2);">Aus</span>
+        </label>
       </div>
     </div>
     <div class="card">
@@ -529,7 +538,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let state = {
   mode: 'track',
-  settings: { bmr: 2000, goal: 1800, stepsGoal: 10000, apiKey: '' },
+  settings: { bmr: 2000, goal: 1800, stepsGoal: 10000, apiKey: '', aiSearchEnabled: false },
   todayLog: [],
   activityLog: [],
   steps: 0,
@@ -807,18 +816,24 @@ let dbFilter = '';
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 async function init() {
-  // 1. Zuerst localStorage laden (sofort, für schnelle Anzeige)
   loadState();
   renderAll();
   document.getElementById('today-date').textContent = new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
   document.getElementById('manual-input').addEventListener('keydown', e => { if(e.key==='Enter') processManual(); });
   initSpeech();
   renderActivityGrid();
-  if(state.mode === 'db') switchToDb();
-  else document.getElementById('main-nav').style.display = 'flex';
-
-  // 2. Dann Cloud laden und nur DB + Gerichte + Aktivitäten übernehmen
-  //    (Tageslog bleibt vom localStorage — der ist gerätespezifisch aktueller)
+  renderAiToggle();
+  // Immer auf Eingabe-Seite starten
+  if(state.mode === 'db') {
+    switchToDb();
+  } else {
+    document.getElementById('main-nav').style.display = 'flex';
+    document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+    document.getElementById('page-input').classList.add('active');
+    document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-btn')[1].classList.add('active');
+    renderModeHint();
+  }
   await autoLoadFromCloud();
 }
 
@@ -968,12 +983,11 @@ function switchToTrack() {
   document.getElementById('modeTrack').classList.add('active');
   document.getElementById('modeDb').classList.remove('active');
   document.getElementById('main-nav').style.display = 'flex';
-  // Hide DB page, show home
   document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-  document.getElementById('page-home').classList.add('active');
+  document.getElementById('page-input').classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.nav-btn')[0].classList.add('active');
-  renderHome();
+  document.querySelectorAll('.nav-btn')[1].classList.add('active');
+  renderModeHint();
   saveState();
 }
 
@@ -1071,6 +1085,7 @@ function renderSettings() {
   document.getElementById('set-goal').value = state.settings.goal || '';
   document.getElementById('set-steps').value = state.settings.stepsGoal || '';
   document.getElementById('set-apikey').value = state.settings.apiKey || '';
+  renderAiToggle();
 }
 
 function saveSettings() {
@@ -1080,6 +1095,24 @@ function saveSettings() {
   state.settings.apiKey = document.getElementById('set-apikey').value.trim();
   saveStateAndSync();
   toast('Einstellungen gespeichert');
+}
+
+function toggleAiSearch() {
+  state.settings.aiSearchEnabled = !state.settings.aiSearchEnabled;
+  renderAiToggle();
+  saveStateAndSync();
+}
+
+function renderAiToggle() {
+  const on = state.settings.aiSearchEnabled;
+  const toggle = document.getElementById('ai-toggle');
+  const knob = document.getElementById('ai-toggle-knob');
+  const label = document.getElementById('ai-toggle-label');
+  if(!toggle) return;
+  toggle.style.background = on ? '#2d5a3d' : 'var(--bg2)';
+  knob.style.left = on ? '22px' : '2px';
+  label.textContent = on ? 'An' : 'Aus';
+  label.style.color = on ? 'var(--accent)' : 'var(--text2)';
 }
 
 function renderSession() {
@@ -1172,21 +1205,19 @@ async function processInput(text) {
   document.getElementById('mic-btn').classList.add('processing');
   document.getElementById('mic-status').textContent = 'Verarbeite…';
 
-  // Stufe 1: Lokaler Parser — kostenlos, sofort
+  // Stufe 1: Lokaler Parser — immer zuerst
   const localResult = tryLocalParser(text);
 
   if(localResult) {
-    // Lokal erkannt → direkt verarbeiten
     handleParsedInput(localResult, text);
+  } else if(state.settings.aiSearchEnabled && state.settings.apiKey && state.settings.apiKey.startsWith('sk-ant-')) {
+    // Stufe 2: Claude + Web-Search — nur wenn Toggle AN und Key vorhanden
+    document.getElementById('mic-status').textContent = 'Suche Nährwerte…';
+    await processWithClaudeSearch(text, state.settings.apiKey);
+  } else if(!state.settings.aiSearchEnabled) {
+    toast('Nicht in Datenbank — KI-Suche in Einstellungen aktivieren');
   } else {
-    // Stufe 2: Claude mit Web-Search
-    const apiKey = state.settings.apiKey;
-    if(apiKey && apiKey.startsWith('sk-ant-')) {
-      document.getElementById('mic-status').textContent = 'Suche Nährwerte…';
-      await processWithClaudeSearch(text, apiKey);
-    } else {
-      toast('Nicht erkannt — API Key in Einstellungen hinterlegen für KI-Suche');
-    }
+    toast('Nicht erkannt — API Key in Einstellungen hinterlegen');
   }
   document.getElementById('mic-btn').classList.remove('processing');
   document.getElementById('mic-status').textContent = 'Tippen zum Starten';
