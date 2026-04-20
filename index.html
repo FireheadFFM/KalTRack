@@ -1806,7 +1806,8 @@ function renderHistory() {
         </div>
         <div class="stats-grid" style="margin-bottom:8px;">
           <div class="stat-card"><div class="stat-label">Aufgenommen</div><div class="stat-value" style="font-size:18px;">${day.eaten}</div><div class="stat-label">kcal</div></div>
-          <div class="stat-card"><div class="stat-label">Bilanz</div><div class="stat-value" style="font-size:18px;color:${balColor};">${balSign}${balance}</div><div class="stat-label">kcal</div></div>
+          <div class="stat-card"><div class="stat-label">Aktivität</div><div class="stat-value" style="font-size:18px;color:var(--accent);">−${Math.round((day.steps||0)*0.04) + actKcal}</div><div class="stat-label">kcal</div></div>
+          <div class="stat-card" style="grid-column:span 2;"><div class="stat-label">Bilanz</div><div class="stat-value" style="font-size:18px;color:${balColor};">${balSign}${balance}</div><div class="stat-label">kcal (ohne Grundumsatz)</div></div>
         </div>
         <div class="progress-bar"><div class="progress-fill${day.eaten>day.goal?' over':''}" style="width:${Math.min((day.eaten/day.goal)*100,100)}%;"></div></div>
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:3px;margin-bottom:2px;"><span>${pct}% des Ziels</span><span>Verbrannt: ${day.burned} kcal</span></div>
