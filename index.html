@@ -1206,12 +1206,17 @@ function processWithLocalParser(text) {
     if(re.test(t)) { wordAmount = val; break; }
   }
 
-  // Find food in DB — longest match wins to avoid "Ei" swallowing "Eier"
+  // Find food in DB — word boundary match, longest wins
+  // Uses regex with word boundaries to avoid "Ei" matching inside "Mai Tai" or "Eier"
   let matchedFood = null;
   let matchLen = 0;
   for(const f of state.db) {
     const fn = f.name.toLowerCase();
-    if(t.includes(fn) && fn.length > matchLen) { matchedFood = f; matchLen = fn.length; }
+    // Build a regex that matches the food name at word boundaries
+    // Escape special regex chars in food name
+    const escaped = fn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('(?<![a-zäöüß])' + escaped + '(?![a-zäöüß])', 'i');
+    if(re.test(t) && fn.length > matchLen) { matchedFood = f; matchLen = fn.length; }
   }
 
   if(matchedFood && amountMatch) {
@@ -1226,9 +1231,14 @@ function processWithLocalParser(text) {
     const foodName = t.replace(/\d+\s*(kcal|kalorien|cal)/i,'').replace(/,/,'').trim();
     handleParsedInput({ type:'unknown_no_amount', name:foodName, directKcal: parseInt(kcalMatch[1]) }, text);
   } else if(matchedFood) {
+    const unit = matchedFood.unit || '';
+    const isPiece = unit && !unit.startsWith('100');
     if(matchedFood.gramsPerUnit) {
-      // Known piece weight → assume 1 Stück
+      // Bekanntes Stückgewicht → 1 Stück
       handleParsedInput({ type:'food', name:matchedFood.name, amount: 1, amountUnit:'Stück', matchedDbName:matchedFood.name }, text);
+    } else if(isPiece) {
+      // Portion/Stück/Scheibe ohne Gramm → 1 Einheit, kcal direkt aus kcalPer100
+      handleParsedInput({ type:'food', name:matchedFood.name, amount: 1, amountUnit: unit, matchedDbName:matchedFood.name }, text);
     } else {
       toast(`Menge angeben, z.B. "200g ${matchedFood.name}"`);
     }
@@ -1243,12 +1253,26 @@ function handleParsedInput(parsed, originalText) {
     if(!food) { toast('Lebensmittel nicht in Datenbank gefunden'); return; }
     let kcal = 0;
     let detail = '';
-    if(food.gramsPerUnit && (parsed.amountUnit||'').toLowerCase().match(/stück|stuck/)) {
-      kcal = Math.round((food.gramsPerUnit * parseInt(parsed.amount) * food.kcalPer100) / 100);
-      detail = `${parsed.amount} Stück (${food.gramsPerUnit}g/Stück)`;
+    const unitLower = (parsed.amountUnit||'').toLowerCase();
+    const isPieceUnit = unitLower.match(/stück|stuck|portion|scheibe/);
+    const isPer100Unit = (food.unit||'').startsWith('100');
+
+    if(food.gramsPerUnit && isPieceUnit) {
+      // Stück mit bekanntem Gramm-Gewicht
+      kcal = Math.round((food.gramsPerUnit * parseFloat(parsed.amount) * food.kcalPer100) / 100);
+      detail = `${parsed.amount} ${food.unit} (${food.gramsPerUnit}g)`;
+    } else if(!isPer100Unit && isPieceUnit) {
+      // Portion/Stück/Scheibe ohne Gramm → kcalPer100 IST der Gesamtwert pro Einheit
+      kcal = Math.round(food.kcalPer100 * parseFloat(parsed.amount));
+      detail = `${parsed.amount} ${food.unit}`;
+    } else if(!isPer100Unit && unitLower === food.unit.toLowerCase()) {
+      // Einheit stimmt direkt überein (z.B. "Portion")
+      kcal = Math.round(food.kcalPer100 * parseFloat(parsed.amount));
+      detail = `${parsed.amount} ${food.unit}`;
     } else {
-      kcal = Math.round((parseInt(parsed.amount) * food.kcalPer100) / 100);
-      detail = `${parsed.amount}${parsed.amountUnit||'g'} · ${food.kcalPer100} kcal/100g`;
+      // Gramm/ml-Angabe
+      kcal = Math.round((parseFloat(parsed.amount) * food.kcalPer100) / 100);
+      detail = `${parsed.amount}${parsed.amountUnit||'g'} · ${food.kcalPer100} kcal/100${food.unit==='100ml'?'ml':'g'}`;
     }
     addToSession({ name: food.name, kcal, detail });
 
