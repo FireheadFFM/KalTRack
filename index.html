@@ -382,14 +382,42 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <div><div class="settings-label">Nutritionix Key</div><div class="settings-sub">Für Restaurantketten (Stufe 3)</div></div>
         <input type="text" id="set-nx-key" placeholder="App Key" onchange="saveSettings()" style="width:110px;font-size:11px;" />
       </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Suchquellen</div>
       <div class="settings-row">
-        <div><div class="settings-label">KI-Suche</div><div class="settings-sub">Claude sucht Nährwerte im Web</div></div>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-          <div id="ai-toggle" onclick="toggleAiSearch()" style="width:44px;height:24px;border-radius:12px;background:var(--bg2);border:1px solid var(--border);position:relative;cursor:pointer;transition:background 0.2s;">
-            <div id="ai-toggle-knob" style="width:20px;height:20px;border-radius:50%;background:white;position:absolute;top:1px;left:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
-          </div>
-          <span id="ai-toggle-label" style="font-size:13px;color:var(--text2);">Aus</span>
-        </label>
+        <div>
+          <div class="settings-label">Lokale Datenbank</div>
+          <div class="settings-sub">Immer aktiv · kostenlos</div>
+        </div>
+        <span style="font-size:12px;padding:3px 10px;border-radius:10px;background:var(--accent-bg);color:var(--accent);font-weight:500;">Immer an</span>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Open Food Facts</div>
+          <div class="settings-sub">Stufe 2 · kostenlos · Markenprodukte</div>
+        </div>
+        <div id="toggle-off" onclick="toggleSource('off')" style="width:44px;height:24px;border-radius:12px;background:var(--bg2);border:1px solid var(--border);position:relative;cursor:pointer;transition:background 0.2s;flex-shrink:0;">
+          <div id="toggle-off-knob" style="width:20px;height:20px;border-radius:50%;background:white;position:absolute;top:1px;left:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Nutritionix</div>
+          <div class="settings-sub">Stufe 3 · kostenlos · Restaurants</div>
+        </div>
+        <div id="toggle-nx" onclick="toggleSource('nx')" style="width:44px;height:24px;border-radius:12px;background:var(--bg2);border:1px solid var(--border);position:relative;cursor:pointer;transition:background 0.2s;flex-shrink:0;">
+          <div id="toggle-nx-knob" style="width:20px;height:20px;border-radius:50%;background:white;position:absolute;top:1px;left:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">KI-Suche (Claude)</div>
+          <div class="settings-sub">Stufe 4 · kostenpflichtig · Fallback</div>
+        </div>
+        <div id="toggle-ai" onclick="toggleSource('ai')" style="width:44px;height:24px;border-radius:12px;background:var(--bg2);border:1px solid var(--border);position:relative;cursor:pointer;transition:background 0.2s;flex-shrink:0;">
+          <div id="toggle-ai-knob" style="width:20px;height:20px;border-radius:50%;background:white;position:absolute;top:1px;left:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
+        </div>
       </div>
     </div>
     <div class="card">
@@ -546,7 +574,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let state = {
   mode: 'track',
-  settings: { bmr: 2000, goal: 1800, stepsGoal: 10000, apiKey: '', aiSearchEnabled: false, nutritionixAppId: '', nutritionixKey: '' },
+  settings: { bmr: 2000, goal: 1800, stepsGoal: 10000, apiKey: '', aiSearchEnabled: false, nutritionixAppId: '', nutritionixKey: '', offEnabled: true, nxEnabled: false, aiEnabled: false },
   todayLog: [],
   activityLog: [],
   steps: 0,
@@ -1109,23 +1137,31 @@ function saveSettings() {
   toast('Einstellungen gespeichert');
 }
 
-function toggleAiSearch() {
-  state.settings.aiSearchEnabled = !state.settings.aiSearchEnabled;
-  renderAiToggle();
+function toggleSource(src) {
+  if(src === 'off') state.settings.offEnabled = !state.settings.offEnabled;
+  if(src === 'nx') state.settings.nxEnabled = !state.settings.nxEnabled;
+  if(src === 'ai') { state.settings.aiEnabled = !state.settings.aiEnabled; state.settings.aiSearchEnabled = state.settings.aiEnabled; }
+  renderSourceToggles();
   saveStateAndSync();
 }
 
-function renderAiToggle() {
-  const on = state.settings.aiSearchEnabled;
-  const toggle = document.getElementById('ai-toggle');
-  const knob = document.getElementById('ai-toggle-knob');
-  const label = document.getElementById('ai-toggle-label');
-  if(!toggle) return;
-  toggle.style.background = on ? '#2d5a3d' : 'var(--bg2)';
-  knob.style.left = on ? '22px' : '2px';
-  label.textContent = on ? 'An' : 'Aus';
-  label.style.color = on ? 'var(--accent)' : 'var(--text2)';
+function toggleAiSearch() { toggleSource('ai'); }
+
+function renderSourceToggles() {
+  setToggle('off', state.settings.offEnabled);
+  setToggle('nx', state.settings.nxEnabled);
+  setToggle('ai', state.settings.aiEnabled ?? state.settings.aiSearchEnabled);
 }
+
+function setToggle(id, on) {
+  const el = document.getElementById('toggle-' + id);
+  const knob = document.getElementById('toggle-' + id + '-knob');
+  if(!el || !knob) return;
+  el.style.background = on ? '#2d5a3d' : 'var(--bg2)';
+  knob.style.left = on ? '22px' : '2px';
+}
+
+function renderAiToggle() { renderSourceToggles(); }
 
 function renderSession() {
   const card = document.getElementById('session-card');
@@ -1226,18 +1262,20 @@ async function processInput(text) {
     return;
   }
 
-  // Stufe 2: Open Food Facts (kostenlos, keine Registrierung)
-  document.getElementById('mic-status').textContent = 'Suche in Open Food Facts…';
-  const offResult = await searchOpenFoodFacts(text);
-  if(offResult) {
-    showClaudeSearchResult(offResult, text);
-    document.getElementById('mic-btn').classList.remove('processing');
-    document.getElementById('mic-status').textContent = 'Tippen zum Starten';
-    return;
+  // Stufe 2: Open Food Facts (wenn aktiviert)
+  if(state.settings.offEnabled !== false) {
+    document.getElementById('mic-status').textContent = 'Suche in Open Food Facts…';
+    const offResult = await searchOpenFoodFacts(text);
+    if(offResult) {
+      showClaudeSearchResult(offResult, text);
+      document.getElementById('mic-btn').classList.remove('processing');
+      document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+      return;
+    }
   }
 
-  // Stufe 3: Nutritionix (kostenlos bis 500/Tag, Restaurants)
-  if(state.settings.nutritionixAppId && state.settings.nutritionixKey) {
+  // Stufe 3: Nutritionix (wenn aktiviert und Keys vorhanden)
+  if(state.settings.nxEnabled && state.settings.nutritionixAppId && state.settings.nutritionixKey) {
     document.getElementById('mic-status').textContent = 'Suche in Nutritionix…';
     const nxResult = await searchNutritionix(text);
     if(nxResult) {
@@ -1248,12 +1286,12 @@ async function processInput(text) {
     }
   }
 
-  // Stufe 4: Claude + Web-Search (nur wenn Toggle AN)
-  if(state.settings.aiSearchEnabled && state.settings.apiKey && state.settings.apiKey.startsWith('sk-ant-')) {
+  // Stufe 4: Claude + Web-Search (wenn aktiviert und Key vorhanden)
+  if(state.settings.aiEnabled && state.settings.apiKey && state.settings.apiKey.startsWith('sk-ant-')) {
     document.getElementById('mic-status').textContent = 'KI sucht Nährwerte…';
     await processWithClaudeSearch(text, state.settings.apiKey);
   } else {
-    toast('Nicht gefunden — Nutritionix-Key oder KI-Suche in Einstellungen aktivieren');
+    toast('Nicht gefunden — weitere Quellen in Einstellungen aktivieren');
   }
 
   document.getElementById('mic-btn').classList.remove('processing');
