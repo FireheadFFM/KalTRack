@@ -175,8 +175,9 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <button class="nav-btn active" onclick="showPage('home')">Übersicht</button>
       <button class="nav-btn" onclick="showPage('input')">Eingabe</button>
       <button class="nav-btn" onclick="showPage('activity')">Aktivität</button>
+      <button class="nav-btn" onclick="showPage('db')">Datenbank</button>
       <button class="nav-btn" onclick="showPage('history')">Historie</button>
-      <button class="nav-btn" onclick="showPage('settings')">Einstellungen</button>
+      <button class="nav-btn" onclick="showPage('settings')">⚙</button>
     </div>
   </div>
 
@@ -284,6 +285,27 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
     </div>
   </div>
 
+  <!-- DB PAGE -->
+  <div class="page" id="page-db">
+    <div class="card" style="margin-bottom:8px;">
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <div class="search-wrap" style="flex:1;margin-bottom:0;">
+          <span class="search-icon">⌕</span>
+          <input type="text" id="db-search" placeholder="Suchen…" oninput="filterDb(this.value)" />
+        </div>
+        <button class="btn btn-primary" onclick="openDbAdd()" style="white-space:nowrap;">+ Neu</button>
+      </div>
+      <div id="db-cat-filter" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;"></div>
+    </div>
+
+    <div id="db-page-list"></div>
+
+    <div class="section-title">Gespeicherte Gerichte</div>
+    <div class="card">
+      <div id="dishes-list"></div>
+    </div>
+  </div>
+
   <!-- HISTORY PAGE -->
   <div class="page" id="page-history">
     <div class="card">
@@ -379,6 +401,28 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
     <div class="dialog-btns">
       <button class="btn btn-secondary" onclick="closeDialog('dialog-unknown')">Abbrechen</button>
       <button class="btn btn-primary" onclick="confirmUnknown()">Hinzufügen</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="dialog-db-edit" onclick="closeDialog('dialog-db-edit')">
+  <div class="dialog" onclick="event.stopPropagation()">
+    <h3>Lebensmittel bearbeiten</h3>
+    <input type="text" id="db-edit-name" placeholder="Name" />
+    <input type="number" id="db-edit-kcal" placeholder="kcal pro 100g / Stück" />
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <select id="db-edit-unit" style="flex:1;padding:9px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;">
+        <option value="100g">100g</option>
+        <option value="100ml">100ml</option>
+        <option value="Stück">Stück</option>
+        <option value="Scheibe">Scheibe</option>
+        <option value="Portion">Portion</option>
+      </select>
+      <input type="number" id="db-edit-grams" placeholder="g/Stück (opt.)" style="flex:1;" />
+    </div>
+    <div class="dialog-btns">
+      <button class="btn btn-danger" onclick="confirmDbDelete()">Löschen</button>
+      <button class="btn btn-primary" onclick="confirmDbEdit()">Speichern</button>
     </div>
   </div>
 </div>
@@ -737,12 +781,13 @@ function showPage(p) {
   document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
-  const idx = ['home','input','activity','history','settings'].indexOf(p);
+  const idx = ['home','input','activity','db','history','settings'].indexOf(p);
   document.querySelectorAll('.nav-btn')[idx].classList.add('active');
   if(p === 'home') renderHome();
   if(p === 'settings') renderSettings();
   if(p === 'input') renderModeHint();
   if(p === 'history') renderHistory();
+  if(p === 'db') renderDbPageFull();
 }
 
 function setMode(m) {
@@ -972,7 +1017,8 @@ Regeln:
 - type "unknown_no_amount": Lebensmittel NUR mit Kalorien aber OHNE Menge (z.B. "Gummibärchen 300 kcal") → NUR Tageslog, KEIN DB-Eintrag
 - type "unclear": Eingabe zu vage
 - matchedDbName: wenn in DB gefunden, exakter Name aus DB
-- directKcal: wenn der User direkt kcal nannte`;
+- directKcal: wenn der User direkt kcal nannte
+- WICHTIG: Artikel wie "einen", "eine", "ein", "zwei", "drei" etc. als Stückzahl erkennen. "einen Apfel" → amount:1, amountUnit:"Stück". "zwei Eier" → amount:2, amountUnit:"Stück". "eine Banane" → amount:1, amountUnit:"Stück". Auch "halb" oder "halbe" → amount:0.5`;
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1002,30 +1048,56 @@ function processWithLocalParser(text) {
     }
   }
 
-  // Parse amount
-  const amountMatch = t.match(/(\d+(?:[,.]\d+)?)\s*(g|gramm|ml|stück|stuck|scheibe|scheiben|tasse|esslöffel|el|tl|teelöffel)/i);
-  const numberMatch = t.match(/^(\d+)\s+/);
+  // Natural language numbers incl. articles
+  const wordNumbers = [
+    ['ein paar',2],['einen',1],['eine',1],['einem',1],['einer',1],['ein',1],
+    ['nen',1],['zwei',2],['drei',3],['vier',4],['fünf',5],
+    ['sechs',6],['sieben',7],['acht',8],['neun',9],['zehn',10],
+    ['halb',0.5],['halbe',0.5],['halber',0.5],['halben',0.5],['halbes',0.5]
+  ];
 
   // Check direct kcal
   const kcalMatch = t.match(/(\d+)\s*(kcal|kalorien|cal)/i);
 
-  // Find food in DB
+  // Parse numeric amount with unit
+  const amountMatch = t.match(/(\d+(?:[,.]\d+)?)\s*(g|gramm|ml|stück|stuck|scheibe|scheiben|tasse|esslöffel|el|tl|teelöffel)/i);
+
+  // Leading digit without unit → piece count
+  const leadingNumMatch = t.match(/^(\d+)\s+\S/);
+
+  // Word-based amount
+  let wordAmount = null;
+  for(const [word, val] of wordNumbers) {
+    const re = new RegExp('\\b' + word + '\\b');
+    if(re.test(t)) { wordAmount = val; break; }
+  }
+
+  // Find food in DB — longest match wins to avoid "Ei" swallowing "Eier"
   let matchedFood = null;
+  let matchLen = 0;
   for(const f of state.db) {
-    if(t.includes(f.name.toLowerCase())) { matchedFood = f; break; }
+    const fn = f.name.toLowerCase();
+    if(t.includes(fn) && fn.length > matchLen) { matchedFood = f; matchLen = fn.length; }
   }
 
   if(matchedFood && amountMatch) {
     handleParsedInput({ type:'food', name:matchedFood.name, amount: parseFloat(amountMatch[1].replace(',','.')), amountUnit: amountMatch[2], matchedDbName:matchedFood.name }, text);
-  } else if(matchedFood && numberMatch) {
-    handleParsedInput({ type:'food', name:matchedFood.name, amount: parseInt(numberMatch[1]), amountUnit:'Stück', matchedDbName:matchedFood.name }, text);
+  } else if(matchedFood && leadingNumMatch) {
+    handleParsedInput({ type:'food', name:matchedFood.name, amount: parseInt(leadingNumMatch[1]), amountUnit:'Stück', matchedDbName:matchedFood.name }, text);
+  } else if(matchedFood && wordAmount !== null) {
+    handleParsedInput({ type:'food', name:matchedFood.name, amount: wordAmount, amountUnit:'Stück', matchedDbName:matchedFood.name }, text);
   } else if(kcalMatch && amountMatch) {
     handleParsedInput({ type:'unknown_with_kcal', name:text.split(/\d/)[0].trim(), amount: parseFloat(amountMatch[1].replace(',','.')), amountUnit: amountMatch[2], directKcal: parseInt(kcalMatch[1]) }, text);
   } else if(kcalMatch) {
     const foodName = t.replace(/\d+\s*(kcal|kalorien|cal)/i,'').replace(/,/,'').trim();
     handleParsedInput({ type:'unknown_no_amount', name:foodName, directKcal: parseInt(kcalMatch[1]) }, text);
   } else if(matchedFood) {
-    handleParsedInput({ type:'unclear', name:matchedFood.name }, text);
+    if(matchedFood.gramsPerUnit) {
+      // Known piece weight → assume 1 Stück
+      handleParsedInput({ type:'food', name:matchedFood.name, amount: 1, amountUnit:'Stück', matchedDbName:matchedFood.name }, text);
+    } else {
+      toast(`Menge angeben, z.B. "200g ${matchedFood.name}"`);
+    }
   } else {
     toast('Eingabe nicht erkannt. Bitte genauer angeben.');
   }
@@ -1260,55 +1332,135 @@ function speak(text) {
 }
 
 // ─── DB MANAGEMENT ────────────────────────────────────────────────────────────
-// Attach to settings page: add a DB section after load
 window.addEventListener('DOMContentLoaded', () => {
-  const settingsPage = document.getElementById('page-settings');
-  const dbSection = document.createElement('div');
-  dbSection.innerHTML = `
-    <div class="section-title" style="padding:0 2px;">Lebensmittel-Datenbank</div>
-    <div class="card">
-      <div class="search-wrap">
-        <span class="search-icon">⌕</span>
-        <input type="text" id="db-search" placeholder="Suchen…" oninput="filterDb(this.value)" />
-      </div>
-      <button class="btn btn-primary" style="margin-bottom:10px;width:100%;" onclick="openDbAdd()">+ Lebensmittel anlegen</button>
-      <div id="db-list"></div>
-    </div>
-    <div class="section-title" style="padding:0 2px;">Gespeicherte Gerichte</div>
-    <div class="card">
-      <div id="dishes-list"></div>
-    </div>`;
-  settingsPage.appendChild(dbSection);
-  renderDbList();
   init();
 });
 
-function filterDb(q) { dbFilter = q; renderDbList(); }
+let dbActiveCat = 'Alle';
+function filterDb(q) { dbFilter = q; renderDbPageFull(); }
 
-function renderDbList() {
-  const list = document.getElementById('db-list');
-  const dishes = document.getElementById('dishes-list');
-  if(!list) return;
-  const filtered = state.db.filter(f => f.name.toLowerCase().includes(dbFilter.toLowerCase()));
-  list.innerHTML = filtered.slice(0,20).map(f => `
-    <div class="db-item">
-      <div><div class="db-name">${f.name}</div><div class="db-detail">${f.kcalPer100} kcal/100g</div></div>
-      <div class="db-actions">
-        <button class="btn btn-danger" onclick="deleteDbItem('${f.id}')">−</button>
-      </div>
-    </div>`).join('') || '<div class="empty-state">Keine Einträge gefunden</div>';
+function renderDbPageFull() {
+  const cats = ['Alle', ...new Set(state.db.map(f=>f.category||'Sonstiges').filter(Boolean))].sort((a,b)=>a==='Alle'?-1:b==='Alle'?1:a.localeCompare(b));
+  const catEl = document.getElementById('db-cat-filter');
+  if(catEl) {
+    catEl.innerHTML = cats.map(c => `
+      <button onclick="setDbCat('${c}')" style="white-space:nowrap;padding:5px 12px;border-radius:14px;border:1px solid ${c===dbActiveCat?'var(--accent)':'var(--border)'};background:${c===dbActiveCat?'var(--accent)':'var(--bg)'};color:${c===dbActiveCat?'white':'var(--text2)'};font-size:12px;font-family:'DM Sans';cursor:pointer;">${c}</button>`).join('');
+  }
 
-  if(dishes) {
-    dishes.innerHTML = state.dishes.length === 0 ? '<div class="empty-state">Noch keine Gerichte gespeichert</div>' :
-      state.dishes.map((d,i) => `
-        <div class="db-item">
-          <div><div class="db-name">${d.name}</div><div class="db-detail">${d.kcal} kcal gesamt</div></div>
-          <div class="db-actions">
-            <button class="btn btn-danger" onclick="deleteDish(${i})">−</button>
-          </div>
+  const q = dbFilter.toLowerCase();
+  let filtered = state.db.filter(f => {
+    const matchQ = !q || f.name.toLowerCase().includes(q);
+    const matchCat = dbActiveCat==='Alle' || (f.category||'Sonstiges')===dbActiveCat;
+    return matchQ && matchCat;
+  });
+  filtered.sort((a,b)=>a.name.localeCompare(b.name,'de'));
+
+  const container = document.getElementById('db-page-list');
+  if(!container) return;
+
+  if(filtered.length === 0) {
+    container.innerHTML = '<div class="card"><div class="empty-state">Keine Einträge gefunden</div></div>';
+  } else {
+    // Group by category when showing all
+    if(dbActiveCat === 'Alle' && !q) {
+      const grouped = {};
+      filtered.forEach(f => {
+        const cat = f.category||'Sonstiges';
+        if(!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(f);
+      });
+      container.innerHTML = Object.entries(grouped).sort(([a],[b])=>a.localeCompare(b,'de')).map(([cat, items]) => `
+        <div class="section-title">${cat} <span style="font-weight:400;color:var(--text3);">(${items.length})</span></div>
+        <div class="card" style="margin-bottom:4px;">
+          ${items.map(f => dbItemHtml(f)).join('')}
         </div>`).join('');
+    } else {
+      container.innerHTML = `<div class="card">${filtered.map(f => dbItemHtml(f)).join('')}</div>`;
+    }
+  }
+
+  // Dishes
+  const dishes = document.getElementById('dishes-list');
+  if(dishes) {
+    dishes.innerHTML = state.dishes.length === 0
+      ? '<div class="empty-state">Noch keine Gerichte gespeichert</div>'
+      : state.dishes.map((d,i) => `
+          <div class="db-item">
+            <div class="log-left">
+              <div class="db-name">${d.name}</div>
+              <div class="db-detail">${d.kcal} kcal · ${d.items?d.items.length:0} Zutaten</div>
+            </div>
+            <div class="db-actions">
+              <button class="btn btn-secondary" style="font-size:12px;padding:6px 10px;" onclick="toggleDishDetail(${i})">Details</button>
+              <button class="btn btn-danger" style="font-size:12px;padding:6px 10px;" onclick="deleteDish(${i})">−</button>
+            </div>
+          </div>
+          <div id="dish-detail-${i}" style="display:none;padding:6px 0 4px;">
+            ${(d.items||[]).map(it=>`<div style="font-size:12px;color:var(--text2);padding:2px 0;display:flex;justify-content:space-between;"><span>${it.name}</span><span>${it.kcal} kcal</span></div>`).join('')}
+          </div>`).join('');
   }
 }
+
+function dbItemHtml(f) {
+  const detail = f.gramsPerUnit ? `${f.kcalPer100} kcal/${f.unit} · ${f.gramsPerUnit}g` : `${f.kcalPer100} kcal/100g`;
+  return `<div class="db-item">
+    <div class="log-left">
+      <div class="db-name">${f.name}</div>
+      <div class="db-detail">${detail}</div>
+    </div>
+    <div class="db-actions">
+      <button class="btn btn-secondary" style="font-size:12px;padding:6px 10px;" onclick="openDbEdit('${f.id}')">✎</button>
+      <button class="btn btn-danger" style="font-size:12px;padding:6px 10px;" onclick="deleteDbItem('${f.id}')">−</button>
+    </div>
+  </div>`;
+}
+
+function setDbCat(cat) { dbActiveCat = cat; renderDbPageFull(); }
+
+function toggleDishDetail(i) {
+  const el = document.getElementById('dish-detail-'+i);
+  if(el) el.style.display = el.style.display==='none'?'block':'none';
+}
+
+let editingDbId = null;
+function openDbEdit(id) {
+  const f = state.db.find(x=>x.id===id);
+  if(!f) return;
+  editingDbId = id;
+  document.getElementById('db-edit-name').value = f.name;
+  document.getElementById('db-edit-kcal').value = f.kcalPer100;
+  document.getElementById('db-edit-unit').value = f.unit||'100g';
+  document.getElementById('db-edit-grams').value = f.gramsPerUnit||'';
+  openDialog('dialog-db-edit');
+}
+
+function confirmDbEdit() {
+  const f = state.db.find(x=>x.id===editingDbId);
+  if(!f) return;
+  const name = document.getElementById('db-edit-name').value.trim();
+  const kcal = parseInt(document.getElementById('db-edit-kcal').value);
+  if(!name||!kcal) { toast('Name und kcal eingeben'); return; }
+  f.name = name;
+  f.kcalPer100 = kcal;
+  f.unit = document.getElementById('db-edit-unit').value;
+  const g = parseInt(document.getElementById('db-edit-grams').value);
+  if(g) f.gramsPerUnit = g; else delete f.gramsPerUnit;
+  closeDialog('dialog-db-edit');
+  renderDbPageFull(); saveState();
+  toast(`${name} gespeichert`);
+}
+
+function confirmDbDelete() {
+  if(!editingDbId) return;
+  const f = state.db.find(x=>x.id===editingDbId);
+  if(!confirm(`"${f?.name}" wirklich löschen?`)) return;
+  state.db = state.db.filter(x=>x.id!==editingDbId);
+  closeDialog('dialog-db-edit');
+  renderDbPageFull(); saveState();
+  toast('Gelöscht');
+}
+
+function renderDbList() { renderDbPageFull(); }
 
 function openDbAdd() {
   document.getElementById('db-add-name').value = '';
