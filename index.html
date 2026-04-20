@@ -1529,7 +1529,9 @@ function openDbEdit(id) {
   editingDbId = id;
   document.getElementById('db-edit-name').value = f.name;
   document.getElementById('db-edit-kcal').value = f.kcalPer100;
-  document.getElementById('db-edit-kcal-mode').value = 'per100';
+  // Auto-detect mode: Stück/Scheibe/Portion → gesamt, 100g/100ml → per100
+  const isPiece = f.unit && !f.unit.startsWith('100');
+  document.getElementById('db-edit-kcal-mode').value = isPiece ? 'total' : 'per100';
   document.getElementById('db-edit-unit').value = f.unit||'100g';
   document.getElementById('db-edit-grams').value = f.gramsPerUnit||'';
   document.getElementById('db-edit-hint').textContent = '';
