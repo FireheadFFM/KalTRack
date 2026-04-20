@@ -790,18 +790,58 @@ let currentPage = 'home';
 let dbFilter = '';
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
-function init() {
+async function init() {
+  // 1. Zuerst localStorage laden (sofort, für schnelle Anzeige)
   loadState();
   renderAll();
   document.getElementById('today-date').textContent = new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
   document.getElementById('manual-input').addEventListener('keydown', e => { if(e.key==='Enter') processManual(); });
   initSpeech();
   renderActivityGrid();
-  // Restore mode
-  if(state.mode === 'db') {
-    switchToDb();
-  } else {
-    document.getElementById('main-nav').style.display = 'flex';
+  if(state.mode === 'db') switchToDb();
+  else document.getElementById('main-nav').style.display = 'flex';
+
+  // 2. Dann Cloud laden und nur DB + Gerichte + Aktivitäten übernehmen
+  //    (Tageslog bleibt vom localStorage — der ist gerätespezifisch aktueller)
+  await autoLoadFromCloud();
+}
+
+async function autoLoadFromCloud() {
+  setSyncStatus('Verbinde mit Cloud…', 'var(--text3)');
+  try {
+    const resp = await fetch(`${SB_URL}/rest/v1/userdata?id=eq.${SB_ROW_ID}&select=payload`, { headers: SB_HEADERS });
+    const rows = await resp.json();
+    if(!rows || rows.length === 0 || !rows[0].payload) {
+      setSyncStatus('', '');
+      return;
+    }
+    const cloud = JSON.parse(rows[0].payload);
+
+    // Merge-Strategie: Cloud-DB/Gerichte/Aktivitäten/Historie/Settings übernehmen
+    // Tageslog bleibt lokal (aktuellste Quelle für heute)
+    let changed = false;
+    if(cloud.db && cloud.db.length > (state.db?.length || 0)) {
+      state.db = cloud.db; changed = true;
+    }
+    if(cloud.dishes) { state.dishes = cloud.dishes; changed = true; }
+    if(cloud.activities) { state.activities = cloud.activities; changed = true; }
+    if(cloud.settings) { state.settings = cloud.settings; changed = true; }
+    if(cloud.history && cloud.history.length > (state.history?.length || 0)) {
+      state.history = cloud.history; changed = true;
+    }
+
+    if(changed) {
+      saveState();
+      renderAll();
+      renderActivityGrid();
+      renderDbPageFull();
+    }
+    const now = new Date().toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+    setSyncStatus('✓ Cloud synchronisiert ' + now, 'var(--accent)');
+    setTimeout(() => setSyncStatus('', ''), 4000);
+  } catch(e) {
+    setSyncStatus('Offline — lokale Daten werden verwendet', 'var(--text3)');
+    setTimeout(() => setSyncStatus('', ''), 4000);
   }
 }
 
@@ -840,6 +880,8 @@ function loadState() {
   if(!state.activities || state.activities.length === 0) state.activities = [...ACTIVITIES_DEFAULT];
   if(!state.dishes) state.dishes = [];
   if(!state.history) state.history = [];
+  // Merke: Default-DB wird nur beim allerersten Start geladen.
+  // Danach kommt die DB immer aus Cloud (autoLoadFromCloud) oder localStorage.
 }
 
 function saveState() {
