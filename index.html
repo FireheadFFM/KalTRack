@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="KalTrack">
+<meta name="theme-color" content="#2d5a3d">
+<link rel="manifest" id="pwa-manifest">
+<title>KalTrack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f3ef;
+  --bg2: #edeae4;
+  --card: #ffffff;
+  --text: #1a1814;
+  --text2: #6b6760;
+  --text3: #9e9b95;
+  --accent: #2d5a3d;
+  --accent2: #4a8c5c;
+  --accent-bg: #e8f0ea;
+  --danger: #8b2e1a;
+  --danger-bg: #f5e8e5;
+  --warn: #8b5e1a;
+  --warn-bg: #f5eee5;
+  --border: rgba(0,0,0,0.08);
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--text); }
+
+.app { max-width: 430px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+
+/* HEADER */
+.header { background: var(--card); border-bottom: 1px solid var(--border); padding: 14px 16px 10px; position: sticky; top: 0; z-index: 100; }
+.header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.app-name { font-size: 20px; font-weight: 600; letter-spacing: -0.5px; color: var(--text); }
+.app-name span { color: var(--accent2); }
+.mode-toggle { display: flex; background: var(--bg); border-radius: 20px; padding: 3px; gap: 2px; }
+.mode-btn { padding: 5px 12px; border-radius: 17px; border: none; font-size: 12px; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; transition: all 0.2s; background: none; color: var(--text2); }
+.mode-btn.active { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.mode-btn.active.db-mode { background: var(--accent); color: white; }
+
+/* NAV */
+.nav { display: flex; background: var(--card); border-bottom: 1px solid var(--border); }
+.nav-btn { flex: 1; padding: 10px 4px 8px; font-size: 11px; font-family: 'DM Sans', sans-serif; font-weight: 500; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text3); cursor: pointer; transition: all 0.2s; letter-spacing: 0.02em; }
+.nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* PAGES */
+.page { display: none; flex: 1; padding: 12px; overflow-y: auto; }
+.page.active { display: block; }
+
+/* CARDS */
+.card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); padding: 14px 16px; margin-bottom: 10px; box-shadow: var(--shadow); }
+.card-label { font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+
+/* STATS */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.stat-card { background: var(--bg); border-radius: var(--radius-sm); padding: 12px; }
+.stat-label { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+.stat-value { font-size: 22px; font-weight: 600; font-family: 'DM Mono', monospace; letter-spacing: -0.5px; color: var(--text); }
+.stat-value.green { color: var(--accent); }
+.stat-value.red { color: var(--danger); }
+.stat-unit { font-size: 12px; font-weight: 400; color: var(--text3); margin-left: 2px; }
+
+/* PROGRESS */
+.progress-wrap { margin: 4px 0 8px; }
+.progress-bar { height: 6px; background: var(--bg2); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; background: var(--accent2); transition: width 0.4s ease; }
+.progress-fill.over { background: var(--danger); }
+.progress-labels { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; color: var(--text3); }
+
+/* MIC */
+.mic-section { text-align: center; padding: 8px 0 4px; }
+.mic-btn { width: 76px; height: 76px; border-radius: 50%; background: var(--accent); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; transition: all 0.2s; position: relative; box-shadow: 0 4px 16px rgba(45,90,61,0.3); }
+.mic-btn:active { transform: scale(0.95); }
+.mic-btn.listening { background: var(--danger); box-shadow: 0 4px 16px rgba(139,46,26,0.4); animation: pulseRed 1.4s infinite; }
+.mic-btn.processing { background: var(--warn); box-shadow: 0 4px 16px rgba(139,94,26,0.4); }
+.mic-btn svg { width: 30px; height: 30px; }
+@keyframes pulseRed { 0%,100% { box-shadow: 0 4px 16px rgba(139,46,26,0.4), 0 0 0 0 rgba(139,46,26,0.3); } 50% { box-shadow: 0 4px 16px rgba(139,46,26,0.4), 0 0 0 14px rgba(139,46,26,0); } }
+.mic-status { font-size: 13px; color: var(--text2); min-height: 18px; }
+.mic-transcript { font-size: 14px; color: var(--accent); font-style: italic; min-height: 18px; margin-top: 4px; padding: 0 12px; }
+
+/* MANUAL INPUT */
+.manual-row { display: flex; gap: 8px; margin-top: 10px; }
+.manual-row input { flex: 1; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); outline: none; }
+.manual-row input:focus { border-color: var(--accent2); background: white; }
+.btn { padding: 9px 16px; border-radius: var(--radius-sm); border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:active { background: var(--accent2); }
+.btn-secondary { background: var(--bg2); color: var(--text2); }
+.btn-danger { background: var(--danger-bg); color: var(--danger); }
+.btn-full { width: 100%; padding: 11px; margin-top: 8px; }
+
+/* LOG ITEMS */
+.log-list { margin-top: 4px; }
+.log-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.log-item:last-child { border-bottom: none; }
+.log-left { flex: 1; }
+.log-name { font-size: 14px; color: var(--text); font-weight: 500; }
+.log-detail { font-size: 12px; color: var(--text3); margin-top: 1px; }
+.log-right { display: flex; align-items: center; gap: 8px; }
+.log-kcal { font-size: 14px; font-weight: 600; font-family: 'DM Mono', monospace; color: var(--text); }
+.log-del { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 16px; padding: 2px 4px; }
+.log-del:active { color: var(--danger); }
+.empty-state { text-align: center; padding: 24px 0; color: var(--text3); font-size: 14px; }
+
+/* BADGE */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; margin-left: 6px; }
+.badge-warn { background: var(--warn-bg); color: var(--warn); }
+.badge-db { background: var(--accent-bg); color: var(--accent); }
+
+/* DIALOG */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: flex-end; }
+.overlay.open { display: flex; }
+.dialog { background: var(--card); border-radius: var(--radius) var(--radius) 0 0; padding: 20px 16px 32px; width: 100%; max-width: 430px; margin: 0 auto; animation: slideUp 0.2s ease; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.dialog h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+.dialog p { font-size: 14px; color: var(--text2); margin-bottom: 14px; line-height: 1.5; }
+.dialog input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); outline: none; margin-bottom: 10px; }
+.dialog input:focus { border-color: var(--accent2); background: white; }
+.dialog-btns { display: flex; gap: 8px; }
+.dialog-btns .btn { flex: 1; padding: 11px; }
+
+/* ACTIVITIES */
+.activity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.activity-card { background: var(--bg); border-radius: var(--radius-sm); padding: 10px 12px; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; }
+.activity-card:active { border-color: var(--accent2); background: var(--accent-bg); }
+.activity-name { font-size: 13px; font-weight: 500; color: var(--text); }
+.activity-kcal { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+/* SETTINGS */
+.settings-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.settings-row:last-child { border-bottom: none; }
+.settings-label { font-size: 14px; color: var(--text); }
+.settings-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.settings-row input { width: 90px; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; font-family: 'DM Mono', monospace; text-align: right; background: var(--bg); color: var(--text); outline: none; }
+.settings-row input:focus { border-color: var(--accent2); background: white; }
+
+/* DB PAGE */
+.search-wrap { position: relative; margin-bottom: 10px; }
+.search-wrap input { width: 100%; padding: 9px 12px 9px 36px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; font-family: 'DM Sans', sans-serif; background: var(--card); color: var(--text); outline: none; }
+.search-wrap input:focus { border-color: var(--accent2); }
+.search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 15px; }
+.db-item { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.db-item:last-child { border-bottom: none; }
+.db-name { font-size: 14px; font-weight: 500; color: var(--text); }
+.db-detail { font-size: 12px; color: var(--text3); margin-top: 1px; }
+.db-actions { display: flex; gap: 6px; }
+
+/* TOAST */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: white; padding: 10px 18px; border-radius: 20px; font-size: 13px; z-index: 300; opacity: 0; transition: all 0.3s ease; pointer-events: none; white-space: nowrap; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* SECTION TITLE */
+.section-title { font-size: 13px; font-weight: 600; color: var(--text2); margin: 14px 0 6px; padding: 0 2px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-top">
+      <div class="app-name">Kal<span>Track</span></div>
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="modeTrack" onclick="setMode('track')">Heute tracken</button>
+        <button class="mode-btn db-mode" id="modeDb" onclick="setMode('db')">Datenbank</button>
+      </div>
+    </div>
+    <div class="nav">
+      <button class="nav-btn active" onclick="showPage('home')">Übersicht</button>
+      <button class="nav-btn" onclick="showPage('input')">Eingabe</button>
+      <button class="nav-btn" onclick="showPage('activity')">Aktivität</button>
+      <button class="nav-btn" onclick="showPage('settings')">Einstellungen</button>
+    </div>
+  </div>
+
+  <!-- HOME PAGE -->
+  <div class="page active" id="page-home">
+    <div class="card">
+      <div class="card-label">Tagesbilanz — <span id="today-date"></span></div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Aufgenommen</div>
+          <div class="stat-value" id="s-eaten">0</div>
+          <div class="stat-label">kcal</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Verbraucht</div>
+          <div class="stat-value" id="s-burned">0</div>
+          <div class="stat-label">kcal</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Bilanz</div>
+          <div class="stat-value" id="s-balance">0</div>
+          <div class="stat-label" id="s-balance-label">kcal</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Noch verfügbar</div>
+          <div class="stat-value green" id="s-remain">0</div>
+          <div class="stat-label">kcal</div>
+        </div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+        <div class="progress-labels"><span>0</span><span id="prog-max">0</span></div>
+      </div>
+    </div>
+
+    <div class="section-title">Heutige Einträge</div>
+    <div class="card">
+      <div class="log-list" id="log-list">
+        <div class="empty-state">Noch keine Einträge heute</div>
+      </div>
+    </div>
+
+    <div class="section-title">Aktivitäten heute</div>
+    <div class="card">
+      <div class="log-list" id="activity-log-list">
+        <div class="empty-state">Keine Aktivitäten eingetragen</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INPUT PAGE -->
+  <div class="page" id="page-input">
+    <div class="card mic-section">
+      <div id="mode-hint" style="font-size:12px;color:var(--accent);font-weight:500;margin-bottom:8px;min-height:16px;"></div>
+      <button class="mic-btn" id="mic-btn" onclick="toggleMic()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="2" width="6" height="11" rx="3"/>
+          <path d="M5 10a7 7 0 0014 0"/>
+          <line x1="12" y1="21" x2="12" y2="17"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+        </svg>
+      </button>
+      <div class="mic-status" id="mic-status">Tippen zum Starten</div>
+      <div class="mic-transcript" id="mic-transcript"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Oder manuell eingeben</div>
+      <div class="manual-row">
+        <input type="text" id="manual-input" placeholder='z.B. "200g Tomaten" oder "Spiegeleier"' />
+        <button class="btn btn-primary" onclick="processManual()">→</button>
+      </div>
+    </div>
+
+    <div id="session-card" class="card" style="display:none;">
+      <div class="card-label">Aktuelle Sitzung <span id="session-total" style="float:right;font-family:'DM Mono';color:var(--text)">0 kcal</span></div>
+      <div class="log-list" id="session-list"></div>
+      <button class="btn btn-primary btn-full" id="session-save-btn" onclick="finishSession()">Sitzung abschließen</button>
+    </div>
+  </div>
+
+  <!-- ACTIVITY PAGE -->
+  <div class="page" id="page-activity">
+    <div class="card">
+      <div class="card-label">Schritte heute</div>
+      <div class="manual-row">
+        <input type="number" id="steps-input" placeholder="z.B. 8000" />
+        <button class="btn btn-primary" onclick="saveSteps()">Speichern</button>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-top:8px;">≈ 0,04 kcal pro Schritt</div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Aktivität hinzufügen</div>
+      <div class="activity-grid" id="activity-grid"></div>
+    </div>
+
+    <div class="card" id="custom-activity-card">
+      <div class="card-label">Eigene Aktivität</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input type="text" id="act-name" placeholder="Name" style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" />
+        <input type="number" id="act-kcal" placeholder="kcal/h" style="width:80px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" />
+      </div>
+      <button class="btn btn-primary" onclick="addCustomActivity()">Speichern & hinzufügen</button>
+    </div>
+  </div>
+
+  <!-- SETTINGS PAGE -->
+  <div class="page" id="page-settings">
+    <div class="card">
+      <div class="card-label">Mein Profil</div>
+      <div class="settings-row">
+        <div><div class="settings-label">Grundumsatz</div><div class="settings-sub">kcal pro Tag</div></div>
+        <input type="number" id="set-bmr" placeholder="2000" onchange="saveSettings()" />
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">Ziel-Kalorien</div><div class="settings-sub">inkl. Aktivität (optional)</div></div>
+        <input type="number" id="set-goal" placeholder="1800" onchange="saveSettings()" />
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">Tägliches Schrittziel</div><div class="settings-sub">Schritte</div></div>
+        <input type="number" id="set-steps" placeholder="10000" onchange="saveSettings()" />
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">Claude API Key</div><div class="settings-sub">Für KI-Spracherkennung</div></div>
+        <input type="text" id="set-apikey" placeholder="sk-ant-..." onchange="saveSettings()" style="width:110px;font-size:11px;" />
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Datensicherung</div>
+      <button class="btn btn-primary btn-full" onclick="exportData()" style="margin-bottom:8px;">Daten exportieren (JSON)</button>
+      <label class="btn btn-secondary btn-full" style="display:block;text-align:center;cursor:pointer;">
+        Daten importieren
+        <input type="file" accept=".json" onchange="importData(event)" style="display:none;" />
+      </label>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5;">Export speichert alle Einträge, Datenbank, Gerichte und Einstellungen. Import überschreibt alle lokalen Daten.</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Tageslog zurücksetzen</div>
+      <button class="btn btn-danger btn-full" onclick="resetDay()">Heutigen Tag zurücksetzen</button>
+    </div>
+  </div>
+</div>
+
+<!-- DIALOGS -->
+<div class="overlay" id="dialog-dish" onclick="closeDialog('dialog-dish')">
+  <div class="dialog" onclick="event.stopPropagation()">
+    <h3>Gericht speichern?</h3>
+    <p id="dialog-dish-info"></p>
+    <input type="text" id="dialog-dish-name" placeholder="Name des Gerichts" />
+    <div class="dialog-btns">
+      <button class="btn btn-secondary" onclick="finishDishNo()">Nur einmalig</button>
+      <button class="btn btn-primary" onclick="finishDishYes()">Als Gericht speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="dialog-activity" onclick="closeDialog('dialog-activity')">
+  <div class="dialog" onclick="event.stopPropagation()">
+    <h3 id="dialog-act-title">Aktivität</h3>
+    <p id="dialog-act-info"></p>
+    <input type="number" id="dialog-act-minutes" placeholder="Minuten" />
+    <div class="dialog-btns">
+      <button class="btn btn-secondary" onclick="closeDialog('dialog-activity')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="confirmActivity()">Hinzufügen</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="dialog-unknown" onclick="closeDialog('dialog-unknown')">
+  <div class="dialog" onclick="event.stopPropagation()">
+    <h3>Unbekanntes Lebensmittel</h3>
+    <p id="dialog-unk-info"></p>
+    <div class="dialog-btns">
+      <button class="btn btn-secondary" onclick="closeDialog('dialog-unknown')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="confirmUnknown()">Hinzufügen</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="dialog-db-add" onclick="closeDialog('dialog-db-add')">
+  <div class="dialog" onclick="event.stopPropagation()">
+    <h3 id="dialog-db-title">Lebensmittel anlegen</h3>
+    <input type="text" id="db-add-name" placeholder="Name" />
+    <input type="number" id="db-add-kcal" placeholder="kcal pro 100g (oder pro Stück)" />
+    <input type="text" id="db-add-unit" placeholder='Einheit: "100g" oder "Stück"' />
+    <div class="dialog-btns">
+      <button class="btn btn-secondary" onclick="closeDialog('dialog-db-add')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="confirmDbAdd()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let state = {
+  mode: 'track',
+  settings: { bmr: 2000, goal: 1800, stepsGoal: 10000, apiKey: '' },
+  todayLog: [],
+  activityLog: [],
+  steps: 0,
+  sessionItems: [],
+  db: [],
+  dishes: [],
+  activities: []
+};
+
+const FOOD_DB_DEFAULT = [
+  // ── OBST ──────────────────────────────────────────────────────────────────
+  {id:'f001',name:'Apfel',kcalPer100:52,unit:'Stück',gramsPerUnit:182,category:'Obst'},
+  {id:'f002',name:'Birne',kcalPer100:57,unit:'Stück',gramsPerUnit:178,category:'Obst'},
+  {id:'f003',name:'Banane',kcalPer100:89,unit:'Stück',gramsPerUnit:118,category:'Obst'},
+  {id:'f004',name:'Orange',kcalPer100:47,unit:'Stück',gramsPerUnit:200,category:'Obst'},
+  {id:'f005',name:'Mandarine',kcalPer100:53,unit:'Stück',gramsPerUnit:75,category:'Obst'},
+  {id:'f006',name:'Clementine',kcalPer100:47,unit:'Stück',gramsPerUnit:70,category:'Obst'},
+  {id:'f007',name:'Grapefruit',kcalPer100:42,unit:'Stück',gramsPerUnit:230,category:'Obst'},
+  {id:'f008',name:'Zitrone',kcalPer100:29,unit:'Stück',gramsPerUnit:80,category:'Obst'},
+  {id:'f009',name:'Erdbeeren',kcalPer100:32,unit:'100g',category:'Obst'},
+  {id:'f010',name:'Erdbeere',kcalPer100:32,unit:'Stück',gramsPerUnit:15,category:'Obst'},
+  {id:'f011',name:'Himbeeren',kcalPer100:52,unit:'100g',category:'Obst'},
+  {id:'f012',name:'Blaubeeren',kcalPer100:57,unit:'100g',category:'Obst'},
+  {id:'f013',name:'Heidelbeeren',kcalPer100:57,unit:'100g',category:'Obst'},
+  {id:'f014',name:'Weintrauben',kcalPer100:69,unit:'100g',category:'Obst'},
+  {id:'f015',name:'Kirschen',kcalPer100:63,unit:'100g',category:'Obst'},
+  {id:'f016',name:'Pfirsich',kcalPer100:39,unit:'Stück',gramsPerUnit:150,category:'Obst'},
+  {id:'f017',name:'Nektarine',kcalPer100:44,unit:'Stück',gramsPerUnit:140,category:'Obst'},
+  {id:'f018',name:'Pflaume',kcalPer100:46,unit:'Stück',gramsPerUnit:60,category:'Obst'},
+  {id:'f019',name:'Mango',kcalPer100:60,unit:'100g',category:'Obst'},
+  {id:'f020',name:'Ananas',kcalPer100:50,unit:'100g',category:'Obst'},
+  {id:'f021',name:'Kiwi',kcalPer100:61,unit:'Stück',gramsPerUnit:75,category:'Obst'},
+  {id:'f022',name:'Wassermelone',kcalPer100:30,unit:'100g',category:'Obst'},
+  {id:'f023',name:'Honigmelone',kcalPer100:36,unit:'100g',category:'Obst'},
+  {id:'f024',name:'Avocado',kcalPer100:160,unit:'Stück',gramsPerUnit:150,category:'Obst'},
+  {id:'f025',name:'Papaya',kcalPer100:43,unit:'100g',category:'Obst'},
+  {id:'f026',name:'Feige',kcalPer100:74,unit:'Stück',gramsPerUnit:50,category:'Obst'},
+  {id:'f027',name:'Datteln',kcalPer100:277,unit:'Stück',gramsPerUnit:8,category:'Obst'},
+
+  // ── GEMÜSE ────────────────────────────────────────────────────────────────
+  {id:'v001',name:'Tomate',kcalPer100:18,unit:'Stück',gramsPerUnit:120,category:'Gemüse'},
+  {id:'v002',name:'Tomaten',kcalPer100:18,unit:'100g',category:'Gemüse'},
+  {id:'v003',name:'Gurke',kcalPer100:12,unit:'100g',category:'Gemüse'},
+  {id:'v004',name:'Salatgurke',kcalPer100:12,unit:'Stück',gramsPerUnit:350,category:'Gemüse'},
+  {id:'v005',name:'Paprika rot',kcalPer100:31,unit:'Stück',gramsPerUnit:160,category:'Gemüse'},
+  {id:'v006',name:'Paprika gelb',kcalPer100:27,unit:'Stück',gramsPerUnit:160,category:'Gemüse'},
+  {id:'v007',name:'Paprika grün',kcalPer100:20,unit:'Stück',gramsPerUnit:160,category:'Gemüse'},
+  {id:'v008',name:'Karotte',kcalPer100:41,unit:'Stück',gramsPerUnit:80,category:'Gemüse'},
+  {id:'v009',name:'Karotten',kcalPer100:41,unit:'100g',category:'Gemüse'},
+  {id:'v010',name:'Brokkoli',kcalPer100:35,unit:'100g',category:'Gemüse'},
+  {id:'v011',name:'Blumenkohl',kcalPer100:25,unit:'100g',category:'Gemüse'},
+  {id:'v012',name:'Zucchini',kcalPer100:17,unit:'100g',category:'Gemüse'},
+  {id:'v013',name:'Aubergine',kcalPer100:25,unit:'100g',category:'Gemüse'},
+  {id:'v014',name:'Zwiebel',kcalPer100:40,unit:'Stück',gramsPerUnit:110,category:'Gemüse'},
+  {id:'v015',name:'Frühlingszwiebel',kcalPer100:32,unit:'Stück',gramsPerUnit:15,category:'Gemüse'},
+  {id:'v016',name:'Knoblauch',kcalPer100:149,unit:'Zehe',gramsPerUnit:5,category:'Gemüse'},
+  {id:'v017',name:'Spinat',kcalPer100:23,unit:'100g',category:'Gemüse'},
+  {id:'v018',name:'Feldsalat',kcalPer100:19,unit:'100g',category:'Gemüse'},
+  {id:'v019',name:'Kopfsalat',kcalPer100:14,unit:'100g',category:'Gemüse'},
+  {id:'v020',name:'Eisbergsalat',kcalPer100:13,unit:'100g',category:'Gemüse'},
+  {id:'v021',name:'Rucola',kcalPer100:25,unit:'100g',category:'Gemüse'},
+  {id:'v022',name:'Chicorée',kcalPer100:17,unit:'100g',category:'Gemüse'},
+  {id:'v023',name:'Sellerie',kcalPer100:13,unit:'100g',category:'Gemüse'},
+  {id:'v024',name:'Staudensellerie',kcalPer100:16,unit:'Stange',gramsPerUnit:40,category:'Gemüse'},
+  {id:'v025',name:'Champignons',kcalPer100:22,unit:'100g',category:'Gemüse'},
+  {id:'v026',name:'Champignon',kcalPer100:22,unit:'Stück',gramsPerUnit:20,category:'Gemüse'},
+  {id:'v027',name:'Erbsen',kcalPer100:81,unit:'100g',category:'Gemüse'},
+  {id:'v028',name:'Mais',kcalPer100:86,unit:'100g',category:'Gemüse'},
+  {id:'v029',name:'Lauch',kcalPer100:31,unit:'100g',category:'Gemüse'},
+  {id:'v030',name:'Rosenkohl',kcalPer100:43,unit:'100g',category:'Gemüse'},
+  {id:'v031',name:'Spargel',kcalPer100:20,unit:'100g',category:'Gemüse'},
+  {id:'v032',name:'Rote Bete',kcalPer100:43,unit:'100g',category:'Gemüse'},
+  {id:'v033',name:'Kürbis',kcalPer100:26,unit:'100g',category:'Gemüse'},
+  {id:'v034',name:'Süßkartoffel',kcalPer100:86,unit:'100g',category:'Gemüse'},
+  {id:'v035',name:'Kartoffel',kcalPer100:77,unit:'Stück',gramsPerUnit:150,category:'Gemüse'},
+  {id:'v036',name:'Kartoffeln',kcalPer100:77,unit:'100g',category:'Gemüse'},
+
+  // ── FLEISCH & FISCH ───────────────────────────────────────────────────────
+  {id:'m001',name:'Hähnchenbrust',kcalPer100:165,unit:'100g',category:'Fleisch'},
+  {id:'m002',name:'Hähnchenkeule',kcalPer100:215,unit:'100g',category:'Fleisch'},
+  {id:'m003',name:'Putenbrust',kcalPer100:157,unit:'100g',category:'Fleisch'},
+  {id:'m004',name:'Rinderfilet',kcalPer100:172,unit:'100g',category:'Fleisch'},
+  {id:'m005',name:'Rinderhackfleisch',kcalPer100:235,unit:'100g',category:'Fleisch'},
+  {id:'m006',name:'Schweineschnitzel',kcalPer100:143,unit:'100g',category:'Fleisch'},
+  {id:'m007',name:'Schweinefilet',kcalPer100:143,unit:'100g',category:'Fleisch'},
+  {id:'m008',name:'Lammkotelett',kcalPer100:218,unit:'Stück',gramsPerUnit:120,category:'Fleisch'},
+  {id:'m009',name:'Speck',kcalPer100:458,unit:'100g',category:'Fleisch'},
+  {id:'m010',name:'Bauchspeck',kcalPer100:510,unit:'100g',category:'Fleisch'},
+  {id:'m011',name:'Schinken',kcalPer100:145,unit:'100g',category:'Fleisch'},
+  {id:'m012',name:'Kochschinken',kcalPer100:107,unit:'Scheibe',gramsPerUnit:30,category:'Fleisch'},
+  {id:'m013',name:'Salami',kcalPer100:425,unit:'Scheibe',gramsPerUnit:10,category:'Fleisch'},
+  {id:'m014',name:'Lyoner',kcalPer100:250,unit:'Scheibe',gramsPerUnit:30,category:'Fleisch'},
+  {id:'m015',name:'Mortadella',kcalPer100:285,unit:'Scheibe',gramsPerUnit:30,category:'Fleisch'},
+  {id:'m016',name:'Frankfurter Würstchen',kcalPer100:285,unit:'Stück',gramsPerUnit:70,category:'Fleisch'},
+  {id:'m017',name:'Würstchen',kcalPer100:285,unit:'Stück',gramsPerUnit:70,category:'Fleisch'},
+  {id:'m018',name:'Bratwurst',kcalPer100:302,unit:'Stück',gramsPerUnit:120,category:'Fleisch'},
+  {id:'m019',name:'Leberwurst',kcalPer100:326,unit:'100g',category:'Fleisch'},
+  {id:'m020',name:'Lachs',kcalPer100:208,unit:'100g',category:'Fisch'},
+  {id:'m021',name:'Thunfisch (Dose)',kcalPer100:116,unit:'100g',category:'Fisch'},
+  {id:'m022',name:'Thunfisch in Öl',kcalPer100:190,unit:'100g',category:'Fisch'},
+  {id:'m023',name:'Kabeljau',kcalPer100:82,unit:'100g',category:'Fisch'},
+  {id:'m024',name:'Forelle',kcalPer100:135,unit:'100g',category:'Fisch'},
+  {id:'m025',name:'Hering',kcalPer100:202,unit:'100g',category:'Fisch'},
+  {id:'m026',name:'Makrele',kcalPer100:205,unit:'100g',category:'Fisch'},
+  {id:'m027',name:'Garnelen',kcalPer100:99,unit:'100g',category:'Fisch'},
+  {id:'m028',name:'Dorsch',kcalPer100:79,unit:'100g',category:'Fisch'},
+  {id:'m029',name:'Pangasius',kcalPer100:83,unit:'100g',category:'Fisch'},
+
+  // ── EIER & MILCHPRODUKTE ──────────────────────────────────────────────────
+  {id:'d001',name:'Ei',kcalPer100:155,unit:'Stück',gramsPerUnit:60,category:'Milch & Eier'},
+  {id:'d002',name:'Eier',kcalPer100:155,unit:'Stück',gramsPerUnit:60,category:'Milch & Eier'},
+  {id:'d003',name:'Vollmilch',kcalPer100:61,unit:'100ml',category:'Milch & Eier'},
+  {id:'d004',name:'Fettarme Milch',kcalPer100:46,unit:'100ml',category:'Milch & Eier'},
+  {id:'d005',name:'Hafermilch',kcalPer100:46,unit:'100ml',category:'Milch & Eier'},
+  {id:'d006',name:'Mandelmilch',kcalPer100:24,unit:'100ml',category:'Milch & Eier'},
+  {id:'d007',name:'Sojamilch',kcalPer100:43,unit:'100ml',category:'Milch & Eier'},
+  {id:'d008',name:'Joghurt (3,5%)',kcalPer100:61,unit:'100g',category:'Milch & Eier'},
+  {id:'d009',name:'Joghurt (0,1%)',kcalPer100:36,unit:'100g',category:'Milch & Eier'},
+  {id:'d010',name:'Skyr',kcalPer100:65,unit:'100g',category:'Milch & Eier'},
+  {id:'d011',name:'Magerquark',kcalPer100:69,unit:'100g',category:'Milch & Eier'},
+  {id:'d012',name:'Speisequark (20%)',kcalPer100:100,unit:'100g',category:'Milch & Eier'},
+  {id:'d013',name:'Hüttenkäse',kcalPer100:88,unit:'100g',category:'Milch & Eier'},
+  {id:'d014',name:'Frischkäse',kcalPer100:130,unit:'100g',category:'Milch & Eier'},
+  {id:'d015',name:'Frischkäse (Doppelrahm)',kcalPer100:263,unit:'100g',category:'Milch & Eier'},
+  {id:'d016',name:'Mozzarella',kcalPer100:254,unit:'100g',category:'Milch & Eier'},
+  {id:'d017',name:'Gouda',kcalPer100:356,unit:'Scheibe',gramsPerUnit:30,category:'Milch & Eier'},
+  {id:'d018',name:'Edamer',kcalPer100:314,unit:'Scheibe',gramsPerUnit:30,category:'Milch & Eier'},
+  {id:'d019',name:'Emmentaler',kcalPer100:389,unit:'Scheibe',gramsPerUnit:30,category:'Milch & Eier'},
+  {id:'d020',name:'Parmesan',kcalPer100:431,unit:'100g',category:'Milch & Eier'},
+  {id:'d021',name:'Feta',kcalPer100:264,unit:'100g',category:'Milch & Eier'},
+  {id:'d022',name:'Brie',kcalPer100:319,unit:'100g',category:'Milch & Eier'},
+  {id:'d023',name:'Camembert',kcalPer100:300,unit:'100g',category:'Milch & Eier'},
+  {id:'d024',name:'Butter',kcalPer100:717,unit:'100g',category:'Milch & Eier'},
+  {id:'d025',name:'Sahne',kcalPer100:337,unit:'100ml',category:'Milch & Eier'},
+  {id:'d026',name:'Schmand',kcalPer100:237,unit:'100g',category:'Milch & Eier'},
+  {id:'d027',name:'Saure Sahne',kcalPer100:125,unit:'100g',category:'Milch & Eier'},
+  {id:'d028',name:'Crème fraîche',kcalPer100:292,unit:'100g',category:'Milch & Eier'},
+
+  // ── BROT & GETREIDE ───────────────────────────────────────────────────────
+  {id:'b001',name:'Weißbrot',kcalPer100:265,unit:'Scheibe',gramsPerUnit:30,category:'Brot & Getreide'},
+  {id:'b002',name:'Toastbrot',kcalPer100:262,unit:'Scheibe',gramsPerUnit:25,category:'Brot & Getreide'},
+  {id:'b003',name:'Vollkornbrot',kcalPer100:216,unit:'Scheibe',gramsPerUnit:45,category:'Brot & Getreide'},
+  {id:'b004',name:'Roggenbrot',kcalPer100:210,unit:'Scheibe',gramsPerUnit:45,category:'Brot & Getreide'},
+  {id:'b005',name:'Graubrot',kcalPer100:230,unit:'Scheibe',gramsPerUnit:40,category:'Brot & Getreide'},
+  {id:'b006',name:'Brötchen',kcalPer100:270,unit:'Stück',gramsPerUnit:55,category:'Brot & Getreide'},
+  {id:'b007',name:'Vollkornbrötchen',kcalPer100:245,unit:'Stück',gramsPerUnit:60,category:'Brot & Getreide'},
+  {id:'b008',name:'Croissant',kcalPer100:406,unit:'Stück',gramsPerUnit:60,category:'Brot & Getreide'},
+  {id:'b009',name:'Bagel',kcalPer100:245,unit:'Stück',gramsPerUnit:98,category:'Brot & Getreide'},
+  {id:'b010',name:'Haferflocken',kcalPer100:370,unit:'100g',category:'Brot & Getreide'},
+  {id:'b011',name:'Müsli',kcalPer100:363,unit:'100g',category:'Brot & Getreide'},
+  {id:'b012',name:'Granola',kcalPer100:471,unit:'100g',category:'Brot & Getreide'},
+  {id:'b013',name:'Cornflakes',kcalPer100:378,unit:'100g',category:'Brot & Getreide'},
+  {id:'b014',name:'Reis (roh)',kcalPer100:350,unit:'100g',category:'Brot & Getreide'},
+  {id:'b015',name:'Reis (gekocht)',kcalPer100:130,unit:'100g',category:'Brot & Getreide'},
+  {id:'b016',name:'Basmati (gekocht)',kcalPer100:121,unit:'100g',category:'Brot & Getreide'},
+  {id:'b017',name:'Nudeln (roh)',kcalPer100:358,unit:'100g',category:'Brot & Getreide'},
+  {id:'b018',name:'Nudeln (gekocht)',kcalPer100:131,unit:'100g',category:'Brot & Getreide'},
+  {id:'b019',name:'Spaghetti (gekocht)',kcalPer100:131,unit:'100g',category:'Brot & Getreide'},
+  {id:'b020',name:'Vollkornnudeln (gekocht)',kcalPer100:124,unit:'100g',category:'Brot & Getreide'},
+  {id:'b021',name:'Quinoa (gekocht)',kcalPer100:120,unit:'100g',category:'Brot & Getreide'},
+  {id:'b022',name:'Couscous (gekocht)',kcalPer100:112,unit:'100g',category:'Brot & Getreide'},
+  {id:'b023',name:'Bulgur (gekocht)',kcalPer100:83,unit:'100g',category:'Brot & Getreide'},
+  {id:'b024',name:'Weizenmehl',kcalPer100:341,unit:'100g',category:'Brot & Getreide'},
+  {id:'b025',name:'Knäckebrot',kcalPer100:352,unit:'Scheibe',gramsPerUnit:10,category:'Brot & Getreide'},
+  {id:'b026',name:'Reiswaffeln',kcalPer100:387,unit:'Stück',gramsPerUnit:9,category:'Brot & Getreide'},
+
+  // ── HÜLSENFRÜCHTE ─────────────────────────────────────────────────────────
+  {id:'l001',name:'Linsen (gekocht)',kcalPer100:116,unit:'100g',category:'Hülsenfrüchte'},
+  {id:'l002',name:'Kichererbsen (Dose)',kcalPer100:130,unit:'100g',category:'Hülsenfrüchte'},
+  {id:'l003',name:'Kidneybohnen (Dose)',kcalPer100:127,unit:'100g',category:'Hülsenfrüchte'},
+  {id:'l004',name:'Schwarze Bohnen (Dose)',kcalPer100:132,unit:'100g',category:'Hülsenfrüchte'},
+  {id:'l005',name:'Weiße Bohnen (Dose)',kcalPer100:114,unit:'100g',category:'Hülsenfrüchte'},
+  {id:'l006',name:'Erbsen (Dose)',kcalPer100:81,unit:'100g',category:'Hülsenfrüchte'},
+  {id:'l007',name:'Edamame',kcalPer100:121,unit:'100g',category:'Hülsenfrüchte'},
+  {id:'l008',name:'Tofu',kcalPer100:76,unit:'100g',category:'Hülsenfrüchte'},
+
+  // ── FETTE & ÖLE ───────────────────────────────────────────────────────────
+  {id:'o001',name:'Olivenöl',kcalPer100:884,unit:'100g',category:'Fette & Öle'},
+  {id:'o002',name:'Rapsöl',kcalPer100:884,unit:'100g',category:'Fette & Öle'},
+  {id:'o003',name:'Sonnenblumenöl',kcalPer100:884,unit:'100g',category:'Fette & Öle'},
+  {id:'o004',name:'Kokosöl',kcalPer100:862,unit:'100g',category:'Fette & Öle'},
+  {id:'o005',name:'Margarine',kcalPer100:719,unit:'100g',category:'Fette & Öle'},
+  {id:'o006',name:'Mayonnaise',kcalPer100:680,unit:'100g',category:'Fette & Öle'},
+
+  // ── NÜSSE & SAMEN ─────────────────────────────────────────────────────────
+  {id:'n001',name:'Mandeln',kcalPer100:579,unit:'100g',category:'Nüsse & Samen'},
+  {id:'n002',name:'Walnüsse',kcalPer100:654,unit:'100g',category:'Nüsse & Samen'},
+  {id:'n003',name:'Cashews',kcalPer100:553,unit:'100g',category:'Nüsse & Samen'},
+  {id:'n004',name:'Haselnüsse',kcalPer100:628,unit:'100g',category:'Nüsse & Samen'},
+  {id:'n005',name:'Erdnüsse',kcalPer100:567,unit:'100g',category:'Nüsse & Samen'},
+  {id:'n006',name:'Erdnussbutter',kcalPer100:588,unit:'100g',category:'Nüsse & Samen'},
+  {id:'n007',name:'Mandelmus',kcalPer100:614,unit:'100g',category:'Nüsse & Samen'},
+  {id:'n008',name:'Kürbiskerne',kcalPer100:559,unit:'100g',category:'Nüsse & Samen'},
+  {id:'n009',name:'Sonnenblumenkerne',kcalPer100:584,unit:'100g',category:'Nüsse & Samen'},
+  {id:'n010',name:'Sesam',kcalPer100:573,unit:'100g',category:'Nüsse & Samen'},
+  {id:'n011',name:'Chiasamen',kcalPer100:486,unit:'100g',category:'Nüsse & Samen'},
+  {id:'n012',name:'Leinsamen',kcalPer100:534,unit:'100g',category:'Nüsse & Samen'},
+  {id:'n013',name:'Pistazien',kcalPer100:562,unit:'100g',category:'Nüsse & Samen'},
+  {id:'n014',name:'Pinienkerne',kcalPer100:673,unit:'100g',category:'Nüsse & Samen'},
+  {id:'n015',name:'Macadamia',kcalPer100:718,unit:'100g',category:'Nüsse & Samen'},
+
+  // ── SÜSSES & SNACKS ───────────────────────────────────────────────────────
+  {id:'s001',name:'Schokolade (Vollmilch)',kcalPer100:535,unit:'100g',category:'Süßes'},
+  {id:'s002',name:'Schokolade (Zartbitter)',kcalPer100:546,unit:'100g',category:'Süßes'},
+  {id:'s003',name:'Gummibärchen',kcalPer100:343,unit:'100g',category:'Süßes'},
+  {id:'s004',name:'Haribo',kcalPer100:343,unit:'100g',category:'Süßes'},
+  {id:'s005',name:'Chips',kcalPer100:536,unit:'100g',category:'Süßes'},
+  {id:'s006',name:'Kartoffelchips',kcalPer100:536,unit:'100g',category:'Süßes'},
+  {id:'s007',name:'Popcorn (gesalzen)',kcalPer100:375,unit:'100g',category:'Süßes'},
+  {id:'s008',name:'Cracker',kcalPer100:430,unit:'Stück',gramsPerUnit:4,category:'Süßes'},
+  {id:'s009',name:'Müsliegel',kcalPer100:378,unit:'Stück',gramsPerUnit:35,category:'Süßes'},
+  {id:'s010',name:'Keks',kcalPer100:480,unit:'Stück',gramsPerUnit:10,category:'Süßes'},
+  {id:'s011',name:'Spekulatius',kcalPer100:448,unit:'Stück',gramsPerUnit:7,category:'Süßes'},
+  {id:'s012',name:'Nutella',kcalPer100:539,unit:'100g',category:'Süßes'},
+  {id:'s013',name:'Honig',kcalPer100:304,unit:'100g',category:'Süßes'},
+  {id:'s014',name:'Marmelade',kcalPer100:250,unit:'100g',category:'Süßes'},
+  {id:'s015',name:'Zucker',kcalPer100:400,unit:'100g',category:'Süßes'},
+  {id:'s016',name:'Eis (Vanille)',kcalPer100:207,unit:'100g',category:'Süßes'},
+  {id:'s017',name:'Joghurt-Eis',kcalPer100:109,unit:'100g',category:'Süßes'},
+
+  // ── GETRÄNKE ──────────────────────────────────────────────────────────────
+  {id:'g001',name:'Wasser',kcalPer100:0,unit:'100ml',category:'Getränke'},
+  {id:'g002',name:'Kaffee (schwarz)',kcalPer100:1,unit:'100ml',category:'Getränke'},
+  {id:'g003',name:'Espresso',kcalPer100:9,unit:'100ml',category:'Getränke'},
+  {id:'g004',name:'Cappuccino',kcalPer100:40,unit:'100ml',category:'Getränke'},
+  {id:'g005',name:'Latte Macchiato',kcalPer100:55,unit:'100ml',category:'Getränke'},
+  {id:'g006',name:'Tee (ungesüßt)',kcalPer100:1,unit:'100ml',category:'Getränke'},
+  {id:'g007',name:'Orangensaft',kcalPer100:45,unit:'100ml',category:'Getränke'},
+  {id:'g008',name:'Apfelsaft',kcalPer100:46,unit:'100ml',category:'Getränke'},
+  {id:'g009',name:'Coca-Cola',kcalPer100:42,unit:'100ml',category:'Getränke'},
+  {id:'g010',name:'Cola Zero',kcalPer100:0,unit:'100ml',category:'Getränke'},
+  {id:'g011',name:'Fanta',kcalPer100:44,unit:'100ml',category:'Getränke'},
+  {id:'g012',name:'Sprite',kcalPer100:42,unit:'100ml',category:'Getränke'},
+  {id:'g013',name:'Bier (5%)',kcalPer100:43,unit:'100ml',category:'Getränke'},
+  {id:'g014',name:'Weißwein',kcalPer100:66,unit:'100ml',category:'Getränke'},
+  {id:'g015',name:'Rotwein',kcalPer100:68,unit:'100ml',category:'Getränke'},
+  {id:'g016',name:'Prosecco',kcalPer100:67,unit:'100ml',category:'Getränke'},
+  {id:'g017',name:'Whisky',kcalPer100:250,unit:'100ml',category:'Getränke'},
+  {id:'g018',name:'Vodka',kcalPer100:231,unit:'100ml',category:'Getränke'},
+  {id:'g019',name:'Proteinshake (Wasser)',kcalPer100:40,unit:'100ml',category:'Getränke'},
+  {id:'g020',name:'Smoothie',kcalPer100:60,unit:'100ml',category:'Getränke'},
+
+  // ── SAUCEN & DRESSINGS ────────────────────────────────────────────────────
+  {id:'c001',name:'Ketchup',kcalPer100:112,unit:'100g',category:'Saucen'},
+  {id:'c002',name:'Senf',kcalPer100:77,unit:'100g',category:'Saucen'},
+  {id:'c003',name:'Balsamico',kcalPer100:88,unit:'100g',category:'Saucen'},
+  {id:'c004',name:'Sojasauce',kcalPer100:60,unit:'100g',category:'Saucen'},
+  {id:'c005',name:'Hummus',kcalPer100:177,unit:'100g',category:'Saucen'},
+  {id:'c006',name:'Pesto',kcalPer100:454,unit:'100g',category:'Saucen'},
+  {id:'c007',name:'Tomatensoße',kcalPer100:48,unit:'100g',category:'Saucen'},
+  {id:'c008',name:'Bolognese-Sauce',kcalPer100:105,unit:'100g',category:'Saucen'},
+  {id:'c009',name:'Guacamole',kcalPer100:150,unit:'100g',category:'Saucen'},
+  {id:'c010',name:'Tzatziki',kcalPer100:82,unit:'100g',category:'Saucen'},
+];
+
+const ACTIVITIES_DEFAULT = [
+  {id:'a1',name:'Gehen',kcalPerHour:280,icon:'🚶'},
+  {id:'a2',name:'Joggen',kcalPerHour:550,icon:'🏃'},
+  {id:'a3',name:'Radfahren',kcalPerHour:450,icon:'🚴'},
+  {id:'a4',name:'Schwimmen',kcalPerHour:500,icon:'🏊'},
+  {id:'a5',name:'Krafttraining',kcalPerHour:350,icon:'🏋️'},
+  {id:'a6',name:'Yoga',kcalPerHour:200,icon:'🧘'},
+  {id:'a7',name:'Fußball',kcalPerHour:600,icon:'⚽'},
+  {id:'a8',name:'Tennis',kcalPerHour:500,icon:'🎾'},
+];
+
+let currentActivity = null;
+let pendingUnknown = null;
+let pendingDishItems = null;
+let recognition = null;
+let isListening = false;
+let currentPage = 'home';
+let dbFilter = '';
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+function init() {
+  loadState();
+  renderAll();
+  document.getElementById('today-date').textContent = new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+  document.getElementById('manual-input').addEventListener('keydown', e => { if(e.key==='Enter') processManual(); });
+  initSpeech();
+  renderActivityGrid();
+  renderDbPage();
+}
+
+function loadState() {
+  try {
+    const s = localStorage.getItem('kaltrack_state');
+    if(s) {
+      const loaded = JSON.parse(s);
+      const today = new Date().toDateString();
+      if(loaded.lastDate !== today) {
+        loaded.todayLog = [];
+        loaded.activityLog = [];
+        loaded.steps = 0;
+        loaded.sessionItems = [];
+      }
+      state = {...state, ...loaded};
+    }
+  } catch(e) {}
+  if(!state.db || state.db.length === 0) state.db = [...FOOD_DB_DEFAULT];
+  if(!state.activities || state.activities.length === 0) state.activities = [...ACTIVITIES_DEFAULT];
+  if(!state.dishes) state.dishes = [];
+}
+
+function saveState() {
+  state.lastDate = new Date().toDateString();
+  localStorage.setItem('kaltrack_state', JSON.stringify(state));
+}
+
+// ─── UI ───────────────────────────────────────────────────────────────────────
+function showPage(p) {
+  currentPage = p;
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  const idx = ['home','input','activity','settings'].indexOf(p);
+  document.querySelectorAll('.nav-btn')[idx].classList.add('active');
+  if(p === 'home') renderHome();
+  if(p === 'settings') renderSettings();
+  if(p === 'input') renderModeHint();
+}
+
+function setMode(m) {
+  state.mode = m;
+  document.getElementById('modeTrack').classList.toggle('active', m==='track');
+  document.getElementById('modeDb').classList.toggle('active', m==='db');
+  renderModeHint();
+  if(m==='db') renderDbPage();
+  saveState();
+}
+
+function renderModeHint() {
+  const el = document.getElementById('mode-hint');
+  if(state.mode === 'db') el.textContent = 'Datenbank-Modus: Einträge landen nicht im Tageslog';
+  else el.textContent = '';
+}
+
+function renderAll() {
+  renderHome();
+  renderSettings();
+  renderSession();
+  renderDbPage();
+  renderModeHint();
+}
+
+function renderHome() {
+  const eaten = state.todayLog.reduce((s,i) => s+i.kcal, 0);
+  const stepsKcal = Math.round(state.steps * 0.04);
+  const actKcal = state.activityLog.reduce((s,i) => s+i.kcal, 0);
+  const burned = (state.settings.bmr||2000) + stepsKcal + actKcal;
+  const goal = state.settings.goal || state.settings.bmr || 2000;
+  const balance = eaten - burned;
+  const remain = goal - eaten;
+
+  document.getElementById('s-eaten').textContent = eaten;
+  document.getElementById('s-burned').textContent = burned;
+  const balEl = document.getElementById('s-balance');
+  balEl.textContent = (balance > 0 ? '+' : '') + balance;
+  balEl.className = 'stat-value ' + (balance > 0 ? 'red' : 'green');
+  document.getElementById('s-balance-label').textContent = balance > 0 ? 'Überschuss' : 'Defizit';
+  const remEl = document.getElementById('s-remain');
+  remEl.textContent = remain;
+  remEl.className = 'stat-value ' + (remain < 0 ? 'red' : 'green');
+
+  const pct = Math.min((eaten/goal)*100, 100);
+  const fill = document.getElementById('progress-fill');
+  fill.style.width = pct + '%';
+  fill.className = 'progress-fill' + (eaten > goal ? ' over' : '');
+  document.getElementById('prog-max').textContent = goal + ' kcal';
+
+  // Log list
+  const ll = document.getElementById('log-list');
+  if(state.todayLog.length === 0) { ll.innerHTML = '<div class="empty-state">Noch keine Einträge heute</div>'; }
+  else {
+    ll.innerHTML = state.todayLog.map((item,i) => `
+      <div class="log-item">
+        <div class="log-left">
+          <div class="log-name">${item.name}${item.noDb ? '<span class="badge badge-warn">kein DB-Eintrag</span>' : ''}</div>
+          <div class="log-detail">${item.detail || ''}</div>
+        </div>
+        <div class="log-right">
+          <div class="log-kcal">${item.kcal} kcal</div>
+          <button class="log-del" onclick="deleteLog(${i})">×</button>
+        </div>
+      </div>`).join('');
+  }
+
+  // Activity log
+  const al = document.getElementById('activity-log-list');
+  if(state.activityLog.length === 0) { al.innerHTML = '<div class="empty-state">Keine Aktivitäten eingetragen</div>'; }
+  else {
+    al.innerHTML = state.activityLog.map((item,i) => `
+      <div class="log-item">
+        <div class="log-left">
+          <div class="log-name">${item.name}</div>
+          <div class="log-detail">${item.minutes} Minuten</div>
+        </div>
+        <div class="log-right">
+          <div class="log-kcal">−${item.kcal} kcal</div>
+          <button class="log-del" onclick="deleteActivity(${i})">×</button>
+        </div>
+      </div>`).join('');
+  }
+}
+
+function renderSettings() {
+  document.getElementById('set-bmr').value = state.settings.bmr || '';
+  document.getElementById('set-goal').value = state.settings.goal || '';
+  document.getElementById('set-steps').value = state.settings.stepsGoal || '';
+  document.getElementById('set-apikey').value = state.settings.apiKey || '';
+}
+
+function saveSettings() {
+  state.settings.bmr = parseInt(document.getElementById('set-bmr').value) || 2000;
+  state.settings.goal = parseInt(document.getElementById('set-goal').value) || 1800;
+  state.settings.stepsGoal = parseInt(document.getElementById('set-steps').value) || 10000;
+  state.settings.apiKey = document.getElementById('set-apikey').value.trim();
+  saveState();
+  toast('Einstellungen gespeichert');
+}
+
+function renderSession() {
+  const card = document.getElementById('session-card');
+  const list = document.getElementById('session-list');
+  const total = state.sessionItems.reduce((s,i) => s+i.kcal, 0);
+  if(state.sessionItems.length === 0) { card.style.display='none'; return; }
+  card.style.display = 'block';
+  document.getElementById('session-total').textContent = total + ' kcal';
+  list.innerHTML = state.sessionItems.map((item,i) => `
+    <div class="log-item">
+      <div class="log-left"><div class="log-name">${item.name}</div><div class="log-detail">${item.detail||''}</div></div>
+      <div class="log-right"><div class="log-kcal">${item.kcal} kcal</div></div>
+    </div>`).join('');
+  const btn = document.getElementById('session-save-btn');
+  btn.textContent = state.mode==='db' ? 'Als Gericht in DB speichern' : 'Sitzung abschließen';
+}
+
+function renderActivityGrid() {
+  const grid = document.getElementById('activity-grid');
+  grid.innerHTML = state.activities.map(a => `
+    <div class="activity-card" onclick="openActivity('${a.id}')">
+      <div class="activity-name">${a.icon||'⚡'} ${a.name}</div>
+      <div class="activity-kcal">${a.kcalPerHour} kcal/h</div>
+    </div>`).join('');
+}
+
+function renderDbPage() {
+  const page = document.getElementById('page-settings');
+  // DB is in input tab when mode=db; handled via page-input showing db card
+  // Actually render a searchable list on page-home when mode=db, but simpler: add a db section to settings
+}
+
+// ─── SPEECH ───────────────────────────────────────────────────────────────────
+function initSpeech() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition) return;
+  recognition = new SpeechRecognition();
+  recognition.lang = 'de-DE';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.onstart = () => {
+    isListening = true;
+    document.getElementById('mic-btn').classList.add('listening');
+    document.getElementById('mic-status').textContent = 'Ich höre zu…';
+  };
+  recognition.onresult = (e) => {
+    const transcript = Array.from(e.results).map(r=>r[0].transcript).join('');
+    document.getElementById('mic-transcript').textContent = transcript;
+    if(e.results[e.results.length-1].isFinal) {
+      stopListening();
+      processInput(transcript);
+    }
+  };
+  recognition.onerror = (e) => { stopListening(); toast('Mikrofon-Fehler: ' + e.error); };
+  recognition.onend = () => { if(isListening) { stopListening(); } };
+}
+
+function toggleMic() {
+  if(!recognition) { toast('Spracherkennung nicht verfügbar — bitte manuell eingeben'); return; }
+  if(isListening) stopListening();
+  else startListening();
+}
+
+function startListening() {
+  isListening = true;
+  document.getElementById('mic-transcript').textContent = '';
+  recognition.start();
+}
+
+function stopListening() {
+  isListening = false;
+  document.getElementById('mic-btn').classList.remove('listening','processing');
+  document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+  try { recognition.stop(); } catch(e) {}
+}
+
+// ─── INPUT PROCESSING ─────────────────────────────────────────────────────────
+function processManual() {
+  const val = document.getElementById('manual-input').value.trim();
+  if(!val) return;
+  document.getElementById('manual-input').value = '';
+  processInput(val);
+}
+
+async function processInput(text) {
+  document.getElementById('mic-btn').classList.add('processing');
+  document.getElementById('mic-status').textContent = 'Verarbeite…';
+
+  const apiKey = state.settings.apiKey;
+  if(apiKey && apiKey.startsWith('sk-ant-')) {
+    await processWithClaude(text, apiKey);
+  } else {
+    processWithLocalParser(text);
+  }
+  document.getElementById('mic-btn').classList.remove('processing');
+  document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+}
+
+async function processWithClaude(text, apiKey) {
+  const dbNames = state.db.map(f=>f.name).join(', ');
+  const dishNames = state.dishes.map(d=>d.name).join(', ');
+  const prompt = `Du bist ein Kalorien-Assistent. Analysiere diese Eingabe und antworte NUR mit JSON.
+
+Bekannte Lebensmittel in DB: ${dbNames}
+Bekannte Gerichte: ${dishNames}
+
+Eingabe: "${text}"
+
+Antworte mit genau diesem JSON-Format:
+{
+  "type": "food|dish|unknown_with_kcal|unknown_no_amount|unclear",
+  "name": "Name",
+  "amount": 200,
+  "amountUnit": "g|ml|Stück",
+  "kcal": null,
+  "directKcal": null,
+  "matchedDbName": null
+}
+
+Regeln:
+- type "food": Lebensmittel mit Menge, das in DB ist oder berechnet werden kann
+- type "dish": bekanntes Gericht aus der Liste
+- type "unknown_with_kcal": Lebensmittel MIT Menge UND direkter Kalorienangabe (z.B. "150g Gummibärchen 500 kcal") → kann in DB gespeichert werden
+- type "unknown_no_amount": Lebensmittel NUR mit Kalorien aber OHNE Menge (z.B. "Gummibärchen 300 kcal") → NUR Tageslog, KEIN DB-Eintrag
+- type "unclear": Eingabe zu vage
+- matchedDbName: wenn in DB gefunden, exakter Name aus DB
+- directKcal: wenn der User direkt kcal nannte`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 300, messages: [{ role: 'user', content: prompt }] })
+    });
+    const data = await resp.json();
+    const raw = data.content?.[0]?.text || '';
+    const clean = raw.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(clean);
+    handleParsedInput(parsed, text);
+  } catch(e) {
+    toast('KI-Fehler — verwende lokale Erkennung');
+    processWithLocalParser(text);
+  }
+}
+
+function processWithLocalParser(text) {
+  const t = text.toLowerCase().trim();
+
+  // Check dishes first
+  for(const dish of state.dishes) {
+    if(t.includes(dish.name.toLowerCase())) {
+      handleParsedInput({ type:'dish', name:dish.name, matchedDbName:dish.name }, text);
+      return;
+    }
+  }
+
+  // Parse amount
+  const amountMatch = t.match(/(\d+(?:[,.]\d+)?)\s*(g|gramm|ml|stück|stuck|scheibe|scheiben|tasse|esslöffel|el|tl|teelöffel)/i);
+  const numberMatch = t.match(/^(\d+)\s+/);
+
+  // Check direct kcal
+  const kcalMatch = t.match(/(\d+)\s*(kcal|kalorien|cal)/i);
+
+  // Find food in DB
+  let matchedFood = null;
+  for(const f of state.db) {
+    if(t.includes(f.name.toLowerCase())) { matchedFood = f; break; }
+  }
+
+  if(matchedFood && amountMatch) {
+    handleParsedInput({ type:'food', name:matchedFood.name, amount: parseFloat(amountMatch[1].replace(',','.')), amountUnit: amountMatch[2], matchedDbName:matchedFood.name }, text);
+  } else if(matchedFood && numberMatch) {
+    handleParsedInput({ type:'food', name:matchedFood.name, amount: parseInt(numberMatch[1]), amountUnit:'Stück', matchedDbName:matchedFood.name }, text);
+  } else if(kcalMatch && amountMatch) {
+    handleParsedInput({ type:'unknown_with_kcal', name:text.split(/\d/)[0].trim(), amount: parseFloat(amountMatch[1].replace(',','.')), amountUnit: amountMatch[2], directKcal: parseInt(kcalMatch[1]) }, text);
+  } else if(kcalMatch) {
+    const foodName = t.replace(/\d+\s*(kcal|kalorien|cal)/i,'').replace(/,/,'').trim();
+    handleParsedInput({ type:'unknown_no_amount', name:foodName, directKcal: parseInt(kcalMatch[1]) }, text);
+  } else if(matchedFood) {
+    handleParsedInput({ type:'unclear', name:matchedFood.name }, text);
+  } else {
+    toast('Eingabe nicht erkannt. Bitte genauer angeben.');
+  }
+}
+
+function handleParsedInput(parsed, originalText) {
+  if(parsed.type === 'food') {
+    const food = state.db.find(f => f.name === (parsed.matchedDbName||parsed.name));
+    if(!food) { toast('Lebensmittel nicht in Datenbank gefunden'); return; }
+    let kcal = 0;
+    let detail = '';
+    if(food.gramsPerUnit && (parsed.amountUnit||'').toLowerCase().match(/stück|stuck/)) {
+      kcal = Math.round((food.gramsPerUnit * parseInt(parsed.amount) * food.kcalPer100) / 100);
+      detail = `${parsed.amount} Stück (${food.gramsPerUnit}g/Stück)`;
+    } else {
+      kcal = Math.round((parseInt(parsed.amount) * food.kcalPer100) / 100);
+      detail = `${parsed.amount}${parsed.amountUnit||'g'} · ${food.kcalPer100} kcal/100g`;
+    }
+    addToSession({ name: food.name, kcal, detail });
+
+  } else if(parsed.type === 'dish') {
+    const dish = state.dishes.find(d=>d.name===parsed.name);
+    if(dish) { addToSession({ name: dish.name, kcal: dish.kcal, detail: 'Gespeichertes Gericht' }); }
+    else { toast('Gericht nicht gefunden'); }
+
+  } else if(parsed.type === 'unknown_with_kcal') {
+    // Has amount + direct kcal → can calculate per 100g → save to DB
+    const per100 = Math.round((parsed.directKcal / parsed.amount) * 100);
+    pendingUnknown = { name: parsed.name, kcal: parsed.directKcal, detail: `${parsed.amount}${parsed.amountUnit} · direkt angegeben`, saveToDb: true, dbEntry: { name: parsed.name, kcalPer100: per100, unit: '100g' } };
+    document.getElementById('dialog-unk-info').innerHTML = `<strong>${parsed.name}</strong><br>${parsed.amount}${parsed.amountUnit} · ${parsed.directKcal} kcal<br><span style="color:var(--accent);font-size:12px;">≈ ${per100} kcal/100g → wird in Datenbank gespeichert</span>`;
+    openDialog('dialog-unknown');
+
+  } else if(parsed.type === 'unknown_no_amount') {
+    pendingUnknown = { name: parsed.name, kcal: parsed.directKcal, detail: 'Direkt angegeben – kein DB-Eintrag', noDb: true };
+    document.getElementById('dialog-unk-info').innerHTML = `<strong>${parsed.name}</strong> · ${parsed.directKcal} kcal<br><span style="color:var(--warn);font-size:12px;">Ohne Mengenangabe – wird nur zum Tageslog hinzugefügt, nicht in Datenbank gespeichert</span>`;
+    openDialog('dialog-unknown');
+
+  } else {
+    toast('Bitte Menge angeben, z.B. "200g" oder "2 Stück"');
+  }
+}
+
+function addToSession(item) {
+  if(state.mode === 'db') {
+    // DB mode: add to session for potential dish creation
+    state.sessionItems.push(item);
+    renderSession();
+    showPage('input');
+    toast('Zur Sitzung hinzugefügt (DB-Modus)');
+  } else {
+    state.sessionItems.push(item);
+    renderSession();
+    showPage('input');
+    speak(`${item.name}, ${item.kcal} Kilokalorien`);
+    toast(`${item.name}: ${item.kcal} kcal`);
+  }
+  saveState();
+}
+
+function finishSession() {
+  if(state.sessionItems.length === 0) return;
+  const total = state.sessionItems.reduce((s,i)=>s+i.kcal,0);
+
+  if(state.mode === 'db') {
+    // DB mode: ask for dish name
+    pendingDishItems = [...state.sessionItems];
+    document.getElementById('dialog-dish-info').textContent = `${state.sessionItems.length} Zutaten · ${total} kcal gesamt`;
+    document.getElementById('dialog-dish-name').value = '';
+    openDialog('dialog-dish');
+    return;
+  }
+
+  if(state.sessionItems.length >= 2) {
+    // Track mode with multiple items: ask if it's a dish
+    pendingDishItems = [...state.sessionItems];
+    document.getElementById('dialog-dish-info').textContent = `${state.sessionItems.length} Zutaten · ${total} kcal gesamt. Möchtest du diese Kombination als Gericht speichern?`;
+    document.getElementById('dialog-dish-name').value = '';
+    openDialog('dialog-dish');
+  } else {
+    // Single item: just log it
+    commitSessionToLog();
+  }
+}
+
+function finishDishYes() {
+  const name = document.getElementById('dialog-dish-name').value.trim();
+  if(!name) { toast('Bitte Namen eingeben'); return; }
+  const total = pendingDishItems.reduce((s,i)=>s+i.kcal,0);
+  state.dishes.push({ id:'d'+Date.now(), name, kcal: total, items: pendingDishItems });
+  closeDialog('dialog-dish');
+  if(state.mode === 'db') {
+    state.sessionItems = [];
+    renderSession();
+    toast(`"${name}" in Datenbank gespeichert`);
+  } else {
+    commitSessionToLog(name, total);
+  }
+  saveState();
+}
+
+function finishDishNo() {
+  closeDialog('dialog-dish');
+  if(state.mode === 'db') {
+    state.sessionItems = [];
+    renderSession();
+    toast('Verworfen');
+  } else {
+    commitSessionToLog();
+  }
+}
+
+function commitSessionToLog(dishName, dishKcal) {
+  if(dishName) {
+    state.todayLog.push({ name: dishName, kcal: dishKcal, detail: 'Gericht' });
+  } else {
+    state.sessionItems.forEach(item => state.todayLog.push(item));
+  }
+  state.sessionItems = [];
+  renderSession();
+  renderHome();
+  saveState();
+  toast('Eingetragen!');
+  showPage('home');
+}
+
+function confirmUnknown() {
+  if(!pendingUnknown) return;
+  if(pendingUnknown.saveToDb && pendingUnknown.dbEntry) {
+    const entry = pendingUnknown.dbEntry;
+    if(!state.db.find(f=>f.name.toLowerCase()===entry.name.toLowerCase())) {
+      state.db.push({ id:'u'+Date.now(), ...entry });
+      toast(`${entry.name} in Datenbank gespeichert`);
+    }
+  }
+  addToSession({ name: pendingUnknown.name, kcal: pendingUnknown.kcal, detail: pendingUnknown.detail, noDb: pendingUnknown.noDb });
+  closeDialog('dialog-unknown');
+  pendingUnknown = null;
+}
+
+// ─── ACTIVITIES ───────────────────────────────────────────────────────────────
+function openActivity(id) {
+  currentActivity = state.activities.find(a=>a.id===id);
+  if(!currentActivity) return;
+  document.getElementById('dialog-act-title').textContent = `${currentActivity.icon||'⚡'} ${currentActivity.name}`;
+  document.getElementById('dialog-act-info').textContent = `${currentActivity.kcalPerHour} kcal/h`;
+  document.getElementById('dialog-act-minutes').value = '';
+  openDialog('dialog-activity');
+}
+
+function confirmActivity() {
+  const min = parseInt(document.getElementById('dialog-act-minutes').value);
+  if(!min || min <= 0) { toast('Bitte Minuten eingeben'); return; }
+  const kcal = Math.round((currentActivity.kcalPerHour / 60) * min);
+  state.activityLog.push({ name: currentActivity.name, minutes: min, kcal });
+  closeDialog('dialog-activity');
+  renderHome();
+  saveState();
+  toast(`${currentActivity.name}: −${kcal} kcal`);
+}
+
+function addCustomActivity() {
+  const name = document.getElementById('act-name').value.trim();
+  const kcalPerHour = parseInt(document.getElementById('act-kcal').value);
+  if(!name || !kcalPerHour) { toast('Name und kcal/h eingeben'); return; }
+  const act = { id:'ca'+Date.now(), name, kcalPerHour, icon:'⚡' };
+  state.activities.push(act);
+  renderActivityGrid();
+  document.getElementById('act-name').value = '';
+  document.getElementById('act-kcal').value = '';
+  saveState();
+  toast(`${name} gespeichert`);
+  openActivity(act.id);
+}
+
+function saveSteps() {
+  const steps = parseInt(document.getElementById('steps-input').value);
+  if(!steps) return;
+  state.steps = steps;
+  saveState();
+  renderHome();
+  toast(`${steps.toLocaleString('de-DE')} Schritte gespeichert`);
+}
+
+// ─── DB PAGE (embedded in input page) ─────────────────────────────────────────
+function renderDbPage() {
+  // Re-render session area to show DB controls
+}
+
+// ─── DIALOG ───────────────────────────────────────────────────────────────────
+function openDialog(id) { document.getElementById(id).classList.add('open'); }
+function closeDialog(id) { document.getElementById(id).classList.remove('open'); }
+
+// ─── LOG ACTIONS ──────────────────────────────────────────────────────────────
+function deleteLog(i) { state.todayLog.splice(i,1); saveState(); renderHome(); }
+function deleteActivity(i) { state.activityLog.splice(i,1); saveState(); renderHome(); }
+function resetDay() {
+  if(!confirm('Heutigen Tag wirklich zurücksetzen?')) return;
+  state.todayLog = []; state.activityLog = []; state.steps = 0; state.sessionItems = [];
+  saveState(); renderAll(); toast('Tag zurückgesetzt');
+}
+
+// ─── TOAST & SPEECH ───────────────────────────────────────────────────────────
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+function speak(text) {
+  if(!window.speechSynthesis) return;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'de-DE'; u.rate = 1.1;
+  window.speechSynthesis.speak(u);
+}
+
+// ─── DB MANAGEMENT ────────────────────────────────────────────────────────────
+// Attach to settings page: add a DB section after load
+window.addEventListener('DOMContentLoaded', () => {
+  const settingsPage = document.getElementById('page-settings');
+  const dbSection = document.createElement('div');
+  dbSection.innerHTML = `
+    <div class="section-title" style="padding:0 2px;">Lebensmittel-Datenbank</div>
+    <div class="card">
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="db-search" placeholder="Suchen…" oninput="filterDb(this.value)" />
+      </div>
+      <button class="btn btn-primary" style="margin-bottom:10px;width:100%;" onclick="openDbAdd()">+ Lebensmittel anlegen</button>
+      <div id="db-list"></div>
+    </div>
+    <div class="section-title" style="padding:0 2px;">Gespeicherte Gerichte</div>
+    <div class="card">
+      <div id="dishes-list"></div>
+    </div>`;
+  settingsPage.appendChild(dbSection);
+  renderDbList();
+  init();
+});
+
+function filterDb(q) { dbFilter = q; renderDbList(); }
+
+function renderDbList() {
+  const list = document.getElementById('db-list');
+  const dishes = document.getElementById('dishes-list');
+  if(!list) return;
+  const filtered = state.db.filter(f => f.name.toLowerCase().includes(dbFilter.toLowerCase()));
+  list.innerHTML = filtered.slice(0,20).map(f => `
+    <div class="db-item">
+      <div><div class="db-name">${f.name}</div><div class="db-detail">${f.kcalPer100} kcal/100g</div></div>
+      <div class="db-actions">
+        <button class="btn btn-danger" onclick="deleteDbItem('${f.id}')">−</button>
+      </div>
+    </div>`).join('') || '<div class="empty-state">Keine Einträge gefunden</div>';
+
+  if(dishes) {
+    dishes.innerHTML = state.dishes.length === 0 ? '<div class="empty-state">Noch keine Gerichte gespeichert</div>' :
+      state.dishes.map((d,i) => `
+        <div class="db-item">
+          <div><div class="db-name">${d.name}</div><div class="db-detail">${d.kcal} kcal gesamt</div></div>
+          <div class="db-actions">
+            <button class="btn btn-danger" onclick="deleteDish(${i})">−</button>
+          </div>
+        </div>`).join('');
+  }
+}
+
+function openDbAdd() {
+  document.getElementById('db-add-name').value = '';
+  document.getElementById('db-add-kcal').value = '';
+  document.getElementById('db-add-unit').value = '100g';
+  openDialog('dialog-db-add');
+}
+
+function confirmDbAdd() {
+  const name = document.getElementById('db-add-name').value.trim();
+  const kcal = parseInt(document.getElementById('db-add-kcal').value);
+  if(!name || !kcal) { toast('Name und kcal eingeben'); return; }
+  state.db.push({ id:'m'+Date.now(), name, kcalPer100: kcal, unit: '100g' });
+  closeDialog('dialog-db-add');
+  renderDbList(); saveState();
+  toast(`${name} gespeichert`);
+}
+
+function deleteDbItem(id) { state.db = state.db.filter(f=>f.id!==id); renderDbList(); saveState(); }
+function deleteDish(i) { state.dishes.splice(i,1); renderDbList(); saveState(); }
+
+// ─── EXPORT / IMPORT ──────────────────────────────────────────────────────────
+function exportData() {
+  const payload = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    settings: state.settings,
+    db: state.db,
+    dishes: state.dishes,
+    activities: state.activities,
+    todayLog: state.todayLog,
+    activityLog: state.activityLog,
+    steps: state.steps,
+    lastDate: state.lastDate
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `kaltrack-backup-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Export erfolgreich');
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if(!data.version || !data.db) { toast('Ungültige Datei'); return; }
+      if(!confirm(`Import aus ${data.exportedAt ? new Date(data.exportedAt).toLocaleString('de-DE') : 'unbekannt'}?\n\nAlle lokalen Daten werden überschrieben.`)) return;
+      if(data.settings) state.settings = data.settings;
+      if(data.db) state.db = data.db;
+      if(data.dishes) state.dishes = data.dishes;
+      if(data.activities) state.activities = data.activities;
+      if(data.todayLog) state.todayLog = data.todayLog;
+      if(data.activityLog) state.activityLog = data.activityLog;
+      if(data.steps !== undefined) state.steps = data.steps;
+      if(data.lastDate) state.lastDate = data.lastDate;
+      saveState();
+      renderAll();
+      renderActivityGrid();
+      renderDbList();
+      toast('Import erfolgreich ✓');
+    } catch(err) {
+      toast('Fehler beim Lesen der Datei');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ─── PWA MANIFEST (inline, kein separater Server nötig) ──────────────────────
+(function injectManifest() {
+  const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="100" fill="#2d5a3d"/><text x="256" y="340" font-size="260" text-anchor="middle" font-family="sans-serif" fill="white">K</text><circle cx="370" cy="160" r="60" fill="#4a8c5c"/><text x="370" y="178" font-size="56" text-anchor="middle" font-family="sans-serif" fill="white">kcal</text></svg>`;
+  const svgBlob = new Blob([icon], {type:'image/svg+xml'});
+  const iconUrl = URL.createObjectURL(svgBlob);
+  const manifest = {
+    name: 'KalTrack – Kalorienzähler',
+    short_name: 'KalTrack',
+    description: 'Kalorien tracken per Sprache',
+    start_url: '.',
+    display: 'standalone',
+    background_color: '#f5f3ef',
+    theme_color: '#2d5a3d',
+    orientation: 'portrait',
+    icons: [
+      { src: iconUrl, sizes: '192x192', type: 'image/svg+xml' },
+      { src: iconUrl, sizes: '512x512', type: 'image/svg+xml' }
+    ]
+  };
+  const mBlob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+  const mUrl = URL.createObjectURL(mBlob);
+  document.getElementById('pwa-manifest').href = mUrl;
+
+  // Apple Touch Icon
+  const img = document.createElement('link');
+  img.rel = 'apple-touch-icon';
+  img.href = iconUrl;
+  document.head.appendChild(img);
+})();
+</script>
+</body>
+</html>
