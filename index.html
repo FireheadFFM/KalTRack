@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="KalTrack">
+<meta name="apple-mobile-web-app-title" content="FitMole">
 <meta name="theme-color" content="#2d5a3d">
 <link rel="manifest" id="pwa-manifest">
-<title>KalTrack</title>
+<title>FitMole</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -199,7 +199,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
           <ellipse cx="13" cy="30" rx="3" ry="1.5" fill="#4a3020"/>
           <ellipse cx="23" cy="30" rx="3" ry="1.5" fill="#4a3020"/>
         </svg>
-        <span>Kal<span style="color:var(--accent2);">Track</span></span>
+        <span>Fit<span style="color:var(--accent2);">Mole</span></span>
       </div>
       <div class="mode-toggle">
         <button class="mode-btn active" id="modeTrack" onclick="switchToTrack()">Heute tracken</button>
@@ -807,7 +807,7 @@ function init() {
 
 function loadState() {
   try {
-    const s = localStorage.getItem('kaltrack_state');
+    const s = localStorage.getItem('fitmole_state');
     if(s) {
       const loaded = JSON.parse(s);
       const today = new Date().toDateString();
@@ -844,7 +844,7 @@ function loadState() {
 
 function saveState() {
   state.lastDate = new Date().toDateString();
-  localStorage.setItem('kaltrack_state', JSON.stringify(state));
+  localStorage.setItem('fitmole_state', JSON.stringify(state));
 }
 
 // ─── UI ───────────────────────────────────────────────────────────────────────
@@ -1876,7 +1876,7 @@ function exportData() {
   const a = document.createElement('a');
   const date = new Date().toISOString().slice(0,10);
   a.href = url;
-  a.download = `kaltrack-backup-${date}.json`;
+  a.download = `fitmole-backup-${date}.json`;
   a.click();
   URL.revokeObjectURL(url);
   toast('Export erfolgreich');
@@ -1919,8 +1919,8 @@ function importData(event) {
   const svgBlob = new Blob([icon], {type:'image/svg+xml'});
   const iconUrl = URL.createObjectURL(svgBlob);
   const manifest = {
-    name: 'KalTrack – Kalorienzähler',
-    short_name: 'KalTrack',
+    name: 'FitMole – Kalorienzähler',
+    short_name: 'FitMole',
     description: 'Kalorien tracken per Sprache',
     start_url: '.',
     display: 'standalone',
