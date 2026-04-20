@@ -1780,6 +1780,24 @@ function renderHistory() {
     const balSign = balance > 0 ? '+' : '';
     const balColor = balance > 0 ? 'var(--danger)' : 'var(--accent)';
     const pct = Math.min(Math.round((day.eaten / day.goal) * 100), 999);
+    const actLog = day.activityLog || [];
+    const actKcal = actLog.reduce((s,a) => s+a.kcal, 0);
+
+    const activitiesHtml = actLog.length > 0 ? `
+      <div style="margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border);">
+        ${actLog.map(a => {
+          const icon = state.activities.find(x=>x.name===a.name)?.icon || '⚡';
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12px;color:var(--text2);">
+            <span>${icon} ${a.name} · ${a.minutes} Min</span>
+            <span style="color:var(--accent);font-weight:500;">−${a.kcal} kcal</span>
+          </div>`;
+        }).join('')}
+        ${day.steps ? `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);padding:3px 0;"><span>🚶 ${day.steps.toLocaleString('de-DE')} Schritte</span><span style="color:var(--accent);font-weight:500;">−${Math.round(day.steps*0.04)} kcal</span></div>` : ''}
+      </div>` : (day.steps ? `
+      <div style="margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);"><span>🚶 ${day.steps.toLocaleString('de-DE')} Schritte</span><span style="color:var(--accent);font-weight:500;">−${Math.round(day.steps*0.04)} kcal</span></div>
+      </div>` : '');
+
     return `
       <div class="card" style="margin-bottom:8px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -1791,11 +1809,12 @@ function renderHistory() {
           <div class="stat-card"><div class="stat-label">Bilanz</div><div class="stat-value" style="font-size:18px;color:${balColor};">${balSign}${balance}</div><div class="stat-label">kcal</div></div>
         </div>
         <div class="progress-bar"><div class="progress-fill${day.eaten>day.goal?' over':''}" style="width:${Math.min((day.eaten/day.goal)*100,100)}%;"></div></div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:3px;"><span>${pct}% des Ziels</span><span>${day.steps ? day.steps.toLocaleString('de-DE')+' Schritte' : ''}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:3px;margin-bottom:2px;"><span>${pct}% des Ziels</span><span>Verbrannt: ${day.burned} kcal</span></div>
+        ${activitiesHtml}
         ${day.log && day.log.length > 0 ? `
-        <div style="margin-top:10px;">
-          <div style="font-size:11px;font-weight:500;color:var(--text3);margin-bottom:6px;cursor:pointer;" onclick="toggleDayLog(${i})">Einträge anzeigen ▾</div>
-          <div id="daylog-${i}" style="display:none;">
+        <div style="margin-top:8px;">
+          <div style="font-size:11px;font-weight:500;color:var(--text3);cursor:pointer;padding-top:8px;border-top:0.5px solid var(--border);" onclick="toggleDayLog(${i})" id="daylog-toggle-${i}">Mahlzeiten anzeigen ▾</div>
+          <div id="daylog-${i}" style="display:none;margin-top:6px;">
             ${day.log.map(item=>`<div class="log-item"><div class="log-left"><div class="log-name" style="font-size:13px;">${item.name}</div><div class="log-detail">${item.detail||''}</div></div><div class="log-kcal" style="font-size:13px;">${item.kcal} kcal</div></div>`).join('')}
           </div>
         </div>` : ''}
@@ -1805,8 +1824,11 @@ function renderHistory() {
 
 function toggleDayLog(i) {
   const el = document.getElementById('daylog-'+i);
+  const toggle = document.getElementById('daylog-toggle-'+i);
   if(!el) return;
-  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  const open = el.style.display === 'none';
+  el.style.display = open ? 'block' : 'none';
+  if(toggle) toggle.textContent = open ? 'Mahlzeiten ausblenden ▴' : 'Mahlzeiten anzeigen ▾';
 }
 
 function renderWeekChart() {
