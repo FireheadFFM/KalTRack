@@ -1148,9 +1148,13 @@ function toggleSource(src) {
 function toggleAiSearch() { toggleSource('ai'); }
 
 function renderSourceToggles() {
-  setToggle('off', state.settings.offEnabled);
-  setToggle('nx', state.settings.nxEnabled);
-  setToggle('ai', state.settings.aiEnabled ?? state.settings.aiSearchEnabled);
+  // offEnabled defaults to true if not yet set
+  const off = state.settings.offEnabled !== false;
+  const nx = !!state.settings.nxEnabled;
+  const ai = !!(state.settings.aiEnabled ?? state.settings.aiSearchEnabled);
+  setToggle('off', off);
+  setToggle('nx', nx);
+  setToggle('ai', ai);
 }
 
 function setToggle(id, on) {
