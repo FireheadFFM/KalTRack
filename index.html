@@ -175,6 +175,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <button class="nav-btn active" onclick="showPage('home')">Übersicht</button>
       <button class="nav-btn" onclick="showPage('input')">Eingabe</button>
       <button class="nav-btn" onclick="showPage('activity')">Aktivität</button>
+      <button class="nav-btn" onclick="showPage('history')">Historie</button>
       <button class="nav-btn" onclick="showPage('settings')">Einstellungen</button>
     </div>
   </div>
@@ -283,6 +284,20 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
     </div>
   </div>
 
+  <!-- HISTORY PAGE -->
+  <div class="page" id="page-history">
+    <div class="card">
+      <div class="card-label">Wochenübersicht</div>
+      <canvas id="week-chart" style="width:100%;height:180px;"></canvas>
+      <div style="display:flex;gap:12px;justify-content:center;margin-top:10px;font-size:11px;color:var(--text3);">
+        <span><span style="display:inline-block;width:10px;height:10px;background:#4a8c5c;border-radius:2px;margin-right:4px;"></span>Aufgenommen</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:#2d5a3d;border-radius:2px;margin-right:4px;"></span>Ziel</span>
+      </div>
+    </div>
+    <div class="section-title">Tageseinträge</div>
+    <div id="history-days"></div>
+  </div>
+
   <!-- SETTINGS PAGE -->
   <div class="page" id="page-settings">
     <div class="card">
@@ -349,6 +364,18 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
   <div class="dialog" onclick="event.stopPropagation()">
     <h3>Unbekanntes Lebensmittel</h3>
     <p id="dialog-unk-info"></p>
+    <div id="dialog-unk-amount-row" style="display:none;margin-bottom:10px;">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:6px;">Menge angeben (optional) — dann wird es in der Datenbank gespeichert:</div>
+      <div style="display:flex;gap:8px;">
+        <input type="number" id="dialog-unk-amount" placeholder="Menge" style="flex:1;" />
+        <select id="dialog-unk-unit" style="width:90px;padding:9px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;">
+          <option value="g">g</option>
+          <option value="ml">ml</option>
+          <option value="Stück">Stück</option>
+        </select>
+        <button class="btn btn-secondary" onclick="triggerAmountMic()" style="padding:9px 12px;" id="unk-mic-btn">🎙</button>
+      </div>
+    </div>
     <div class="dialog-btns">
       <button class="btn btn-secondary" onclick="closeDialog('dialog-unknown')">Abbrechen</button>
       <button class="btn btn-primary" onclick="confirmUnknown()">Hinzufügen</button>
@@ -382,7 +409,8 @@ let state = {
   sessionItems: [],
   db: [],
   dishes: [],
-  activities: []
+  activities: [],
+  history: []
 };
 
 const FOOD_DB_DEFAULT = [
@@ -667,7 +695,23 @@ function loadState() {
     if(s) {
       const loaded = JSON.parse(s);
       const today = new Date().toDateString();
-      if(loaded.lastDate !== today) {
+      if(loaded.lastDate && loaded.lastDate !== today) {
+        // Archive yesterday before resetting
+        if(!loaded.history) loaded.history = [];
+        const stepsKcal = Math.round((loaded.steps||0) * 0.04);
+        const actKcal = (loaded.activityLog||[]).reduce((s,i)=>s+i.kcal,0);
+        const eaten = (loaded.todayLog||[]).reduce((s,i)=>s+i.kcal,0);
+        const burned = ((loaded.settings&&loaded.settings.bmr)||2000) + stepsKcal + actKcal;
+        const goal = (loaded.settings&&loaded.settings.goal) || (loaded.settings&&loaded.settings.bmr) || 2000;
+        loaded.history.unshift({
+          date: loaded.lastDate,
+          eaten, burned, goal,
+          balance: eaten - burned,
+          steps: loaded.steps||0,
+          log: loaded.todayLog||[],
+          activityLog: loaded.activityLog||[]
+        });
+        if(loaded.history.length > 90) loaded.history = loaded.history.slice(0,90);
         loaded.todayLog = [];
         loaded.activityLog = [];
         loaded.steps = 0;
@@ -679,6 +723,7 @@ function loadState() {
   if(!state.db || state.db.length === 0) state.db = [...FOOD_DB_DEFAULT];
   if(!state.activities || state.activities.length === 0) state.activities = [...ACTIVITIES_DEFAULT];
   if(!state.dishes) state.dishes = [];
+  if(!state.history) state.history = [];
 }
 
 function saveState() {
@@ -692,11 +737,12 @@ function showPage(p) {
   document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
-  const idx = ['home','input','activity','settings'].indexOf(p);
+  const idx = ['home','input','activity','history','settings'].indexOf(p);
   document.querySelectorAll('.nav-btn')[idx].classList.add('active');
   if(p === 'home') renderHome();
   if(p === 'settings') renderSettings();
   if(p === 'input') renderModeHint();
+  if(p === 'history') renderHistory();
 }
 
 function setMode(m) {
@@ -808,7 +854,10 @@ function renderSession() {
   list.innerHTML = state.sessionItems.map((item,i) => `
     <div class="log-item">
       <div class="log-left"><div class="log-name">${item.name}</div><div class="log-detail">${item.detail||''}</div></div>
-      <div class="log-right"><div class="log-kcal">${item.kcal} kcal</div></div>
+      <div class="log-right">
+        <div class="log-kcal">${item.kcal} kcal</div>
+        <button class="log-del" onclick="deleteSessionItem(${i})">×</button>
+      </div>
     </div>`).join('');
   const btn = document.getElementById('session-save-btn');
   btn.textContent = state.mode==='db' ? 'Als Gericht in DB speichern' : 'Sitzung abschließen';
@@ -1003,15 +1052,17 @@ function handleParsedInput(parsed, originalText) {
     else { toast('Gericht nicht gefunden'); }
 
   } else if(parsed.type === 'unknown_with_kcal') {
-    // Has amount + direct kcal → can calculate per 100g → save to DB
     const per100 = Math.round((parsed.directKcal / parsed.amount) * 100);
     pendingUnknown = { name: parsed.name, kcal: parsed.directKcal, detail: `${parsed.amount}${parsed.amountUnit} · direkt angegeben`, saveToDb: true, dbEntry: { name: parsed.name, kcalPer100: per100, unit: '100g' } };
     document.getElementById('dialog-unk-info').innerHTML = `<strong>${parsed.name}</strong><br>${parsed.amount}${parsed.amountUnit} · ${parsed.directKcal} kcal<br><span style="color:var(--accent);font-size:12px;">≈ ${per100} kcal/100g → wird in Datenbank gespeichert</span>`;
+    document.getElementById('dialog-unk-amount-row').style.display = 'none';
     openDialog('dialog-unknown');
 
   } else if(parsed.type === 'unknown_no_amount') {
     pendingUnknown = { name: parsed.name, kcal: parsed.directKcal, detail: 'Direkt angegeben – kein DB-Eintrag', noDb: true };
-    document.getElementById('dialog-unk-info').innerHTML = `<strong>${parsed.name}</strong> · ${parsed.directKcal} kcal<br><span style="color:var(--warn);font-size:12px;">Ohne Mengenangabe – wird nur zum Tageslog hinzugefügt, nicht in Datenbank gespeichert</span>`;
+    document.getElementById('dialog-unk-info').innerHTML = `<strong>${parsed.name}</strong> · ${parsed.directKcal} kcal<br><span style="color:var(--warn);font-size:12px;">Keine Menge angegeben — ohne Menge nur im Tageslog, nicht in Datenbank.</span><br><span style="color:var(--accent);font-size:12px;">Menge angeben → wird auch in Datenbank gespeichert:</span>`;
+    document.getElementById('dialog-unk-amount-row').style.display = 'block';
+    document.getElementById('dialog-unk-amount').value = '';
     openDialog('dialog-unknown');
 
   } else {
@@ -1104,6 +1155,20 @@ function commitSessionToLog(dishName, dishKcal) {
 
 function confirmUnknown() {
   if(!pendingUnknown) return;
+  // Check if user entered an amount in the dialog
+  const amountEl = document.getElementById('dialog-unk-amount');
+  const unitEl = document.getElementById('dialog-unk-unit');
+  const enteredAmount = parseFloat(amountEl ? amountEl.value : '');
+  const enteredUnit = unitEl ? unitEl.value : 'g';
+
+  if(enteredAmount > 0 && pendingUnknown.noDb) {
+    // User provided amount → can now save to DB
+    const per100 = Math.round((pendingUnknown.kcal / enteredAmount) * 100);
+    pendingUnknown.saveToDb = true;
+    pendingUnknown.noDb = false;
+    pendingUnknown.detail = `${enteredAmount}${enteredUnit} · direkt angegeben`;
+    pendingUnknown.dbEntry = { name: pendingUnknown.name, kcalPer100: per100, unit: '100g' };
+  }
   if(pendingUnknown.saveToDb && pendingUnknown.dbEntry) {
     const entry = pendingUnknown.dbEntry;
     if(!state.db.find(f=>f.name.toLowerCase()===entry.name.toLowerCase())) {
@@ -1264,6 +1329,156 @@ function confirmDbAdd() {
 
 function deleteDbItem(id) { state.db = state.db.filter(f=>f.id!==id); renderDbList(); saveState(); }
 function deleteDish(i) { state.dishes.splice(i,1); renderDbList(); saveState(); }
+function deleteSessionItem(i) { state.sessionItems.splice(i,1); renderSession(); saveState(); toast('Eintrag entfernt'); }
+
+// ─── MIC IN DIALOG ────────────────────────────────────────────────────────────
+function triggerAmountMic() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition) { toast('Spracheingabe nicht verfügbar'); return; }
+  const r = new SpeechRecognition();
+  r.lang = 'de-DE'; r.continuous = false; r.interimResults = false;
+  const btn = document.getElementById('unk-mic-btn');
+  btn.textContent = '⏹';
+  r.onresult = (e) => {
+    const t = e.results[0][0].transcript;
+    const numMatch = t.match(/(\d+(?:[,.]\d+)?)/);
+    if(numMatch) {
+      document.getElementById('dialog-unk-amount').value = parseFloat(numMatch[1].replace(',','.'));
+      const unitMatch = t.match(/(gramm|g|ml|stück|stuck)/i);
+      if(unitMatch) {
+        const u = unitMatch[1].toLowerCase();
+        document.getElementById('dialog-unk-unit').value = u==='gramm'?'g':u==='stuck'?'Stück':u;
+      }
+    }
+    btn.textContent = '🎙';
+  };
+  r.onerror = () => { btn.textContent = '🎙'; };
+  r.onend = () => { btn.textContent = '🎙'; };
+  r.start();
+}
+
+// ─── HISTORY ──────────────────────────────────────────────────────────────────
+function renderHistory() {
+  renderWeekChart();
+  const container = document.getElementById('history-days');
+  if(!state.history || state.history.length === 0) {
+    container.innerHTML = '<div class="card"><div class="empty-state">Noch keine historischen Daten.<br>Ab morgen wird jeder Tag hier archiviert.</div></div>';
+    return;
+  }
+  container.innerHTML = state.history.map((day, i) => {
+    const dateObj = new Date(day.date);
+    const dateStr = dateObj.toLocaleDateString('de-DE', {weekday:'short', day:'2-digit', month:'2-digit', year:'numeric'});
+    const balance = day.eaten - day.burned;
+    const balSign = balance > 0 ? '+' : '';
+    const balColor = balance > 0 ? 'var(--danger)' : 'var(--accent)';
+    const pct = Math.min(Math.round((day.eaten / day.goal) * 100), 999);
+    return `
+      <div class="card" style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:14px;font-weight:500;color:var(--text);">${dateStr}</div>
+          <div style="font-size:11px;color:var(--text3);">Ziel: ${day.goal} kcal</div>
+        </div>
+        <div class="stats-grid" style="margin-bottom:8px;">
+          <div class="stat-card"><div class="stat-label">Aufgenommen</div><div class="stat-value" style="font-size:18px;">${day.eaten}</div><div class="stat-label">kcal</div></div>
+          <div class="stat-card"><div class="stat-label">Bilanz</div><div class="stat-value" style="font-size:18px;color:${balColor};">${balSign}${balance}</div><div class="stat-label">kcal</div></div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill${day.eaten>day.goal?' over':''}" style="width:${Math.min((day.eaten/day.goal)*100,100)}%;"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:3px;"><span>${pct}% des Ziels</span><span>${day.steps ? day.steps.toLocaleString('de-DE')+' Schritte' : ''}</span></div>
+        ${day.log && day.log.length > 0 ? `
+        <div style="margin-top:10px;">
+          <div style="font-size:11px;font-weight:500;color:var(--text3);margin-bottom:6px;cursor:pointer;" onclick="toggleDayLog(${i})">Einträge anzeigen ▾</div>
+          <div id="daylog-${i}" style="display:none;">
+            ${day.log.map(item=>`<div class="log-item"><div class="log-left"><div class="log-name" style="font-size:13px;">${item.name}</div><div class="log-detail">${item.detail||''}</div></div><div class="log-kcal" style="font-size:13px;">${item.kcal} kcal</div></div>`).join('')}
+          </div>
+        </div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function toggleDayLog(i) {
+  const el = document.getElementById('daylog-'+i);
+  if(!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function renderWeekChart() {
+  const canvas = document.getElementById('week-chart');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.offsetWidth * dpr || 340 * dpr;
+  canvas.height = 180 * dpr;
+  ctx.scale(dpr, dpr);
+  const W = canvas.width / dpr;
+  const H = 180;
+
+  // Build last 7 days data (history is newest-first)
+  const days = [];
+  for(let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toDateString();
+    if(i === 0) {
+      // Today
+      const eaten = state.todayLog.reduce((s,item)=>s+item.kcal,0);
+      const goal = state.settings.goal || state.settings.bmr || 2000;
+      days.push({ label: 'Heute', eaten, goal });
+    } else {
+      const h = state.history.find(x=>x.date===dateStr);
+      const dow = d.toLocaleDateString('de-DE',{weekday:'short'});
+      days.push({ label: dow, eaten: h?h.eaten:0, goal: h?h.goal:(state.settings.goal||state.settings.bmr||2000) });
+    }
+  }
+
+  const maxVal = Math.max(...days.map(d=>Math.max(d.eaten, d.goal)), 100);
+  const padL = 36, padR = 8, padT = 12, padB = 30;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+  const barW = Math.floor(chartW / days.length * 0.55);
+  const gap = chartW / days.length;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+  ctx.lineWidth = 1;
+  for(let g = 0; g <= 4; g++) {
+    const y = padT + chartH - (g/4)*chartH;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W-padR, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.font = '10px DM Sans, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.round((g/4)*maxVal), padL-4, y+3);
+  }
+
+  // Bars + goal dots
+  days.forEach((d, idx) => {
+    const x = padL + idx * gap + gap/2;
+    const barH = d.eaten > 0 ? Math.max((d.eaten/maxVal)*chartH, 3) : 0;
+    const barY = padT + chartH - barH;
+    const barX = x - barW/2;
+
+    // Bar
+    ctx.fillStyle = d.eaten > d.goal ? '#8b2e1a' : '#4a8c5c';
+    ctx.beginPath();
+    ctx.roundRect(barX, barY, barW, barH, [3,3,0,0]);
+    ctx.fill();
+
+    // Goal line
+    const goalY = padT + chartH - (d.goal/maxVal)*chartH;
+    ctx.strokeStyle = '#2d5a3d';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3,2]);
+    ctx.beginPath(); ctx.moveTo(barX-2, goalY); ctx.lineTo(barX+barW+2, goalY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Label
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.font = '10px DM Sans, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(d.label, x, H - 8);
+  });
+}
 
 // ─── EXPORT / IMPORT ──────────────────────────────────────────────────────────
 function exportData() {
@@ -1277,7 +1492,8 @@ function exportData() {
     todayLog: state.todayLog,
     activityLog: state.activityLog,
     steps: state.steps,
-    lastDate: state.lastDate
+    lastDate: state.lastDate,
+    history: state.history
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -1307,6 +1523,7 @@ function importData(event) {
       if(data.activityLog) state.activityLog = data.activityLog;
       if(data.steps !== undefined) state.steps = data.steps;
       if(data.lastDate) state.lastDate = data.lastDate;
+      if(data.history) state.history = data.history;
       saveState();
       renderAll();
       renderActivityGrid();
