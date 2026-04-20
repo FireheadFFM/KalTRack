@@ -816,18 +816,61 @@ async function autoLoadFromCloud() {
       return;
     }
     const cloud = JSON.parse(rows[0].payload);
-
-    // Merge-Strategie: Cloud-DB/Gerichte/Aktivitäten/Historie/Settings übernehmen
-    // Tageslog bleibt lokal (aktuellste Quelle für heute)
     let changed = false;
+
+    // DB: größere Liste gewinnt (mehr Einträge = mehr gepflegt)
     if(cloud.db && cloud.db.length > (state.db?.length || 0)) {
       state.db = cloud.db; changed = true;
     }
-    if(cloud.dishes) { state.dishes = cloud.dishes; changed = true; }
-    if(cloud.activities) { state.activities = cloud.activities; changed = true; }
+
+    // Gerichte: zusammenführen, Duplikate per Name vermeiden
+    if(cloud.dishes && cloud.dishes.length > 0) {
+      const merged = [...(state.dishes||[])];
+      cloud.dishes.forEach(cd => {
+        if(!merged.find(d => d.name === cd.name)) merged.push(cd);
+      });
+      if(merged.length !== (state.dishes||[]).length) {
+        state.dishes = merged; changed = true;
+      }
+    }
+
+    // Aktivitäten: zusammenführen per id
+    if(cloud.activities && cloud.activities.length > 0) {
+      const merged = [...(state.activities||[])];
+      cloud.activities.forEach(ca => {
+        if(!merged.find(a => a.id === ca.id)) merged.push(ca);
+      });
+      if(merged.length !== (state.activities||[]).length) {
+        state.activities = merged; changed = true;
+      }
+    }
+
+    // Einstellungen: Cloud gewinnt (neueste Einstellung zählt)
     if(cloud.settings) { state.settings = cloud.settings; changed = true; }
-    if(cloud.history && cloud.history.length > (state.history?.length || 0)) {
-      state.history = cloud.history; changed = true;
+
+    // Historie: tagesweise mergen — für jeden Tag die Version mit mehr eaten-Einträgen nehmen
+    if(cloud.history && cloud.history.length > 0) {
+      const localMap = {};
+      (state.history||[]).forEach(d => { localMap[d.date] = d; });
+      const cloudMap = {};
+      cloud.history.forEach(d => { cloudMap[d.date] = d; });
+      const allDates = new Set([...Object.keys(localMap), ...Object.keys(cloudMap)]);
+      const merged = [];
+      allDates.forEach(date => {
+        const local = localMap[date];
+        const cloudDay = cloudMap[date];
+        if(local && cloudDay) {
+          // Beide haben diesen Tag — nimm die Version mit mehr Log-Einträgen
+          const localEntries = (local.log||[]).length;
+          const cloudEntries = (cloudDay.log||[]).length;
+          merged.push(cloudEntries >= localEntries ? cloudDay : local);
+        } else {
+          merged.push(local || cloudDay);
+        }
+      });
+      merged.sort((a,b) => new Date(b.date) - new Date(a.date));
+      if(merged.length > 90) merged.splice(90);
+      state.history = merged; changed = true;
     }
 
     if(changed) {
