@@ -342,6 +342,15 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       </div>
     </div>
     <div class="card">
+      <div class="card-label">Cloud-Sync (Supabase)</div>
+      <div id="sync-status" style="font-size:13px;color:var(--text2);margin-bottom:10px;min-height:18px;"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="syncToCloud()">↑ Hochladen</button>
+        <button class="btn btn-secondary" style="flex:1;" onclick="syncFromCloud()">↓ Herunterladen</button>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5;">Hochladen überschreibt die Cloud mit deinen lokalen Daten. Herunterladen überschreibt deine lokalen Daten mit der Cloud.</div>
+    </div>
+    <div class="card">
       <div class="card-label">Datensicherung</div>
       <button class="btn btn-primary btn-full" onclick="exportData()" style="margin-bottom:8px;">Daten exportieren (JSON)</button>
       <label class="btn btn-secondary btn-full" style="display:block;text-align:center;cursor:pointer;">
@@ -885,7 +894,7 @@ function saveSettings() {
   state.settings.goal = parseInt(document.getElementById('set-goal').value) || 1800;
   state.settings.stepsGoal = parseInt(document.getElementById('set-steps').value) || 10000;
   state.settings.apiKey = document.getElementById('set-apikey').value.trim();
-  saveState();
+  saveStateAndSync();
   toast('Einstellungen gespeichert');
 }
 
@@ -1156,7 +1165,7 @@ function addToSession(item) {
     speak(`${item.name}, ${item.kcal} Kilokalorien`);
     toast(`${item.name}: ${item.kcal} kcal`);
   }
-  saveState();
+  saveStateAndSync();
 }
 
 function finishSession() {
@@ -1197,7 +1206,7 @@ function finishDishYes() {
   } else {
     commitSessionToLog(name, total);
   }
-  saveState();
+  saveStateAndSync();
 }
 
 function finishDishNo() {
@@ -1220,7 +1229,7 @@ function commitSessionToLog(dishName, dishKcal) {
   state.sessionItems = [];
   renderSession();
   renderHome();
-  saveState();
+  saveStateAndSync();
   toast('Eingetragen!');
   showPage('home');
 }
@@ -1270,7 +1279,7 @@ function confirmActivity() {
   state.activityLog.push({ name: currentActivity.name, minutes: min, kcal });
   closeDialog('dialog-activity');
   renderHome();
-  saveState();
+  saveStateAndSync();
   toast(`${currentActivity.name}: −${kcal} kcal`);
 }
 
@@ -1283,7 +1292,7 @@ function addCustomActivity() {
   renderActivityGrid();
   document.getElementById('act-name').value = '';
   document.getElementById('act-kcal').value = '';
-  saveState();
+  saveStateAndSync();
   toast(`${name} gespeichert`);
   openActivity(act.id);
 }
@@ -1292,7 +1301,7 @@ function saveSteps() {
   const steps = parseInt(document.getElementById('steps-input').value);
   if(!steps) return;
   state.steps = steps;
-  saveState();
+  saveStateAndSync();
   renderHome();
   toast(`${steps.toLocaleString('de-DE')} Schritte gespeichert`);
 }
@@ -1307,12 +1316,12 @@ function openDialog(id) { document.getElementById(id).classList.add('open'); }
 function closeDialog(id) { document.getElementById(id).classList.remove('open'); }
 
 // ─── LOG ACTIONS ──────────────────────────────────────────────────────────────
-function deleteLog(i) { state.todayLog.splice(i,1); saveState(); renderHome(); }
-function deleteActivity(i) { state.activityLog.splice(i,1); saveState(); renderHome(); }
+function deleteLog(i) { state.todayLog.splice(i,1); saveStateAndSync(); renderHome(); }
+function deleteActivity(i) { state.activityLog.splice(i,1); saveStateAndSync(); renderHome(); }
 function resetDay() {
   if(!confirm('Heutigen Tag wirklich zurücksetzen?')) return;
   state.todayLog = []; state.activityLog = []; state.steps = 0; state.sessionItems = [];
-  saveState(); renderAll(); toast('Tag zurückgesetzt');
+  saveState(); renderAll(); toast("Tag zurückgesetzt");
 }
 
 // ─── TOAST & SPEECH ───────────────────────────────────────────────────────────
@@ -1446,7 +1455,7 @@ function confirmDbEdit() {
   const g = parseInt(document.getElementById('db-edit-grams').value);
   if(g) f.gramsPerUnit = g; else delete f.gramsPerUnit;
   closeDialog('dialog-db-edit');
-  renderDbPageFull(); saveState();
+  renderDbPageFull(); saveStateAndSync();
   toast(`${name} gespeichert`);
 }
 
@@ -1456,7 +1465,7 @@ function confirmDbDelete() {
   if(!confirm(`"${f?.name}" wirklich löschen?`)) return;
   state.db = state.db.filter(x=>x.id!==editingDbId);
   closeDialog('dialog-db-edit');
-  renderDbPageFull(); saveState();
+  renderDbPageFull(); saveStateAndSync();
   toast('Gelöscht');
 }
 
@@ -1475,13 +1484,13 @@ function confirmDbAdd() {
   if(!name || !kcal) { toast('Name und kcal eingeben'); return; }
   state.db.push({ id:'m'+Date.now(), name, kcalPer100: kcal, unit: '100g' });
   closeDialog('dialog-db-add');
-  renderDbList(); saveState();
+  renderDbList(); saveStateAndSync();
   toast(`${name} gespeichert`);
 }
 
-function deleteDbItem(id) { state.db = state.db.filter(f=>f.id!==id); renderDbList(); saveState(); }
-function deleteDish(i) { state.dishes.splice(i,1); renderDbList(); saveState(); }
-function deleteSessionItem(i) { state.sessionItems.splice(i,1); renderSession(); saveState(); toast('Eintrag entfernt'); }
+function deleteDbItem(id) { state.db = state.db.filter(f=>f.id!==id); renderDbList(); saveStateAndSync(); }
+function deleteDish(i) { state.dishes.splice(i,1); renderDbList(); saveStateAndSync(); }
+function deleteSessionItem(i) { state.sessionItems.splice(i,1); renderSession(); saveStateAndSync(); toast('Eintrag entfernt'); }
 
 // ─── MIC IN DIALOG ────────────────────────────────────────────────────────────
 function triggerAmountMic() {
@@ -1630,6 +1639,85 @@ function renderWeekChart() {
     ctx.textAlign = 'center';
     ctx.fillText(d.label, x, H - 8);
   });
+}
+
+// ─── SUPABASE SYNC ────────────────────────────────────────────────────────────
+const SB_URL = 'https://ibqzlvedvugcipzswghh.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlicXpsdmVkdnVnY2lwenN3Z2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MDk3NTMsImV4cCI6MjA5MjI4NTc1M30.0Xe4JN6Rv1V8IZG8fTiIbFmLZVUiHwRw6OBE2mEPMpU';
+const SB_HEADERS = { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY };
+const SB_ROW_ID = 1;
+
+function setSyncStatus(msg, color) {
+  const el = document.getElementById('sync-status');
+  if(el) { el.textContent = msg; el.style.color = color || 'var(--text2)'; }
+}
+
+async function syncToCloud() {
+  setSyncStatus('Wird hochgeladen…', 'var(--accent)');
+  try {
+    const payload = JSON.stringify(state);
+    // Try update first, then insert if not exists
+    const check = await fetch(`${SB_URL}/rest/v1/userdata?id=eq.${SB_ROW_ID}`, { headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' } });
+    const existing = await check.json();
+    let resp;
+    if(existing && existing.length > 0) {
+      resp = await fetch(`${SB_URL}/rest/v1/userdata?id=eq.${SB_ROW_ID}`, {
+        method: 'PATCH',
+        headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ payload })
+      });
+    } else {
+      resp = await fetch(`${SB_URL}/rest/v1/userdata`, {
+        method: 'POST',
+        headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ id: SB_ROW_ID, payload })
+      });
+    }
+    if(resp.ok || resp.status === 204) {
+      const now = new Date().toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+      setSyncStatus('✓ Hochgeladen um ' + now, 'var(--accent)');
+      toast('Cloud-Sync erfolgreich');
+    } else {
+      throw new Error('HTTP ' + resp.status);
+    }
+  } catch(e) {
+    setSyncStatus('Fehler beim Hochladen: ' + e.message, 'var(--danger)');
+    toast('Sync fehlgeschlagen');
+  }
+}
+
+async function syncFromCloud() {
+  setSyncStatus('Wird heruntergeladen…', 'var(--accent)');
+  try {
+    const resp = await fetch(`${SB_URL}/rest/v1/userdata?id=eq.${SB_ROW_ID}&select=payload`, { headers: SB_HEADERS });
+    const rows = await resp.json();
+    if(!rows || rows.length === 0 || !rows[0].payload) {
+      setSyncStatus('Keine Cloud-Daten gefunden', 'var(--warn)');
+      toast('Keine Daten in der Cloud');
+      return;
+    }
+    const loaded = JSON.parse(rows[0].payload);
+    if(!confirm('Cloud-Daten herunterladen? Lokale Daten werden überschrieben.')) return;
+    Object.assign(state, loaded);
+    saveState();
+    renderAll();
+    renderActivityGrid();
+    renderDbPageFull();
+    const now = new Date().toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+    setSyncStatus('✓ Heruntergeladen um ' + now, 'var(--accent)');
+    toast('Cloud-Daten geladen ✓');
+  } catch(e) {
+    setSyncStatus('Fehler beim Herunterladen: ' + e.message, 'var(--danger)');
+    toast('Sync fehlgeschlagen');
+  }
+}
+
+// Auto-sync nach jedem Speichern (debounced, 3 Sekunden)
+let syncTimer = null;
+function saveStateAndSync() {
+  saveState();
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => { syncToCloud(); }, 3000);
 }
 
 // ─── EXPORT / IMPORT ──────────────────────────────────────────────────────────
