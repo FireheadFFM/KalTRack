@@ -165,17 +165,51 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
 <div class="app">
   <div class="header">
     <div class="header-top">
-      <div class="app-name">Kal<span>Track</span></div>
+      <div class="app-name" onclick="switchToTrack()" style="cursor:pointer;display:flex;align-items:center;gap:8px;">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Body -->
+          <ellipse cx="18" cy="22" rx="11" ry="9" fill="#5a3e2b"/>
+          <!-- Head -->
+          <ellipse cx="18" cy="13" rx="8" ry="7" fill="#7a5540"/>
+          <!-- Snout -->
+          <ellipse cx="18" cy="17" rx="4" ry="2.5" fill="#c4876a"/>
+          <!-- Nose -->
+          <circle cx="18" cy="16" r="1.2" fill="#2d1a0e"/>
+          <!-- Eyes -->
+          <circle cx="14.5" cy="11.5" r="1.4" fill="#1a0e07"/>
+          <circle cx="21.5" cy="11.5" r="1.4" fill="#1a0e07"/>
+          <circle cx="15" cy="11" r="0.5" fill="white"/>
+          <circle cx="22" cy="11" r="0.5" fill="white"/>
+          <!-- Schweißband -->
+          <path d="M10.5 10.5 Q18 6 25.5 10.5" stroke="#e84040" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M11 9.5 Q18 5 25 9.5" stroke="#ff6b6b" stroke-width="1" fill="none" stroke-linecap="round" opacity="0.5"/>
+          <!-- Left arm with dumbbell -->
+          <line x1="7" y1="20" x2="4" y2="17" stroke="#5a3e2b" stroke-width="2.5" stroke-linecap="round"/>
+          <rect x="1.5" y="15.5" width="4" height="1.5" rx="0.7" fill="#2d5a3d"/>
+          <rect x="1" y="14.5" width="1.5" height="3.5" rx="0.7" fill="#2d5a3d"/>
+          <rect x="4" y="14.5" width="1.5" height="3.5" rx="0.7" fill="#2d5a3d"/>
+          <!-- Right arm raised -->
+          <line x1="29" y1="20" x2="32" y2="17" stroke="#5a3e2b" stroke-width="2.5" stroke-linecap="round"/>
+          <rect x="30.5" y="15.5" width="4" height="1.5" rx="0.7" fill="#2d5a3d"/>
+          <rect x="30" y="14.5" width="1.5" height="3.5" rx="0.7" fill="#2d5a3d"/>
+          <rect x="33" y="14.5" width="1.5" height="3.5" rx="0.7" fill="#2d5a3d"/>
+          <!-- Sweat drop -->
+          <ellipse cx="26" cy="9" rx="1" ry="1.4" fill="#60a5fa" opacity="0.8"/>
+          <!-- Feet -->
+          <ellipse cx="13" cy="30" rx="3" ry="1.5" fill="#4a3020"/>
+          <ellipse cx="23" cy="30" rx="3" ry="1.5" fill="#4a3020"/>
+        </svg>
+        <span>Kal<span style="color:var(--accent2);">Track</span></span>
+      </div>
       <div class="mode-toggle">
-        <button class="mode-btn active" id="modeTrack" onclick="setMode('track')">Heute tracken</button>
-        <button class="mode-btn db-mode" id="modeDb" onclick="setMode('db')">Datenbank</button>
+        <button class="mode-btn active" id="modeTrack" onclick="switchToTrack()">Heute tracken</button>
+        <button class="mode-btn db-mode" id="modeDb" onclick="switchToDb()">Datenbank</button>
       </div>
     </div>
-    <div class="nav">
+    <div class="nav" id="main-nav">
       <button class="nav-btn active" onclick="showPage('home')">Übersicht</button>
       <button class="nav-btn" onclick="showPage('input')">Eingabe</button>
       <button class="nav-btn" onclick="showPage('activity')">Aktivität</button>
-      <button class="nav-btn" onclick="showPage('db')">Datenbank</button>
       <button class="nav-btn" onclick="showPage('history')">Historie</button>
       <button class="nav-btn" onclick="showPage('settings')">⚙</button>
     </div>
@@ -293,7 +327,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
           <span class="search-icon">⌕</span>
           <input type="text" id="db-search" placeholder="Suchen…" oninput="filterDb(this.value)" />
         </div>
-        <button class="btn btn-primary" onclick="openDbAdd()" style="white-space:nowrap;">+ Neu</button>
+        <button class="btn btn-primary" onclick="openDbAdd(document.getElementById('db-search').value.trim())" style="white-space:nowrap;">+ Neu</button>
       </div>
       <div id="db-cat-filter" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;"></div>
     </div>
@@ -418,7 +452,13 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
   <div class="dialog" onclick="event.stopPropagation()">
     <h3>Lebensmittel bearbeiten</h3>
     <input type="text" id="db-edit-name" placeholder="Name" />
-    <input type="number" id="db-edit-kcal" placeholder="kcal pro 100g / Stück" />
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <input type="number" id="db-edit-kcal" placeholder="kcal" style="flex:1;" />
+      <select id="db-edit-kcal-mode" style="width:110px;padding:9px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" onchange="updateEditUnitLabel()">
+        <option value="per100">pro 100g/ml</option>
+        <option value="total">gesamt</option>
+      </select>
+    </div>
     <div style="display:flex;gap:8px;margin-bottom:10px;">
       <select id="db-edit-unit" style="flex:1;padding:9px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;">
         <option value="100g">100g</option>
@@ -427,10 +467,12 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <option value="Scheibe">Scheibe</option>
         <option value="Portion">Portion</option>
       </select>
-      <input type="number" id="db-edit-grams" placeholder="g/Stück (opt.)" style="flex:1;" />
+      <input type="number" id="db-edit-grams" placeholder="g oder ml/Stück (opt.)" style="flex:1;" />
     </div>
+    <div id="db-edit-hint" style="font-size:11px;color:var(--accent);margin-bottom:10px;min-height:14px;"></div>
     <div class="dialog-btns">
       <button class="btn btn-danger" onclick="confirmDbDelete()">Löschen</button>
+      <button class="btn btn-secondary" onclick="closeDialog('dialog-db-edit')">Abbrechen</button>
       <button class="btn btn-primary" onclick="confirmDbEdit()">Speichern</button>
     </div>
   </div>
@@ -438,10 +480,26 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
 
 <div class="overlay" id="dialog-db-add" onclick="closeDialog('dialog-db-add')">
   <div class="dialog" onclick="event.stopPropagation()">
-    <h3 id="dialog-db-title">Lebensmittel anlegen</h3>
+    <h3>Lebensmittel anlegen</h3>
     <input type="text" id="db-add-name" placeholder="Name" />
-    <input type="number" id="db-add-kcal" placeholder="kcal pro 100g (oder pro Stück)" />
-    <input type="text" id="db-add-unit" placeholder='Einheit: "100g" oder "Stück"' />
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <input type="number" id="db-add-kcal" placeholder="kcal" style="flex:1;" oninput="updateAddHint()" />
+      <select id="db-add-kcal-mode" style="width:110px;padding:9px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" onchange="updateAddHint()">
+        <option value="per100">pro 100g/ml</option>
+        <option value="total">gesamt</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <select id="db-add-unit" style="flex:1;padding:9px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" onchange="updateAddHint()">
+        <option value="100g">100g</option>
+        <option value="100ml">100ml</option>
+        <option value="Stück">Stück</option>
+        <option value="Scheibe">Scheibe</option>
+        <option value="Portion">Portion</option>
+      </select>
+      <input type="number" id="db-add-grams" placeholder="g oder ml/Stück (opt.)" style="flex:1;" oninput="updateAddHint()" />
+    </div>
+    <div id="db-add-hint" style="font-size:11px;color:var(--accent);margin-bottom:10px;min-height:14px;"></div>
     <div class="dialog-btns">
       <button class="btn btn-secondary" onclick="closeDialog('dialog-db-add')">Abbrechen</button>
       <button class="btn btn-primary" onclick="confirmDbAdd()">Speichern</button>
@@ -739,7 +797,12 @@ function init() {
   document.getElementById('manual-input').addEventListener('keydown', e => { if(e.key==='Enter') processManual(); });
   initSpeech();
   renderActivityGrid();
-  renderDbPage();
+  // Restore mode
+  if(state.mode === 'db') {
+    switchToDb();
+  } else {
+    document.getElementById('main-nav').style.display = 'flex';
+  }
 }
 
 function loadState() {
@@ -790,8 +853,8 @@ function showPage(p) {
   document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
-  const idx = ['home','input','activity','db','history','settings'].indexOf(p);
-  document.querySelectorAll('.nav-btn')[idx].classList.add('active');
+  const idx = ['home','input','activity','history','settings'].indexOf(p);
+  if(idx >= 0) document.querySelectorAll('.nav-btn')[idx].classList.add('active');
   if(p === 'home') renderHome();
   if(p === 'settings') renderSettings();
   if(p === 'input') renderModeHint();
@@ -799,13 +862,33 @@ function showPage(p) {
   if(p === 'db') renderDbPageFull();
 }
 
-function setMode(m) {
-  state.mode = m;
-  document.getElementById('modeTrack').classList.toggle('active', m==='track');
-  document.getElementById('modeDb').classList.toggle('active', m==='db');
-  renderModeHint();
-  if(m==='db') renderDbPage();
+function switchToTrack() {
+  state.mode = 'track';
+  document.getElementById('modeTrack').classList.add('active');
+  document.getElementById('modeDb').classList.remove('active');
+  document.getElementById('main-nav').style.display = 'flex';
+  // Hide DB page, show home
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-home').classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn')[0].classList.add('active');
+  renderHome();
   saveState();
+}
+
+function switchToDb() {
+  state.mode = 'db';
+  document.getElementById('modeDb').classList.add('active');
+  document.getElementById('modeTrack').classList.remove('active');
+  document.getElementById('main-nav').style.display = 'none';
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-db').classList.add('active');
+  renderDbPageFull();
+  saveState();
+}
+
+function setMode(m) {
+  if(m === 'track') switchToTrack(); else switchToDb();
 }
 
 function renderModeHint() {
@@ -1411,7 +1494,15 @@ function renderDbPageFull() {
 }
 
 function dbItemHtml(f) {
-  const detail = f.gramsPerUnit ? `${f.kcalPer100} kcal/${f.unit} · ${f.gramsPerUnit}g` : `${f.kcalPer100} kcal/100g`;
+  const isPerPiece = f.unit && !f.unit.startsWith('100');
+  let detail;
+  if(isPerPiece && f.gramsPerUnit) {
+    detail = `${f.kcalPer100} kcal/${f.unit} · ${f.gramsPerUnit}g`;
+  } else if(isPerPiece && !f.gramsPerUnit) {
+    detail = `${f.kcalPer100} kcal/${f.unit}`;
+  } else {
+    detail = `${f.kcalPer100} kcal/100${f.unit==='100ml'?'ml':'g'}`;
+  }
   return `<div class="db-item">
     <div class="log-left">
       <div class="db-name">${f.name}</div>
@@ -1438,8 +1529,10 @@ function openDbEdit(id) {
   editingDbId = id;
   document.getElementById('db-edit-name').value = f.name;
   document.getElementById('db-edit-kcal').value = f.kcalPer100;
+  document.getElementById('db-edit-kcal-mode').value = 'per100';
   document.getElementById('db-edit-unit').value = f.unit||'100g';
   document.getElementById('db-edit-grams').value = f.gramsPerUnit||'';
+  document.getElementById('db-edit-hint').textContent = '';
   openDialog('dialog-db-edit');
 }
 
@@ -1447,13 +1540,21 @@ function confirmDbEdit() {
   const f = state.db.find(x=>x.id===editingDbId);
   if(!f) return;
   const name = document.getElementById('db-edit-name').value.trim();
-  const kcal = parseInt(document.getElementById('db-edit-kcal').value);
-  if(!name||!kcal) { toast('Name und kcal eingeben'); return; }
+  const kcalRaw = parseFloat(document.getElementById('db-edit-kcal').value);
+  const mode = document.getElementById('db-edit-kcal-mode').value;
+  const unit = document.getElementById('db-edit-unit').value;
+  const grams = parseFloat(document.getElementById('db-edit-grams').value);
+  if(!name||!kcalRaw) { toast('Name und kcal eingeben'); return; }
+
+  let kcalPer100 = kcalRaw;
+  if(mode === 'total' && grams > 0) {
+    kcalPer100 = Math.round((kcalRaw / grams) * 100);
+  }
+
   f.name = name;
-  f.kcalPer100 = kcal;
-  f.unit = document.getElementById('db-edit-unit').value;
-  const g = parseInt(document.getElementById('db-edit-grams').value);
-  if(g) f.gramsPerUnit = g; else delete f.gramsPerUnit;
+  f.kcalPer100 = kcalPer100;
+  f.unit = unit;
+  if(grams > 0) f.gramsPerUnit = grams; else delete f.gramsPerUnit;
   closeDialog('dialog-db-edit');
   renderDbPageFull(); saveStateAndSync();
   toast(`${name} gespeichert`);
@@ -1471,21 +1572,56 @@ function confirmDbDelete() {
 
 function renderDbList() { renderDbPageFull(); }
 
-function openDbAdd() {
-  document.getElementById('db-add-name').value = '';
+function openDbAdd(prefillName) {
+  document.getElementById('db-add-name').value = prefillName || '';
   document.getElementById('db-add-kcal').value = '';
+  document.getElementById('db-add-kcal-mode').value = 'per100';
   document.getElementById('db-add-unit').value = '100g';
+  document.getElementById('db-add-grams').value = '';
+  document.getElementById('db-add-hint').textContent = '';
   openDialog('dialog-db-add');
+}
+
+function updateAddHint() {
+  const kcal = parseFloat(document.getElementById('db-add-kcal').value);
+  const mode = document.getElementById('db-add-kcal-mode').value;
+  const unit = document.getElementById('db-add-unit').value;
+  const grams = parseFloat(document.getElementById('db-add-grams').value);
+  const hint = document.getElementById('db-add-hint');
+  if(!kcal) { hint.textContent = ''; return; }
+  if(mode === 'total' && grams > 0) {
+    const per100 = Math.round((kcal / grams) * 100);
+    hint.textContent = `→ wird gespeichert als ${per100} kcal/100g`;
+  } else if(mode === 'total' && (unit==='Stück'||unit==='Scheibe'||unit==='Portion') && !grams) {
+    hint.textContent = `→ wird gespeichert als ${kcal} kcal/${unit}`;
+  } else if(mode === 'per100') {
+    hint.textContent = `→ ${kcal} kcal pro 100g/ml`;
+  }
 }
 
 function confirmDbAdd() {
   const name = document.getElementById('db-add-name').value.trim();
-  const kcal = parseInt(document.getElementById('db-add-kcal').value);
-  if(!name || !kcal) { toast('Name und kcal eingeben'); return; }
-  state.db.push({ id:'m'+Date.now(), name, kcalPer100: kcal, unit: '100g' });
+  const kcalRaw = parseFloat(document.getElementById('db-add-kcal').value);
+  const mode = document.getElementById('db-add-kcal-mode').value;
+  const unit = document.getElementById('db-add-unit').value;
+  const grams = parseFloat(document.getElementById('db-add-grams').value);
+  if(!name || !kcalRaw) { toast('Name und kcal eingeben'); return; }
+
+  let kcalPer100 = kcalRaw;
+  if(mode === 'total' && grams > 0) {
+    kcalPer100 = Math.round((kcalRaw / grams) * 100);
+  }
+
+  const entry = { id:'m'+Date.now(), name, kcalPer100, unit };
+  if(grams > 0) entry.gramsPerUnit = grams;
+  state.db.push(entry);
   closeDialog('dialog-db-add');
-  renderDbList(); saveStateAndSync();
+  renderDbPageFull(); saveStateAndSync();
   toast(`${name} gespeichert`);
+}
+
+function updateEditUnitLabel() {
+  // just triggers hint update if needed
 }
 
 function deleteDbItem(id) { state.db = state.db.filter(f=>f.id!==id); renderDbList(); saveStateAndSync(); }
@@ -1779,7 +1915,7 @@ function importData(event) {
 
 // ─── PWA MANIFEST (inline, kein separater Server nötig) ──────────────────────
 (function injectManifest() {
-  const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="100" fill="#2d5a3d"/><text x="256" y="340" font-size="260" text-anchor="middle" font-family="sans-serif" fill="white">K</text><circle cx="370" cy="160" r="60" fill="#4a8c5c"/><text x="370" y="178" font-size="56" text-anchor="middle" font-family="sans-serif" fill="white">kcal</text></svg>`;
+  const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="100" fill="#2d5a3d"/><ellipse cx="256" cy="310" rx="155" ry="125" fill="#5a3e2b"/><ellipse cx="256" cy="185" rx="115" ry="100" fill="#7a5540"/><ellipse cx="256" cy="240" rx="58" ry="36" fill="#c4876a"/><circle cx="256" cy="228" r="18" fill="#2d1a0e"/><circle cx="200" cy="163" r="20" fill="#1a0e07"/><circle cx="312" cy="163" r="20" fill="#1a0e07"/><circle cx="207" cy="156" r="7" fill="white"/><circle cx="319" cy="156" r="7" fill="white"/><path d="M148 148 Q256 88 364 148" stroke="#e84040" stroke-width="36" fill="none" stroke-linecap="round"/><rect x="80" y="295" width="60" height="22" rx="10" fill="#4a8c5c"/><rect x="68" y="275" width="22" height="50" rx="10" fill="#4a8c5c"/><rect x="108" y="275" width="22" height="50" rx="10" fill="#4a8c5c"/><rect x="372" y="295" width="60" height="22" rx="10" fill="#4a8c5c"/><rect x="360" y="275" width="22" height="50" rx="10" fill="#4a8c5c"/><rect x="400" y="275" width="22" height="50" rx="10" fill="#4a8c5c"/></svg>`;
   const svgBlob = new Blob([icon], {type:'image/svg+xml'});
   const iconUrl = URL.createObjectURL(svgBlob);
   const manifest = {
