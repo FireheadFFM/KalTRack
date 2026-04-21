@@ -481,28 +481,45 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.5 — April 2026</div>
-        <div>· Favoriten: häufig genutzte Einträge schnell hinzufügen</div>
-        <div>· Fuzzy-Suche: „Mai Tai" findet auch bei ungenauen Eingaben</div>
-        <div>· Einheiten: cl und dl werden automatisch umgerechnet</div>
-        <div>· Tageswechsel um 02:00 Uhr (nicht Mitternacht)</div>
-        <div>· Datenbank: Kategorien auf-/zuklappbar</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.7 — April 2026</div>
+        <div>· Gemini KI-Suche (kostenlos, Google-Suche) als Stufe 5</div>
+        <div>· Gerichte als Favorit markierbar (★)</div>
+        <div>· Favoriten: Top-5-Chips direkt sichtbar auf Eingabe-Seite</div>
+        <div>· Favoriten: Kalorienvorschau in Chips und Liste</div>
+        <div>· Favoriten: manuell sortierbar (↑↓)</div>
+        <div>· Favoriten: Standardmenge nachträglich änderbar (✎)</div>
+        <div>· Favoriten: Auto-Badge für automatisch erkannte Einträge</div>
+        <div>· Datenbank: Gerichte oben, auf-/zuklappbar</div>
+        <div>· Datenbank: Kategorie beim Anlegen und Bearbeiten wählbar</div>
+        <div>· Datenbank: neue Kategorie direkt beim Anlegen eintippen</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.6</div>
+        <div>· Suchquellen einzeln togglebar (OFF, Nutritionix, Claude, Gemini)</div>
+        <div>· Open Food Facts Integration (kostenlos, Markenprodukte)</div>
+        <div>· Nutritionix Integration (kostenlos, Restaurants)</div>
+        <div>· Fuzzy-Suche mit Vorschlagsliste bei ungenauen Eingaben</div>
+        <div>· Einheiten cl und dl automatisch umgerechnet</div>
+        <div>· Tageswechsel um 02:00 Uhr statt Mitternacht</div>
         <div>· Löschen überall mit Bestätigung</div>
-        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.4</div>
+        <div>· Datenbank: Kategorien auf-/zuklappbar</div>
+        <div>· Favoriten: Grundfunktion mit Stern in der DB</div>
+        <div>· Changelog und Anleitung in den Einstellungen</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.5</div>
         <div>· Suchquellen-Toggles (Open Food Facts, Nutritionix, KI)</div>
-        <div>· Einstellungen neu strukturiert</div>
+        <div>· Einstellungen in Bereiche gegliedert</div>
         <div>· Maulwurf-Logo und App-Name FitMole</div>
-        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.3</div>
-        <div>· Cloud-Sync via Supabase</div>
+        <div>· Datenbank-Modus: Eingaben landen nicht im Tageslog</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.4</div>
+        <div>· Cloud-Sync via Supabase (automatisch beim Start)</div>
         <div>· PWA-Installation auf dem Homescreen</div>
         <div>· Export/Import als JSON</div>
-        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.2</div>
-        <div>· Lebensmittel-Datenbank mit ~220 Einträgen</div>
-        <div>· Kategoriefilter und Bearbeitung in der DB</div>
-        <div>· Historie mit Wochenchart</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.3</div>
+        <div>· Lebensmittel-Datenbank mit ~220 Einträgen und Kategorien</div>
+        <div>· Kategoriefilter, Bearbeiten, Löschen in der DB</div>
+        <div>· Historie mit Wochenchart und Aktivitätsanzeige</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.0</div>
         <div>· Erste Version mit Spracheingabe</div>
         <div>· Tagesbilanz mit Grundumsatz, Schritten, Aktivitäten</div>
+        <div>· Gerichte anlegen und als Sitzung zusammenfassen</div>
       </div>
     </div>
 
@@ -514,46 +531,53 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <div id="docs-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.8;">
         <div style="font-weight:500;color:var(--text);margin-bottom:6px;">Erste Schritte</div>
         <div>1. Unter ⚙ → Mein Profil: Grundumsatz und Kalorienziel eintragen.</div>
-        <div>2. App oben auf „Heute tracken" stellen.</div>
+        <div>2. App oben auf „Heute tracken" stellen — startet immer auf der Eingabe-Seite.</div>
         <div>3. Mikrofon-Button drücken und Eingabe sprechen — oder im Textfeld tippen.</div>
 
         <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Sprach- und Texteingabe</div>
         <div>· <b>Menge + Lebensmittel:</b> „200g Tomaten", „3 Eier", „einen Apfel"</div>
-        <div>· <b>Gericht:</b> „Spiegeleier mit Würstchen" (vorher als Gericht gespeichert)</div>
+        <div>· <b>Flüssigkeiten:</b> „5cl Hafermilch", „2dl Orangensaft", „300ml Wasser"</div>
+        <div>· <b>Gericht:</b> Name des gespeicherten Gerichts sprechen</div>
         <div>· <b>Unbekannt mit kcal:</b> „Gummibärchen, 300 Kalorien"</div>
-        <div>· <b>Einheiten:</b> g, ml, cl (→ml), dl (→ml), Stück, Scheibe, Portion</div>
-        <div>· Bei ungenauen Eingaben erscheint eine Vorschlagsliste.</div>
-
-        <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Datenbank</div>
-        <div>· Oben per Kategorie filtern oder Suchfeld nutzen.</div>
-        <div>· ✎ zum Bearbeiten, − zum Löschen (immer mit Bestätigung).</div>
-        <div>· ★ macht einen Eintrag zum Favoriten.</div>
-        <div>· Getränke haben eine eigene Kategorie.</div>
-        <div>· Im Datenbank-Modus (oben rechts) werden Eingaben nicht im Tageslog erfasst.</div>
+        <div>· Bei ungenauen Eingaben erscheint „Meintest du...?" mit Vorschlägen.</div>
+        <div>· Mehrere Zutaten nacheinander eingeben → am Ende als Gericht speicherbar.</div>
 
         <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Favoriten</div>
-        <div>· Auf der Eingabe-Seite unten: Favoriten aufklappen.</div>
-        <div>· Favorit antippen → direkt hinzufügen (mit gespeicherter Menge).</div>
-        <div>· Beim ersten Mal wird die Menge abgefragt und gespeichert.</div>
-        <div>· Einträge die 5× genutzt wurden, werden automatisch vorgeschlagen.</div>
+        <div>· ☆ in der Datenbank antippen → wird zum Favoriten (★).</div>
+        <div>· Gilt für Lebensmittel und Gerichte.</div>
+        <div>· Top 5 als Chips direkt auf der Eingabe-Seite sichtbar — antippen zum Hinzufügen.</div>
+        <div>· „▾ alle" zeigt die vollständige Liste mit Sortierung (↑↓) und Bearbeiten (✎).</div>
+        <div>· Beim ersten Antippen wird die Standardmenge abgefragt und gespeichert.</div>
+        <div>· Einträge die 5× genutzt wurden, kommen automatisch (Auto-Badge).</div>
+
+        <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Datenbank</div>
+        <div>· Oben: „Meine Gerichte" (auf-/zuklappbar), darunter Lebensmittel nach Kategorien.</div>
+        <div>· Kategorie-Pills filtern die Ansicht, Suchfeld sucht über alle Kategorien.</div>
+        <div>· + Neu: Name, kcal, Einheit, Menge/Stück und Kategorie angeben.</div>
+        <div>· Neue Kategorie: „+ Neue Kategorie…" im Dropdown wählen und eintippen.</div>
+        <div>· ✎ zum Bearbeiten, − zum Löschen (immer mit Bestätigung), ☆ für Favorit.</div>
+        <div>· Datenbank-Modus (oben rechts): Eingaben landen nicht im Tageslog.</div>
 
         <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Suchquellen</div>
-        <div>· Stufe 1 (immer): Lokale Datenbank</div>
-        <div>· Stufe 1b: Fuzzy-Suche (ähnliche Begriffe)</div>
+        <div>· Stufe 1 (immer): Lokale Datenbank — sofort, kostenlos</div>
+        <div>· Stufe 1b: Fuzzy-Suche — ähnliche Begriffe aus der lokalen DB</div>
         <div>· Stufe 2 (Toggle): Open Food Facts — kostenlos, Markenprodukte</div>
         <div>· Stufe 3 (Toggle + Key): Nutritionix — Restaurants, Fast Food</div>
-        <div>· Stufe 4 (Toggle + Key): Claude KI — kostenpflichtig, letzter Fallback</div>
+        <div>· Stufe 4 (Toggle + Key): Claude KI — kostenpflichtig, Web-Suche</div>
         <div>· Stufe 5 (Toggle + Key): Gemini KI — kostenlos, Google-Suche</div>
+        <div>· Keys unter ⚙ → Externe Dienste eintragen.</div>
 
         <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Cloud-Sync</div>
-        <div>· Änderungen werden automatisch nach 3 Sek. in die Cloud gespeichert.</div>
-        <div>· Beim App-Start werden Cloud-Daten automatisch geladen.</div>
+        <div>· Beim App-Start: Cloud-Daten werden automatisch geladen und gemergt.</div>
+        <div>· Nach jeder Änderung: automatischer Upload nach 3 Sekunden.</div>
         <div>· Manuell: ⚙ → Cloud & Backup → ↑ Hochladen / ↓ Herunterladen.</div>
+        <div>· DB, Gerichte, Einstellungen und Historie werden geräteübergreifend synchronisiert.</div>
+        <div>· Tageslog bleibt gerätespezifisch (aktuellste Quelle gewinnt).</div>
 
-        <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Tageswechsel</div>
-        <div>· Der Tag wechselt um 02:00 Uhr nachts.</div>
-        <div>· Einträge vor 02:00 zählen noch zum Vortag.</div>
-        <div>· Die Historie speichert bis zu 90 Tage.</div>
+        <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Tageswechsel & Historie</div>
+        <div>· Der Tag wechselt um 02:00 Uhr — Spätabend-Einträge zählen noch zum Vortag.</div>
+        <div>· Die Historie speichert bis zu 90 Tage mit allen Mahlzeiten und Aktivitäten.</div>
+        <div>· Wochenchart zeigt Aufgenommenes vs. Ziel als Balkendiagramm.</div>
       </div>
     </div>
   </div>
