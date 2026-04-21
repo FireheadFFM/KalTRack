@@ -359,11 +359,25 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
   <!-- HISTORY PAGE -->
   <div class="page" id="page-history">
     <div class="card">
-      <div class="card-label">Wochenübersicht</div>
-      <canvas id="week-chart" style="width:100%;height:180px;"></canvas>
-      <div style="display:flex;gap:12px;justify-content:center;margin-top:10px;font-size:11px;color:var(--text3);">
-        <span><span style="display:inline-block;width:10px;height:10px;background:#4a8c5c;border-radius:2px;margin-right:4px;"></span>Aufgenommen</span>
-        <span><span style="display:inline-block;width:10px;height:10px;background:#2d5a3d;border-radius:2px;margin-right:4px;"></span>Ziel</span>
+      <div class="card-label">Wochenübersicht — Kalorienbilanz</div>
+      <div style="position:relative;width:100%;height:180px;">
+        <canvas id="week-chart" role="img" aria-label="Tägliche Kalorienbilanz der letzten 7 Tage">Balkendiagramm der Kalorienbilanz pro Tag.</canvas>
+      </div>
+      <div style="display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:11px;color:var(--text3);">
+        <span><span style="display:inline-block;width:10px;height:10px;background:#0F6E56;border-radius:2px;margin-right:4px;"></span>Defizit</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:#993C1D;border-radius:2px;margin-right:4px;"></span>Überschuss</span>
+      </div>
+      <div class="stats-grid" style="margin-top:10px;">
+        <div class="stat-card">
+          <div class="stat-label">Ø Bilanz / Tag</div>
+          <div class="stat-value" id="week-avg" style="font-size:18px;">—</div>
+          <div class="stat-label">kcal</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Gesamtbilanz Woche</div>
+          <div class="stat-value" id="week-total" style="font-size:18px;">—</div>
+          <div class="stat-label">kcal</div>
+        </div>
       </div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 2px 6px;">
@@ -484,7 +498,13 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.8 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.9 — April 2026</div>
+        <div>· Tageslog geräteübergreifend synchronisiert (per Eintrags-ID)</div>
+        <div>· Einträge von Handy und Browser werden zusammengeführt, nicht überschrieben</div>
+        <div>· Aktivitäten ebenfalls geräteübergreifend synchronisiert</div>
+        <div>· Wochenübersicht zeigt Kalorienbilanz (Defizit/Überschuss) statt Aufnahme vs. Ziel</div>
+        <div>· Ø Bilanz pro Tag und Gesamtbilanz der Woche als Kennzahlen</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.8</div>
         <div>· Tage manuell nacherfassen (Historie → + Tag nacherfassen)</div>
         <div>· Einzelne Mahlzeiten und Aktivitäten bei Nacherfassung eintragbar</div>
         <div>· Manuell erfasste Tage mit Badge gekennzeichnet</div>
@@ -578,6 +598,8 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <div>· Nach jeder Änderung: automatischer Upload nach 3 Sekunden.</div>
         <div>· Manuell: ⚙ → Cloud & Backup → ↑ Hochladen / ↓ Herunterladen.</div>
         <div>· DB, Gerichte, Einstellungen und Historie werden geräteübergreifend synchronisiert.</div>
+        <div>· Tageslog und Aktivitäten werden per Eintrags-ID gemergt — Einträge von beiden Geräten bleiben erhalten.</div>
+        <div>· Laufende Sitzungen (mehrere Zutaten) nicht mittendrin auf anderem Gerät unterbrechen.</div>
 
         <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Tage nacherfassen</div>
         <div>· Historie → „+ Tag nacherfassen" — für vergessene oder verpasste Tage.</div>
@@ -1197,6 +1219,28 @@ async function autoLoadFromCloud() {
 
     // Einstellungen: Cloud gewinnt (neueste Einstellung zählt)
     if(cloud.settings) { state.settings = cloud.settings; changed = true; }
+
+    // Tageslog: per ID mergen — Einträge von beiden Geräten zusammenführen
+    if(cloud.todayLog && cloud.todayLog.length > 0) {
+      const localIds = new Set((state.todayLog||[]).map(i=>i.id).filter(Boolean));
+      const cloudOnly = cloud.todayLog.filter(i => i.id && !localIds.has(i.id));
+      if(cloudOnly.length > 0) {
+        state.todayLog = [...(state.todayLog||[]), ...cloudOnly];
+        // Sortieren nach ID (chronologisch)
+        state.todayLog.sort((a,b) => (a.id||'').localeCompare(b.id||''));
+        changed = true;
+      }
+    }
+
+    // Aktivitätslog heute: per ID mergen
+    if(cloud.activityLog && cloud.activityLog.length > 0) {
+      const localIds = new Set((state.activityLog||[]).map(i=>i.id).filter(Boolean));
+      const cloudOnly = cloud.activityLog.filter(i => i.id && !localIds.has(i.id));
+      if(cloudOnly.length > 0) {
+        state.activityLog = [...(state.activityLog||[]), ...cloudOnly];
+        changed = true;
+      }
+    }
 
     // Historie: tagesweise mergen — für jeden Tag die Version mit mehr eaten-Einträgen nehmen
     if(cloud.history && cloud.history.length > 0) {
@@ -2334,10 +2378,13 @@ function finishDishNo() {
 }
 
 function commitSessionToLog(dishName, dishKcal) {
+  const ts = Date.now();
   if(dishName) {
-    state.todayLog.push({ name: dishName, kcal: dishKcal, detail: 'Gericht' });
+    state.todayLog.push({ id: 'l'+ts, name: dishName, kcal: dishKcal, detail: 'Gericht' });
   } else {
-    state.sessionItems.forEach(item => state.todayLog.push(item));
+    state.sessionItems.forEach((item, i) => {
+      state.todayLog.push({ ...item, id: 'l'+(ts+i) });
+    });
   }
   state.sessionItems = [];
   renderSession();
@@ -2389,7 +2436,7 @@ function confirmActivity() {
   const min = parseInt(document.getElementById('dialog-act-minutes').value);
   if(!min || min <= 0) { toast('Bitte Minuten eingeben'); return; }
   const kcal = Math.round((currentActivity.kcalPerHour / 60) * min);
-  state.activityLog.push({ name: currentActivity.name, minutes: min, kcal });
+  state.activityLog.push({ id: 'a'+Date.now(), name: currentActivity.name, minutes: min, kcal });
   closeDialog('dialog-activity');
   renderHome();
   saveStateAndSync();
@@ -2958,83 +3005,104 @@ function toggleDayLog(i) {
   if(toggle) toggle.textContent = open ? 'Mahlzeiten ausblenden ▴' : 'Mahlzeiten anzeigen ▾';
 }
 
+let weekChartInstance = null;
+
 function renderWeekChart() {
   const canvas = document.getElementById('week-chart');
   if(!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = canvas.offsetWidth * dpr || 340 * dpr;
-  canvas.height = 180 * dpr;
-  ctx.scale(dpr, dpr);
-  const W = canvas.width / dpr;
-  const H = 180;
 
-  // Build last 7 days data (history is newest-first)
+  // Build last 7 days
   const days = [];
   for(let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
     const dateStr = d.toDateString();
+    const label = i === 0 ? 'Heute' : d.toLocaleDateString('de-DE',{weekday:'short'});
     if(i === 0) {
-      // Today
       const eaten = state.todayLog.reduce((s,item)=>s+item.kcal,0);
-      const goal = state.settings.goal || state.settings.bmr || 2000;
-      days.push({ label: 'Heute', eaten, goal });
+      const stepsKcal = Math.round((state.steps||0)*0.04);
+      const actKcal = (state.activityLog||[]).reduce((s,a)=>s+a.kcal,0);
+      const burned = (state.settings.bmr||2000) + stepsKcal + actKcal;
+      days.push({ label, balance: eaten - burned });
     } else {
       const h = state.history.find(x=>x.date===dateStr);
-      const dow = d.toLocaleDateString('de-DE',{weekday:'short'});
-      days.push({ label: dow, eaten: h?h.eaten:0, goal: h?h.goal:(state.settings.goal||state.settings.bmr||2000) });
+      days.push({ label, balance: h ? h.eaten - h.burned : null });
     }
   }
 
-  const maxVal = Math.max(...days.map(d=>Math.max(d.eaten, d.goal)), 100);
-  const padL = 36, padR = 8, padT = 12, padB = 30;
-  const chartW = W - padL - padR;
-  const chartH = H - padT - padB;
-  const barW = Math.floor(chartW / days.length * 0.55);
-  const gap = chartW / days.length;
-
-  ctx.clearRect(0, 0, W, H);
-
-  // Grid lines
-  ctx.strokeStyle = 'rgba(0,0,0,0.06)';
-  ctx.lineWidth = 1;
-  for(let g = 0; g <= 4; g++) {
-    const y = padT + chartH - (g/4)*chartH;
-    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W-padR, y); ctx.stroke();
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.font = '10px DM Sans, sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText(Math.round((g/4)*maxVal), padL-4, y+3);
+  // Summary stats (only days with data)
+  const withData = days.filter(d=>d.balance !== null);
+  if(withData.length > 0) {
+    const total = withData.reduce((s,d)=>s+d.balance,0);
+    const avg = Math.round(total / withData.length);
+    const avgEl = document.getElementById('week-avg');
+    const totEl = document.getElementById('week-total');
+    if(avgEl) { avgEl.textContent = (avg>0?'+':'')+avg; avgEl.style.color = avg>0?'#993C1D':'#0F6E56'; }
+    if(totEl) { totEl.textContent = (total>0?'+':'')+Math.round(total); totEl.style.color = total>0?'#993C1D':'#0F6E56'; }
   }
 
-  // Bars + goal dots
-  days.forEach((d, idx) => {
-    const x = padL + idx * gap + gap/2;
-    const barH = d.eaten > 0 ? Math.max((d.eaten/maxVal)*chartH, 3) : 0;
-    const barY = padT + chartH - barH;
-    const barX = x - barW/2;
+  const balances = days.map(d => d.balance);
+  const colors = balances.map(v => v === null ? 'rgba(128,128,128,0.15)' : v <= 0 ? '#0F6E56' : '#993C1D');
 
-    // Bar
-    ctx.fillStyle = d.eaten > d.goal ? '#8b2e1a' : '#4a8c5c';
-    ctx.beginPath();
-    ctx.roundRect(barX, barY, barW, barH, [3,3,0,0]);
-    ctx.fill();
+  // Destroy old chart if exists
+  if(weekChartInstance) { weekChartInstance.destroy(); weekChartInstance = null; }
 
-    // Goal line
-    const goalY = padT + chartH - (d.goal/maxVal)*chartH;
-    ctx.strokeStyle = '#2d5a3d';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([3,2]);
-    ctx.beginPath(); ctx.moveTo(barX-2, goalY); ctx.lineTo(barX+barW+2, goalY); ctx.stroke();
-    ctx.setLineDash([]);
+  // Load Chart.js if not already loaded
+  function drawChart() {
+    weekChartInstance = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: days.map(d=>d.label),
+        datasets: [{
+          data: balances.map(v => v === null ? 0 : v),
+          backgroundColor: colors,
+          borderRadius: 4,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const v = balances[ctx.dataIndex];
+                if(v === null) return 'Kein Eintrag';
+                return (v>0?'+':'')+v+' kcal';
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: 'rgba(128,128,128,0.7)', font:{size:11} },
+            border: { display: false }
+          },
+          y: {
+            grid: { color: 'rgba(128,128,128,0.1)' },
+            ticks: {
+              color: 'rgba(128,128,128,0.7)',
+              font: { size:10 },
+              callback: v => (v>0?'+':'')+v
+            },
+            border: { display: false }
+          }
+        }
+      }
+    });
+  }
 
-    // Label
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.font = '10px DM Sans, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(d.label, x, H - 8);
-  });
+  if(window.Chart) {
+    drawChart();
+  } else {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
+    s.onload = drawChart;
+    document.head.appendChild(s);
+  }
 }
 
 // ─── SUPABASE SYNC ────────────────────────────────────────────────────────────
