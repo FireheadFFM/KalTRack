@@ -218,7 +218,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
   <!-- HOME PAGE -->
   <div class="page active" id="page-home">
     <div class="card">
-      <div class="card-label">Tagesbilanz — <span id="today-date"></span></div>
+      <div class="card-label" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Tagesbilanz — <span id="today-date"></span></span>
+        <button id="home-sync-btn" onclick="manualHomeSync()" title="Jetzt synchronisieren" style="background:none;border:none;cursor:pointer;font-size:15px;color:var(--text3);padding:0 2px;line-height:1;transition:color 0.2s;">⟳</button>
+      </div>
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-label">Aufgenommen</div>
@@ -498,7 +501,11 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.10 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.11 — April 2026</div>
+        <div>· Sync-Button (⟳) neben dem Datum auf der Übersicht zum manuellen Nachladen</div>
+        <div>· Automatischer Cloud-Sync wenn App aus dem Hintergrund reaktiviert wird (visibilitychange)</div>
+        <div>· Behebt fehlenden Sync auf dem Handy wenn Desktop-Einträge nicht erschienen</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.10 — April 2026</div>
         <div>· Datenbank: Filter „Eigene" zeigt nur selbst angelegte Einträge</div>
         <div>· Eigene Einträge als flache Liste ohne Kategorien</div>
         <div>· Kategorien standardmäßig zugeklappt</div>
@@ -603,8 +610,9 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
 
         <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Cloud-Sync</div>
         <div>· Beim App-Start: Cloud-Daten werden automatisch geladen und gemergt.</div>
+        <div>· App reaktivieren: Sobald die App aus dem Hintergrund geholt wird, sync automatisch.</div>
+        <div>· Manuell: ⟳-Symbol neben dem Datum auf der Übersichtsseite — oder ⚙ → Cloud & Backup.</div>
         <div>· Nach jeder Änderung: automatischer Upload nach 3 Sekunden.</div>
-        <div>· Manuell: ⚙ → Cloud & Backup → ↑ Hochladen / ↓ Herunterladen.</div>
         <div>· DB, Gerichte, Einstellungen und Historie werden geräteübergreifend synchronisiert.</div>
         <div>· Tageslog und Aktivitäten werden per Eintrags-ID gemergt — Einträge von beiden Geräten bleiben erhalten.</div>
         <div>· Laufende Sitzungen (mehrere Zutaten) nicht mittendrin auf anderem Gerät unterbrechen.</div>
@@ -1147,6 +1155,13 @@ async function init() {
     renderModeHint();
   }
   await autoLoadFromCloud();
+
+  // Sync wenn App aus dem Hintergrund geholt wird (z.B. Handy-Tab reaktiviert)
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'visible') {
+      autoLoadFromCloud();
+    }
+  });
 }
 
 function scheduleDayRollover() {
@@ -1184,6 +1199,20 @@ function performDayRollover() {
     document.getElementById('today-date').textContent = new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
     toast('Neuer Tag — guten Morgen!');
   }
+}
+
+async function manualHomeSync() {
+  const btn = document.getElementById('home-sync-btn');
+  if(btn) { btn.style.color = 'var(--accent)'; btn.style.animation = 'spin 1s linear infinite'; }
+  // Inject spin keyframe if not present
+  if(!document.getElementById('spin-style')) {
+    const s = document.createElement('style');
+    s.id = 'spin-style';
+    s.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+    document.head.appendChild(s);
+  }
+  await autoLoadFromCloud();
+  if(btn) { btn.style.color = 'var(--accent)'; btn.style.animation = 'none'; setTimeout(() => { btn.style.color = 'var(--text3)'; }, 1500); }
 }
 
 async function autoLoadFromCloud() {
