@@ -518,7 +518,11 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.14 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.15 — April 2026</div>
+        <div>· Open Food Facts: unvollständige Portionsdaten blockieren nicht mehr die Suche</div>
+        <div>· Suchreihenfolge: OFF-Fallback wird erst nach Nutritionix und KI-Suche gezeigt</div>
+        <div>· Gemini/Claude werden jetzt immer erreicht wenn OFF keine vollständigen Daten hat</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.14 — April 2026</div>
         <div>· Open Food Facts: Portionsgröße wird jetzt direkt aus den Produktdaten gelesen (serving_size)</div>
         <div>· Bei Stückangaben (z.B. „ein Big Mac") wird die echte Portionskalorienanzahl verwendet</div>
         <div>· Wenn keine Portionsdaten vorhanden: Dialog zur Mengeneingabe mit Live-kcal-Vorschau</div>
@@ -1697,19 +1701,20 @@ async function processInput(text) {
   }
 
   // Stufe 2: Open Food Facts (wenn aktiviert)
+  let offFallback = null; // merken falls nur kcal/100g ohne Portionsdaten
   if(state.settings.offEnabled !== false) {
     document.getElementById('mic-status').textContent = 'Suche in Open Food Facts…';
     const offResult = await searchOpenFoodFacts(text);
     if(offResult) {
       if(offResult.needsPortionInput) {
-        // Portionsgröße unbekannt → Nutzer fragen
-        showPortionInputDialog(offResult.productName, offResult.kcalPer100);
+        // Portionsdaten unvollständig → als Fallback merken, erstmal weitersuchen
+        offFallback = offResult;
       } else {
         showClaudeSearchResult(offResult, text);
+        document.getElementById('mic-btn').classList.remove('processing');
+        document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+        return;
       }
-      document.getElementById('mic-btn').classList.remove('processing');
-      document.getElementById('mic-status').textContent = 'Tippen zum Starten';
-      return;
     }
   }
 
@@ -1738,6 +1743,14 @@ async function processInput(text) {
   if(state.settings.geminiEnabled && state.settings.geminiKey) {
     document.getElementById('mic-status').textContent = 'Gemini sucht Nährwerte…';
     await processWithGemini(text, state.settings.geminiKey);
+    document.getElementById('mic-btn').classList.remove('processing');
+    document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+    return;
+  }
+
+  // Stufe 6: OFF-Fallback — Portionsdaten unbekannt, jetzt Nutzer fragen
+  if(offFallback) {
+    showPortionInputDialog(offFallback.productName, offFallback.kcalPer100);
     document.getElementById('mic-btn').classList.remove('processing');
     document.getElementById('mic-status').textContent = 'Tippen zum Starten';
     return;
