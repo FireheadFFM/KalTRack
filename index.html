@@ -2241,7 +2241,7 @@ function confirmClaudeResult() {
   pendingClaudeResult.items.forEach(item => {
     // Optional: in DB speichern wenn kcalPer100 bekannt
     if(item.saveToDb && item.kcalPer100 && !state.db.find(f=>f.name.toLowerCase()===item.name.toLowerCase())) {
-      state.db.push({ id:'ai'+Date.now(), name: item.name, kcalPer100: item.kcalPer100, unit:'100g', category:'Sonstiges' });
+      state.db.push({ id:'ai'+Date.now(), name: item.name, kcalPer100: item.kcalPer100, unit:'100g', category:'Sonstiges', custom: true });
     }
     addToSession({ name: item.name, kcal: item.kcal, detail: `${item.amount} ${item.amountUnit} · ${item.detail||'KI-Suche'}` });
   });
@@ -2354,7 +2354,7 @@ function finishDishYes() {
   const name = document.getElementById('dialog-dish-name').value.trim();
   if(!name) { toast('Bitte Namen eingeben'); return; }
   const total = pendingDishItems.reduce((s,i)=>s+i.kcal,0);
-  state.dishes.push({ id:'d'+Date.now(), name, kcal: total, items: pendingDishItems });
+  state.dishes.push({ id:'d'+Date.now(), name, kcal: total, items: pendingDishItems, custom: true });
   closeDialog('dialog-dish');
   if(state.mode === 'db') {
     state.sessionItems = [];
@@ -2413,7 +2413,7 @@ function confirmUnknown() {
   if(pendingUnknown.saveToDb && pendingUnknown.dbEntry) {
     const entry = pendingUnknown.dbEntry;
     if(!state.db.find(f=>f.name.toLowerCase()===entry.name.toLowerCase())) {
-      state.db.push({ id:'u'+Date.now(), ...entry });
+      state.db.push({ id:'u'+Date.now(), ...entry, custom: true });
       toast(`${entry.name} in Datenbank gespeichert`);
     }
   }
@@ -2518,8 +2518,12 @@ function filterDb(q) { dbFilter = q; renderDbPageFull(); }
 
 let dbCollapsed = {};
 function isCustomEntry(f) {
-  // Eigene Einträge: ID beginnt mit m, u, ai, oder hat keine Standard-Präfixe
-  return f.id && /^(m|u|ai|ca)/.test(f.id);
+  if(f.custom === true) return true;
+  if(f.custom === false) return false;
+  // Fallback für ältere Einträge ohne custom-Flag:
+  // Standard-IDs sind kurz (f001, v001, m020 etc.)
+  // Selbst angelegte haben lange Timestamp-IDs (m1776..., d1776..., u1776..., ai1776...)
+  return f.id && /^[a-z]+\d{8,}/.test(f.id);
 }
 
 function renderDbPageFull() {
@@ -2700,7 +2704,7 @@ function confirmDbEdit() {
   if(!name||!kcalRaw) { toast('Name und kcal eingeben'); return; }
   let kcalPer100 = kcalRaw;
   if(mode === 'total' && grams > 0) kcalPer100 = Math.round((kcalRaw / grams) * 100);
-  f.name = name; f.kcalPer100 = kcalPer100; f.unit = unit; f.category = category;
+  f.name = name; f.kcalPer100 = kcalPer100; f.unit = unit; f.category = category; f.custom = true;
   if(grams > 0) f.gramsPerUnit = grams; else delete f.gramsPerUnit;
   closeDialog('dialog-db-edit');
   renderDbPageFull(); saveStateAndSync();
@@ -2780,7 +2784,7 @@ function confirmDbAdd() {
   let kcalPer100 = kcalRaw;
   if(mode === 'total' && grams > 0) kcalPer100 = Math.round((kcalRaw / grams) * 100);
 
-  const entry = { id:'m'+Date.now(), name, kcalPer100, unit, category };
+  const entry = { id:'m'+Date.now(), name, kcalPer100, unit, category, custom: true };
   if(grams > 0) entry.gramsPerUnit = grams;
   state.db.push(entry);
   closeDialog('dialog-db-add');
