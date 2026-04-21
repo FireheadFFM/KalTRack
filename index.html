@@ -341,6 +341,13 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <input type="number" id="steps-input" placeholder="z.B. 8000" onkeydown="if(event.key==='Enter')saveSteps()" />
         <button class="btn btn-primary" onclick="saveSteps()">Speichern</button>
       </div>
+      <div id="steps-progress-wrap" style="margin-top:10px;display:none;">
+        <div class="progress-bar"><div id="steps-progress-fill" class="progress-fill" style="width:0%;background:var(--accent2);"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:var(--text3);">
+          <span id="steps-progress-label">0 Schritte</span>
+          <span id="steps-progress-goal">Ziel: 10.000</span>
+        </div>
+      </div>
       <div style="font-size:12px;color:var(--text3);margin-top:8px;">≈ 0,04 kcal pro Schritt</div>
     </div>
 
@@ -389,13 +396,14 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
   <!-- HISTORY PAGE -->
   <div class="page" id="page-history">
     <div class="card">
-      <div class="card-label">Wochenübersicht — Kalorienbilanz</div>
-      <div style="position:relative;width:100%;height:180px;">
-        <canvas id="week-chart" role="img" aria-label="Tägliche Kalorienbilanz der letzten 7 Tage">Balkendiagramm der Kalorienbilanz pro Tag.</canvas>
+      <div class="card-label">Wochenübersicht — Kalorienbilanz &amp; Schritte</div>
+      <div style="position:relative;width:100%;height:200px;">
+        <canvas id="week-chart" role="img" aria-label="Tägliche Kalorienbilanz und Schritte der letzten 7 Tage">Balkendiagramm der Kalorienbilanz pro Tag.</canvas>
       </div>
-      <div style="display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:11px;color:var(--text3);">
+      <div style="display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:11px;color:var(--text3);flex-wrap:wrap;">
         <span><span style="display:inline-block;width:10px;height:10px;background:#0F6E56;border-radius:2px;margin-right:4px;"></span>Defizit</span>
         <span><span style="display:inline-block;width:10px;height:10px;background:#993C1D;border-radius:2px;margin-right:4px;"></span>Überschuss</span>
+        <span><span style="display:inline-block;width:10px;height:2px;background:#4a8c5c;margin-right:4px;vertical-align:middle;"></span>Schritte</span>
       </div>
       <div class="stats-grid" style="margin-top:10px;">
         <div class="stat-card">
@@ -582,7 +590,11 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.33 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.34 — April 2026</div>
+        <div>· Schrittziel wird jetzt genutzt: Fortschrittsbalken auf der Aktivitäts-Seite</div>
+        <div>· Übersicht: Schritte zeigen „x / Ziel" und „✓ Ziel erreicht" wenn geschafft</div>
+        <div>· Wochenchart: Schritte als grüne Linie auf zweiter Y-Achse, Ziel-Erreichen farblich markiert</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.33 — April 2026</div>
         <div>· Mode-Toggle: „Heute tracken" → „Tracken" (kürzer)</div>
         <div>· Sitzungs-Button: „Sitzung abschließen" → „Zum Tageslog hinzufügen"</div>
         <div>· Favoriten-Chips: „+" als visueller Hinweis dass man sie antippen kann</div>
@@ -1901,6 +1913,7 @@ function showPage(p) {
   if(p === 'settings') { renderSettings(); renderBacklogIdeas(); }
   if(p === 'input') renderModeHint();
   if(p === 'history') renderHistory();
+  if(p === 'activity') renderStepsProgress();
   if(p === 'db') renderDbPageFull();
 }
 
@@ -2003,8 +2016,8 @@ function renderHome() {
     const stepsHtml = hasSteps ? `
       <div class="log-item">
         <div class="log-left">
-          <div class="log-name">🚶 Schritte</div>
-          <div class="log-detail">${state.steps.toLocaleString('de-DE')} Schritte</div>
+          <div class="log-name">🚶 Schritte${state.steps >= (state.settings.stepsGoal||10000) ? ' <span style="color:var(--accent);font-size:12px;">✓ Ziel erreicht</span>' : ''}</div>
+          <div class="log-detail">${state.steps.toLocaleString('de-DE')} / ${(state.settings.stepsGoal||10000).toLocaleString('de-DE')} Schritte</div>
         </div>
         <div class="log-right">
           <div class="log-kcal">−${stepsKcal} kcal</div>
@@ -3373,12 +3386,34 @@ function addCustomActivity() {
   openActivity(act.id);
 }
 
+function renderStepsProgress() {
+  const steps = state.steps || 0;
+  const goal = state.settings.stepsGoal || 10000;
+  const wrap = document.getElementById('steps-progress-wrap');
+  const fill = document.getElementById('steps-progress-fill');
+  const label = document.getElementById('steps-progress-label');
+  const goalEl = document.getElementById('steps-progress-goal');
+  if(!wrap) return;
+  if(steps === 0) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  const pct = Math.min((steps / goal) * 100, 100);
+  fill.style.width = pct + '%';
+  fill.className = 'progress-fill' + (steps >= goal ? ' over' : '');
+  fill.style.background = steps >= goal ? 'var(--accent)' : 'var(--accent2)';
+  label.textContent = steps.toLocaleString('de-DE') + ' Schritte' + (steps >= goal ? ' ✓' : '');
+  goalEl.textContent = 'Ziel: ' + goal.toLocaleString('de-DE');
+  // Vorbelegen des Eingabefeldes mit aktuellen Schritten
+  const input = document.getElementById('steps-input');
+  if(input && !input.value) input.placeholder = steps.toLocaleString('de-DE') + ' (aktuell)';
+}
+
 function saveSteps() {
   const steps = parseInt(document.getElementById('steps-input').value);
   if(!steps) return;
   state.steps = steps;
   saveStateAndSync();
   renderHome();
+  renderStepsProgress();
   dismissReminder();
   toast(`${steps.toLocaleString('de-DE')} Schritte gespeichert`);
 }
@@ -4008,10 +4043,10 @@ function renderWeekChart() {
       const stepsKcal = Math.round((state.steps||0)*0.04);
       const actKcal = (state.activityLog||[]).reduce((s,a)=>s+a.kcal,0);
       const burned = (state.settings.bmr||2000) + stepsKcal + actKcal;
-      days.push({ label, balance: eaten - burned });
+      days.push({ label, balance: eaten - burned, steps: state.steps||0 });
     } else {
       const h = state.history.find(x=>x.date===dateStr);
-      days.push({ label, balance: h ? h.eaten - h.burned : null });
+      days.push({ label, balance: h ? h.eaten - h.burned : null, steps: h ? (h.steps||0) : null });
     }
   }
 
@@ -4027,6 +4062,8 @@ function renderWeekChart() {
   }
 
   const balances = days.map(d => d.balance);
+  const stepsData = days.map(d => d.steps);
+  const stepGoal = state.settings.stepsGoal || 10000;
   const colors = balances.map(v => v === null ? 'transparent' : v <= 0 ? '#0F6E56' : '#993C1D');
   const displayBalances = balances.map(v => v === null ? 0 : v);
 
@@ -4040,19 +4077,37 @@ function renderWeekChart() {
       data: {
         labels: days.map(d=>d.label),
         datasets: [{
+          yAxisID: 'y',
           data: displayBalances,
           backgroundColor: colors,
           borderRadius: 4,
-          borderSkipped: false
+          borderSkipped: false,
+          order: 2
+        }, {
+          // Schritte als Linie auf zweiter Y-Achse
+          type: 'line',
+          yAxisID: 'y2',
+          data: stepsData.map(s => s === null ? null : s),
+          borderColor: '#4a8c5c',
+          backgroundColor: 'rgba(74,140,92,0.1)',
+          pointBackgroundColor: stepsData.map(s => s !== null && s >= stepGoal ? '#2d5a3d' : '#4a8c5c'),
+          pointRadius: stepsData.map(s => s !== null && s > 0 ? 4 : 0),
+          pointHoverRadius: 6,
+          borderWidth: 2,
+          tension: 0.3,
+          spanGaps: false,
+          order: 1
         }, {
           // Gestrichelte Markierung für Tage ohne Eintrag
           type: 'scatter',
+          yAxisID: 'y',
           data: days.map((d,i) => d.balance === null ? { x: i, y: 0 } : null).filter(Boolean),
           pointStyle: 'line',
           pointRadius: 12,
           pointBorderColor: 'rgba(160,160,160,0.4)',
           pointBorderWidth: 1,
-          showLine: false
+          showLine: false,
+          order: 3
         }]
       },
       options: {
@@ -4063,6 +4118,11 @@ function renderWeekChart() {
           tooltip: {
             callbacks: {
               label: ctx => {
+                if(ctx.datasetIndex === 1) {
+                  const s = stepsData[ctx.dataIndex];
+                  if(!s) return 'Keine Schritte';
+                  return s.toLocaleString('de-DE') + ' Schritte' + (s >= stepGoal ? ' ✓' : '');
+                }
                 const v = balances[ctx.dataIndex];
                 if(v === null) return 'Kein Eintrag';
                 return (v>0?'+':'')+v+' kcal';
@@ -4077,11 +4137,20 @@ function renderWeekChart() {
             border: { display: false }
           },
           y: {
+            position: 'left',
             grid: { color: 'rgba(128,128,128,0.1)' },
+            ticks: { color: 'rgba(128,128,128,0.7)', font:{size:10}, callback: v => (v>0?'+':'')+v },
+            border: { display: false }
+          },
+          y2: {
+            position: 'right',
+            grid: { display: false },
+            min: 0,
             ticks: {
-              color: 'rgba(128,128,128,0.7)',
-              font: { size:10 },
-              callback: v => (v>0?'+':'')+v
+              color: 'rgba(74,140,92,0.7)',
+              font: { size:9 },
+              callback: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v,
+              maxTicksLimit: 4
             },
             border: { display: false }
           }
