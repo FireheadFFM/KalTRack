@@ -292,14 +292,16 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <button class="btn btn-primary btn-full" id="session-save-btn" onclick="finishSession()">Sitzung abschließen</button>
     </div>
 
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleFavorites()">
+    <div class="card" id="fav-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <div class="card-label" style="margin:0;">Favoriten</div>
-        <span id="fav-arrow" style="font-size:12px;color:var(--text3);">▾</span>
+        <span id="fav-arrow" style="font-size:12px;color:var(--text3);cursor:pointer;" onclick="toggleFavorites()">▾ alle</span>
       </div>
+      <!-- Schnellauswahl-Chips: Top 5 direkt sichtbar -->
+      <div id="fav-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;"></div>
+      <!-- Ausgeklappte vollständige Liste -->
       <div id="fav-list" style="display:none;margin-top:10px;">
         <div id="fav-items"></div>
-        <div style="font-size:11px;color:var(--text3);margin-top:8px;">Favoriten werden in der Datenbank unter dem jeweiligen Eintrag gepflegt.</div>
       </div>
     </div>
   </div>
@@ -1019,6 +1021,7 @@ async function init() {
   renderActivityGrid();
   renderAiToggle();
   updateAutoFavorites();
+  renderFavorites();
   scheduleDayRollover();
   if(state.mode === 'db') {
     switchToDb();
@@ -1611,29 +1614,90 @@ let pendingFavItem = null;
 function toggleFavorites() {
   favOpen = !favOpen;
   document.getElementById('fav-list').style.display = favOpen ? 'block' : 'none';
-  document.getElementById('fav-arrow').textContent = favOpen ? '▴' : '▾';
+  document.getElementById('fav-arrow').textContent = favOpen ? '▴ weniger' : '▾ alle';
   if(favOpen) renderFavorites();
 }
 
 function renderFavorites() {
   if(!state.favorites) state.favorites = [];
+  const favCard = document.getElementById('fav-card');
+
+  // Chips: Top 5 direkt sichtbar
+  const chips = document.getElementById('fav-chips');
+  if(chips) {
+    if(state.favorites.length === 0) {
+      chips.innerHTML = '<div style="font-size:12px;color:var(--text3);">Noch keine Favoriten — ☆ in der Datenbank antippen.</div>';
+    } else {
+      chips.innerHTML = state.favorites.slice(0,5).map((fav,i) => {
+        const kcalHint = getFavKcalHint(fav);
+        const autoBadge = fav.auto ? '<span style="font-size:10px;background:var(--warn-bg);color:var(--warn);border-radius:6px;padding:1px 5px;margin-left:4px;">Auto</span>' : '';
+        return `<div onclick="useFavorite(${i})" style="display:flex;flex-direction:column;align-items:flex-start;padding:7px 11px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);cursor:pointer;min-width:80px;max-width:140px;">
+          <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">${fav.name}${autoBadge}</div>
+          <div style="font-size:11px;color:var(--text3);">${kcalHint}</div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Vollständige Liste (ausgeklappt)
   const el = document.getElementById('fav-items');
   if(!el) return;
-  if(state.favorites.length === 0) {
-    el.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:8px 0;">Noch keine Favoriten — Stern ★ in der Datenbank antippen.</div>';
-    return;
-  }
-  el.innerHTML = state.favorites.map((fav,i) => `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--border);">
-      <div>
-        <div style="font-size:14px;font-weight:500;color:var(--text);">${fav.name}</div>
-        <div style="font-size:11px;color:var(--text3);">${fav.defaultAmount ? fav.defaultAmount + ' ' + fav.defaultUnit : 'Menge wird abgefragt'}</div>
+  if(state.favorites.length === 0) { el.innerHTML = ''; return; }
+  el.innerHTML = state.favorites.map((fav,i) => {
+    const kcalHint = getFavKcalHint(fav);
+    const autoBadge = fav.auto ? '<span style="font-size:10px;background:var(--warn-bg);color:var(--warn);border-radius:6px;padding:1px 5px;margin-left:4px;">Auto</span>' : '';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--border);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;font-weight:500;color:var(--text);">${fav.name}${autoBadge}</div>
+        <div style="font-size:11px;color:var(--text3);">${kcalHint}</div>
       </div>
-      <div style="display:flex;gap:6px;">
-        <button class="btn btn-primary" style="font-size:12px;padding:6px 12px;" onclick="useFavorite(${i})">+ Hinzufügen</button>
+      <div style="display:flex;gap:4px;flex-shrink:0;margin-left:8px;">
+        ${i > 0 ? `<button class="btn btn-secondary" style="font-size:11px;padding:4px 7px;" onclick="moveFav(${i},-1)">↑</button>` : ''}
+        ${i < state.favorites.length-1 ? `<button class="btn btn-secondary" style="font-size:11px;padding:4px 7px;" onclick="moveFav(${i},1)">↓</button>` : ''}
+        <button class="btn btn-secondary" style="font-size:11px;padding:4px 8px;" onclick="editFavAmount(${i})" title="Menge ändern">✎</button>
+        <button class="btn btn-primary" style="font-size:12px;padding:6px 10px;" onclick="useFavorite(${i})">+</button>
         <button class="btn btn-danger" style="font-size:12px;padding:6px 10px;" onclick="removeFavorite(${i})">★</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+}
+
+function getFavKcalHint(fav) {
+  if(fav.type === 'dish') {
+    const dish = state.dishes.find(d=>d.name===fav.name);
+    return dish ? dish.kcal + ' kcal · Gericht' : 'Gericht';
+  }
+  if(fav.defaultAmount) {
+    const food = state.db.find(f=>f.name===fav.name);
+    if(food) {
+      const {amt} = normalizeUnit(fav.defaultAmount, fav.defaultUnit);
+      const isPiece = food.unit && !food.unit.startsWith('100');
+      const kcal = isPiece && !food.gramsPerUnit
+        ? Math.round(food.kcalPer100 * amt)
+        : food.gramsPerUnit && isPiece
+          ? Math.round((food.gramsPerUnit * amt * food.kcalPer100) / 100)
+          : Math.round((amt * food.kcalPer100) / 100);
+      return `${fav.defaultAmount}${fav.defaultUnit} · ${kcal} kcal`;
+    }
+    return `${fav.defaultAmount}${fav.defaultUnit}`;
+  }
+  return 'Menge wird abgefragt';
+}
+
+function moveFav(i, dir) {
+  const j = i + dir;
+  if(j < 0 || j >= state.favorites.length) return;
+  [state.favorites[i], state.favorites[j]] = [state.favorites[j], state.favorites[i]];
+  saveStateAndSync();
+  renderFavorites();
+}
+
+function editFavAmount(i) {
+  pendingFavItem = { fav: state.favorites[i], idx: i };
+  document.getElementById('dialog-fav-name').textContent = state.favorites[i].name;
+  document.getElementById('dialog-fav-amount-val').value = state.favorites[i].defaultAmount || '';
+  document.getElementById('dialog-fav-amount-unit').value = state.favorites[i].defaultUnit || 'g';
+  openDialog('dialog-fav-amount');
 }
 
 function toggleFavoriteDb(name, type) {
@@ -1643,12 +1707,14 @@ function toggleFavoriteDb(name, type) {
     state.favorites.splice(idx, 1);
     toast(`${name} aus Favoriten entfernt`);
   } else {
-    state.favorites.push({ name, type, defaultAmount: null, defaultUnit: 'g' });
+    // Für Gerichte keine Standardmenge nötig
+    const defaultUnit = type === 'dish' ? 'Portion' : 'g';
+    state.favorites.push({ name, type, defaultAmount: null, defaultUnit });
     toast(`${name} zu Favoriten hinzugefügt ★`);
   }
   saveStateAndSync();
   renderDbPageFull();
-  if(favOpen) renderFavorites();
+  renderFavorites();
 }
 
 function removeFavorite(i) {
@@ -1661,21 +1727,18 @@ function removeFavorite(i) {
 function useFavorite(i) {
   const fav = state.favorites[i];
   if(!fav) return;
-  if(fav.defaultAmount) {
-    // Direkt hinzufügen mit gespeicherter Menge
-    if(fav.type === 'dish') {
-      handleParsedInput({ type:'dish', name:fav.name, matchedDbName:fav.name }, fav.name);
-    } else {
-      const {amt, unit} = normalizeUnit(fav.defaultAmount, fav.defaultUnit);
-      handleParsedInput({ type:'food', name:fav.name, amount:amt, amountUnit:unit, matchedDbName:fav.name }, fav.name);
-    }
-  } else if(fav.type === 'dish') {
+  if(fav.type === 'dish') {
     handleParsedInput({ type:'dish', name:fav.name, matchedDbName:fav.name }, fav.name);
+    return;
+  }
+  if(fav.defaultAmount) {
+    const {amt, unit} = normalizeUnit(fav.defaultAmount, fav.defaultUnit);
+    handleParsedInput({ type:'food', name:fav.name, amount:amt, amountUnit:unit, matchedDbName:fav.name }, fav.name);
   } else {
-    // Menge abfragen
     pendingFavItem = { fav, idx: i };
     document.getElementById('dialog-fav-name').textContent = fav.name;
     document.getElementById('dialog-fav-amount-val').value = '';
+    document.getElementById('dialog-fav-amount-unit').value = fav.defaultUnit || 'g';
     openDialog('dialog-fav-amount');
   }
 }
@@ -1685,7 +1748,6 @@ function confirmFavAmount() {
   const amt = parseFloat(document.getElementById('dialog-fav-amount-val').value);
   const unit = document.getElementById('dialog-fav-amount-unit').value;
   if(!amt) { toast('Bitte Menge eingeben'); return; }
-  // Menge als Standard speichern
   state.favorites[pendingFavItem.idx].defaultAmount = amt;
   state.favorites[pendingFavItem.idx].defaultUnit = unit;
   saveStateAndSync();
@@ -1704,7 +1766,6 @@ function updateAutoFavorites() {
     (day.log||[]).forEach(item => { counts[item.name] = (counts[item.name]||0) + 1; });
   });
   (state.todayLog||[]).forEach(item => { counts[item.name] = (counts[item.name]||0) + 1; });
-  // Items die 5+ mal genutzt wurden automatisch vorschlagen
   Object.entries(counts).filter(([,v])=>v>=5).forEach(([name]) => {
     if(!state.favorites.find(f=>f.name===name)) {
       const food = state.db.find(f=>f.name===name);
@@ -2382,20 +2443,24 @@ function renderDbPageFull() {
   if(dishesContainer) {
     dishesContainer.innerHTML = state.dishes.length === 0
       ? '<div class="empty-state">Noch keine Gerichte gespeichert</div>'
-      : state.dishes.map((d,i) => `
+      : state.dishes.map((d,i) => {
+          const isFav = (state.favorites||[]).find(f=>f.name===d.name);
+          return `
           <div class="db-item">
             <div class="log-left">
               <div class="db-name">${d.name}</div>
               <div class="db-detail">${d.kcal} kcal · ${d.items?d.items.length:0} Zutaten</div>
             </div>
             <div class="db-actions">
+              <button style="background:none;border:none;cursor:pointer;font-size:15px;padding:4px;" onclick="toggleFavoriteDb('${d.name.replace(/'/g,"\\'")}','dish')" title="Favorit">${isFav?'★':'☆'}</button>
               <button class="btn btn-secondary" style="font-size:12px;padding:6px 10px;" onclick="toggleDishDetail(${i})">Details</button>
               <button class="btn btn-danger" style="font-size:12px;padding:6px 10px;" onclick="deleteDishConfirm(${i})">−</button>
             </div>
           </div>
           <div id="dish-detail-${i}" style="display:none;padding:6px 0 4px;">
             ${(d.items||[]).map(it=>`<div style="font-size:12px;color:var(--text2);padding:2px 0;display:flex;justify-content:space-between;"><span>${it.name}</span><span>${it.kcal} kcal</span></div>`).join('')}
-          </div>`).join('');
+          </div>`;
+        }).join('');
   }
 }
 
