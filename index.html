@@ -501,7 +501,9 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.11 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.12 — April 2026</div>
+        <div>· Gemini-Modell auf gemini-2.5-flash aktualisiert (2.0-flash seit März 2026 eingestellt)</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.11 — April 2026</div>
         <div>· Sync-Button (⟳) neben dem Datum auf der Übersicht zum manuellen Nachladen</div>
         <div>· Automatischer Cloud-Sync wenn App aus dem Hintergrund reaktiviert wird (visibilitychange)</div>
         <div>· Behebt fehlenden Sync auf dem Handy wenn Desktop-Einträge nicht erschienen</div>
@@ -2148,7 +2150,7 @@ Antworte NUR mit diesem JSON (kein anderer Text, keine Markdown-Blöcke):
 
   try {
     const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
