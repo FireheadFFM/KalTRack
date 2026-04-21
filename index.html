@@ -539,7 +539,9 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.26 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.27 — April 2026</div>
+        <div>· Schritte können jetzt in der Übersicht mit × gelöscht werden</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.26 — April 2026</div>
         <div>· Fehler behoben: doppelte stepsKcal-Deklaration in renderHome (SyntaxError)</div>
         <div>· Fehler behoben: showPage-Referenzfehler im Aktivitäten-Log</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.25 — April 2026</div>
@@ -1837,11 +1839,11 @@ function renderHome() {
         </div>
         <div class="log-right">
           <div class="log-kcal">−${stepsKcal} kcal</div>
-          <button class="log-del" onclick="document.querySelectorAll('.nav-btn')[2].click()" title="Schritte bearbeiten" style="font-size:13px;">✎</button>
+          <button class="log-del" onclick="deleteSteps()">×</button>
         </div>
       </div>` : '';
 
-    const activitiesHtml = state.activityLog.map((item,i) => `
+    const activitiesHtml = state.activityLog.map((item, i) => `
       <div class="log-item">
         <div class="log-left">
           <div class="log-name">${item.name}</div>
@@ -3244,6 +3246,14 @@ function deleteLog(i) {
   if(!item || !confirm(`"${item.name}" aus dem Tageslog entfernen?`)) return;
   state.todayLog.splice(i,1); saveStateAndSync(); renderHome();
 }
+function deleteSteps() {
+  if(!confirm(`${state.steps.toLocaleString('de-DE')} Schritte löschen?`)) return;
+  state.steps = 0;
+  saveStateAndSync();
+  renderHome();
+  toast('Schritte gelöscht');
+}
+
 function deleteActivity(i) {
   const item = state.activityLog[i];
   if(!item || !confirm(`"${item.name}" aus den Aktivitäten entfernen?`)) return;
