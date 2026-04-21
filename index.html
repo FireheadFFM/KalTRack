@@ -518,7 +518,12 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.13 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.14 — April 2026</div>
+        <div>· Open Food Facts: Portionsgröße wird jetzt direkt aus den Produktdaten gelesen (serving_size)</div>
+        <div>· Bei Stückangaben (z.B. „ein Big Mac") wird die echte Portionskalorienanzahl verwendet</div>
+        <div>· Wenn keine Portionsdaten vorhanden: Dialog zur Mengeneingabe mit Live-kcal-Vorschau</div>
+        <div>· Explizite Grammangaben (z.B. „200g Big Mac") werden weiterhin direkt berechnet</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.13 — April 2026</div>
         <div>· Autocomplete: Vorschläge ab 2 Buchstaben in der Texteingabe (Eingabe-Seite)</div>
         <div>· Autocomplete: Vorschläge auch in der Datenbank-Suche</div>
         <div>· Gerichte erscheinen zuerst in den Vorschlägen, mit Badge gekennzeichnet</div>
@@ -871,6 +876,27 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
     <div class="dialog-btns">
       <button class="btn btn-secondary" onclick="closeDialog('dialog-manual-day')">Abbrechen</button>
       <button class="btn btn-primary" onclick="confirmManualDay()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="dialog-portion-input" onclick="closeDialog('dialog-portion-input')">
+  <div class="dialog" onclick="event.stopPropagation()">
+    <h3 id="dialog-portion-name">Portionsgröße?</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:10px;">Für <strong id="dialog-portion-product"></strong> wurde nur der kcal/100g-Wert gefunden (<span id="dialog-portion-per100"></span> kcal/100g).<br>Wie viel hast du gegessen?</p>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <input type="number" id="dialog-portion-amount" placeholder="Menge" style="flex:1;" />
+      <select id="dialog-portion-unit" style="width:90px;padding:9px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;">
+        <option value="g">g</option>
+        <option value="ml">ml</option>
+        <option value="Stück">Stück</option>
+        <option value="Portion">Portion</option>
+      </select>
+    </div>
+    <div id="dialog-portion-hint" style="font-size:11px;color:var(--accent);margin-bottom:10px;min-height:14px;"></div>
+    <div class="dialog-btns">
+      <button class="btn btn-secondary" onclick="closeDialog('dialog-portion-input')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="confirmPortionInput()">Hinzufügen</button>
     </div>
   </div>
 </div>
@@ -1675,7 +1701,12 @@ async function processInput(text) {
     document.getElementById('mic-status').textContent = 'Suche in Open Food Facts…';
     const offResult = await searchOpenFoodFacts(text);
     if(offResult) {
-      showClaudeSearchResult(offResult, text);
+      if(offResult.needsPortionInput) {
+        // Portionsgröße unbekannt → Nutzer fragen
+        showPortionInputDialog(offResult.productName, offResult.kcalPer100);
+      } else {
+        showClaudeSearchResult(offResult, text);
+      }
       document.getElementById('mic-btn').classList.remove('processing');
       document.getElementById('mic-status').textContent = 'Tippen zum Starten';
       return;
@@ -1720,11 +1751,23 @@ async function processInput(text) {
 // ─── OPEN FOOD FACTS ──────────────────────────────────────────────────────────
 async function searchOpenFoodFacts(text) {
   try {
-    // Menge aus Text extrahieren für spätere Berechnung
+    // Menge aus Text extrahieren
     const amountMatch = text.match(/(\d+(?:[,.]\d+)?)\s*(g|gramm|ml)/i);
     const wordNums = [['einen',1],['eine',1],['ein',1],['zwei',2],['drei',3],['vier',4],['fünf',5]];
-    let amount = amountMatch ? parseFloat(amountMatch[1].replace(',','.')) : 100;
-    let amountUnit = amountMatch ? amountMatch[2] : 'g';
+    let inputAmount = amountMatch ? parseFloat(amountMatch[1].replace(',','.')) : null;
+    let inputUnit = amountMatch ? amountMatch[2] : null;
+
+    // Stückzahl aus Text erkennen (z.B. "ein Big Mac", "2 Würstchen")
+    let pieceCount = 1;
+    if(!amountMatch) {
+      const leadNum = text.match(/^(\d+)\s+\S/);
+      if(leadNum) pieceCount = parseInt(leadNum[1]);
+      else {
+        for(const [word, val] of wordNums) {
+          if(new RegExp('\\b' + word + '\\b', 'i').test(text)) { pieceCount = val; break; }
+        }
+      }
+    }
 
     // Suchwort bereinigen
     const query = text.replace(/\d+\s*(g|gramm|ml|stück|stuck|kcal|kalorien)/gi,'')
@@ -1732,7 +1775,7 @@ async function searchOpenFoodFacts(text) {
                       .trim();
     if(query.length < 2) return null;
 
-    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=3&lc=de&cc=de`;
+    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=5&lc=de&cc=de`;
     const resp = await fetch(url);
     const data = await resp.json();
     if(!data.products || data.products.length === 0) return null;
@@ -1743,20 +1786,49 @@ async function searchOpenFoodFacts(text) {
 
     const kcalPer100 = Math.round(product.nutriments['energy-kcal_100g']);
     const name = product.product_name_de || product.product_name || query;
-    const kcal = Math.round((amount * kcalPer100) / 100);
 
+    // ── Strategie A: Nutzer hat explizite Grammangabe gemacht ──
+    if(inputAmount && inputUnit) {
+      const kcal = Math.round((inputAmount * kcalPer100) / 100);
+      return {
+        items: [{ name, amount: inputAmount, amountUnit: inputUnit, kcal,
+          detail: `${inputAmount}${inputUnit} · ${kcalPer100} kcal/100g · Open Food Facts`,
+          saveToDb: true, kcalPer100 }],
+        totalKcal: kcal, confidence: 'mittel', source: 'Open Food Facts'
+      };
+    }
+
+    // ── Strategie B: Portionsgröße aus OFF auslesen ──
+    const kcalServing = product.nutriments?.['energy-kcal_serving'];
+    const servingSize = product.serving_size; // z.B. "200 g" oder "1 burger (200g)"
+    let servingGrams = null;
+    if(servingSize) {
+      const sg = servingSize.match(/(\d+(?:[,.]\d+)?)\s*g/i);
+      if(sg) servingGrams = parseFloat(sg[1].replace(',','.'));
+    }
+
+    if(kcalServing && kcalServing > 0 && servingGrams && servingGrams > 10) {
+      // Portionsdaten vorhanden → direkt verwenden
+      const kcal = Math.round(kcalServing * pieceCount);
+      return {
+        items: [{ name, amount: pieceCount, amountUnit: 'Portion',
+          kcal,
+          detail: `${pieceCount > 1 ? pieceCount + '× ' : ''}${Math.round(servingGrams)}g · ${Math.round(kcalServing)} kcal/Portion · Open Food Facts`,
+          saveToDb: true, kcalPer100 }],
+        totalKcal: kcal, confidence: 'hoch', source: 'Open Food Facts'
+      };
+    }
+
+    // ── Strategie C: Nur kcal/100g bekannt, keine Portion → Nutzer fragen ──
+    // Ergebnis zurückgeben mit needsPortionInput-Flag
     return {
-      items: [{
-        name, amount, amountUnit,
-        kcal,
+      items: [{ name, amount: null, amountUnit: 'g', kcal: null,
         detail: `${kcalPer100} kcal/100g · Open Food Facts`,
-        saveToDb: true,
-        kcalPer100
-      }],
-      totalKcal: kcal,
-      confidence: 'mittel',
-      source: 'Open Food Facts'
+        saveToDb: true, kcalPer100 }],
+      totalKcal: null, confidence: 'mittel', source: 'Open Food Facts',
+      needsPortionInput: true, productName: name, kcalPer100
     };
+
   } catch(e) { return null; }
 }
 
@@ -2251,7 +2323,58 @@ function tryLocalParser(text) {
   return null; // Nicht lokal erkannt
 }
 
-// ─── GEMINI SEARCH ────────────────────────────────────────────────────────────
+// ─── PORTION INPUT DIALOG (OFF Fallback) ──────────────────────────────────────
+let pendingPortionProduct = null;
+
+function showPortionInputDialog(productName, kcalPer100) {
+  pendingPortionProduct = { name: productName, kcalPer100 };
+  document.getElementById('dialog-portion-product').textContent = productName;
+  document.getElementById('dialog-portion-per100').textContent = kcalPer100;
+  document.getElementById('dialog-portion-amount').value = '';
+  document.getElementById('dialog-portion-hint').textContent = '';
+  // Live-Vorschau beim Tippen
+  const amountEl = document.getElementById('dialog-portion-amount');
+  const unitEl = document.getElementById('dialog-portion-unit');
+  const hintEl = document.getElementById('dialog-portion-hint');
+  const updateHint = () => {
+    const amt = parseFloat(amountEl.value);
+    const unit = unitEl.value;
+    if(amt > 0 && (unit === 'g' || unit === 'ml')) {
+      const kcal = Math.round((amt * kcalPer100) / 100);
+      hintEl.textContent = `→ ${kcal} kcal`;
+    } else {
+      hintEl.textContent = '';
+    }
+  };
+  amountEl.oninput = updateHint;
+  unitEl.onchange = updateHint;
+  openDialog('dialog-portion-input');
+  setTimeout(() => amountEl.focus(), 100);
+}
+
+function confirmPortionInput() {
+  if(!pendingPortionProduct) return;
+  const amt = parseFloat(document.getElementById('dialog-portion-amount').value);
+  const unit = document.getElementById('dialog-portion-unit').value;
+  if(!amt || amt <= 0) { toast('Bitte Menge eingeben'); return; }
+  const { name, kcalPer100 } = pendingPortionProduct;
+  let kcal;
+  if(unit === 'g' || unit === 'ml') {
+    kcal = Math.round((amt * kcalPer100) / 100);
+  } else {
+    // Stück/Portion ohne Gramm → als Gesamtmenge interpretieren, kcalPer100 als Richtwert
+    kcal = Math.round((amt * kcalPer100) / 100);
+  }
+  // In DB speichern
+  if(!state.db.find(f => f.name.toLowerCase() === name.toLowerCase())) {
+    state.db.push({ id:'off'+Date.now(), name, kcalPer100, unit:'100g', category:'Sonstiges', custom: true });
+  }
+  addToSession({ name, kcal, detail: `${amt}${unit} · ${kcalPer100} kcal/100g · Open Food Facts` });
+  closeDialog('dialog-portion-input');
+  pendingPortionProduct = null;
+}
+
+
 async function processWithGemini(text, apiKey) {
   const prompt = `Du bist ein Kalorien-Assistent. Der Nutzer hat folgendes eingegeben: "${text}"
 
