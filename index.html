@@ -343,12 +343,15 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <div id="db-cat-filter" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;"></div>
     </div>
 
-    <div id="db-page-list"></div>
-
-    <div class="section-title">Gespeicherte Gerichte</div>
-    <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;margin:4px 2px 6px;" onclick="toggleDbCat('__dishes')">
+      <div class="section-title" style="margin:0;">Meine Gerichte <span id="dishes-count" style="font-weight:400;color:var(--text3);"></span></div>
+      <span id="dbcat-dishes-arrow" style="font-size:12px;color:var(--text3);">▴</span>
+    </div>
+    <div id="dbcat-__dishes" class="card" style="margin-bottom:8px;">
       <div id="dishes-list"></div>
     </div>
+
+    <div id="db-page-list"></div>
   </div>
 
   <!-- HISTORY PAGE -->
@@ -682,6 +685,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <input type="number" id="db-edit-grams" placeholder="g oder ml/Stück (opt.)" style="flex:1;" />
     </div>
     <div id="db-edit-hint" style="font-size:11px;color:var(--accent);margin-bottom:10px;min-height:14px;"></div>
+    <select id="db-edit-category" style="width:100%;padding:9px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;margin-bottom:10px;"></select>
     <div class="dialog-btns">
       <button class="btn btn-danger" onclick="confirmDbDelete()">Löschen</button>
       <button class="btn btn-secondary" onclick="closeDialog('dialog-db-edit')">Abbrechen</button>
@@ -711,6 +715,9 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       </select>
       <input type="number" id="db-add-grams" placeholder="g oder ml/Stück (opt.)" style="flex:1;" oninput="updateAddHint()" />
     </div>
+    <select id="db-add-category" style="width:100%;padding:9px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;margin-bottom:10px;" onchange="toggleNewCatInput(this.value)">
+    </select>
+    <input type="text" id="db-add-newcat" placeholder="Neue Kategorie eingeben…" style="display:none;margin-bottom:10px;" />
     <div id="db-add-hint" style="font-size:11px;color:var(--accent);margin-bottom:10px;min-height:14px;"></div>
     <div class="dialog-btns">
       <button class="btn btn-secondary" onclick="closeDialog('dialog-db-add')">Abbrechen</button>
@@ -2364,10 +2371,15 @@ function renderDbPageFull() {
     container.innerHTML = `<div class="card">${filtered.map(f => dbItemHtml(f)).join('')}</div>`;
   }
 
-  // Gerichte — auf-/zuklappbar
+  // Gerichte — auf-/zuklappbar (oben, daher im HTML schon platziert)
   const dishesContainer = document.getElementById('dishes-list');
+  const dishCount = document.getElementById('dishes-count');
+  const dishBox = document.getElementById('dbcat-__dishes');
+  const dishArrow = document.getElementById('dbcat-dishes-arrow');
+  if(dishCount) dishCount.textContent = `(${state.dishes.length})`;
+  if(dishBox) dishBox.style.display = dbCollapsed['__dishes'] ? 'none' : 'block';
+  if(dishArrow) dishArrow.textContent = dbCollapsed['__dishes'] ? '▾' : '▴';
   if(dishesContainer) {
-    const dishOpen = dbCollapsed['__dishes'] !== true;
     dishesContainer.innerHTML = state.dishes.length === 0
       ? '<div class="empty-state">Noch keine Gerichte gespeichert</div>'
       : state.dishes.map((d,i) => `
@@ -2389,9 +2401,16 @@ function renderDbPageFull() {
 
 function toggleDbCat(cat) {
   dbCollapsed[cat] = !dbCollapsed[cat];
-  const el = document.getElementById('dbcat-'+cat.replace(/\s/g,'_'));
-  if(el) el.style.display = dbCollapsed[cat] ? 'none' : 'block';
-  renderDbPageFull();
+  if(cat === '__dishes') {
+    const el = document.getElementById('dbcat-__dishes');
+    const arrow = document.getElementById('dbcat-dishes-arrow');
+    if(el) el.style.display = dbCollapsed[cat] ? 'none' : 'block';
+    if(arrow) arrow.textContent = dbCollapsed[cat] ? '▾' : '▴';
+  } else {
+    const el = document.getElementById('dbcat-'+cat.replace(/\s/g,'_'));
+    if(el) el.style.display = dbCollapsed[cat] ? 'none' : 'block';
+    renderDbPageFull();
+  }
 }
 
 function dbItemHtml(f) {
@@ -2446,12 +2465,16 @@ function openDbEdit(id) {
   editingDbId = id;
   document.getElementById('db-edit-name').value = f.name;
   document.getElementById('db-edit-kcal').value = f.kcalPer100;
-  // Auto-detect mode: Stück/Scheibe/Portion → gesamt, 100g/100ml → per100
   const isPiece = f.unit && !f.unit.startsWith('100');
   document.getElementById('db-edit-kcal-mode').value = isPiece ? 'total' : 'per100';
   document.getElementById('db-edit-unit').value = f.unit||'100g';
   document.getElementById('db-edit-grams').value = f.gramsPerUnit||'';
   document.getElementById('db-edit-hint').textContent = '';
+  // Populate category dropdown
+  const cats = [...new Set(state.db.map(x=>x.category||'Sonstiges').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+  const sel = document.getElementById('db-edit-category');
+  sel.innerHTML = cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  sel.value = f.category || 'Sonstiges';
   openDialog('dialog-db-edit');
 }
 
@@ -2463,16 +2486,11 @@ function confirmDbEdit() {
   const mode = document.getElementById('db-edit-kcal-mode').value;
   const unit = document.getElementById('db-edit-unit').value;
   const grams = parseFloat(document.getElementById('db-edit-grams').value);
+  const category = document.getElementById('db-edit-category').value || 'Sonstiges';
   if(!name||!kcalRaw) { toast('Name und kcal eingeben'); return; }
-
   let kcalPer100 = kcalRaw;
-  if(mode === 'total' && grams > 0) {
-    kcalPer100 = Math.round((kcalRaw / grams) * 100);
-  }
-
-  f.name = name;
-  f.kcalPer100 = kcalPer100;
-  f.unit = unit;
+  if(mode === 'total' && grams > 0) kcalPer100 = Math.round((kcalRaw / grams) * 100);
+  f.name = name; f.kcalPer100 = kcalPer100; f.unit = unit; f.category = category;
   if(grams > 0) f.gramsPerUnit = grams; else delete f.gramsPerUnit;
   closeDialog('dialog-db-edit');
   renderDbPageFull(); saveStateAndSync();
@@ -2504,7 +2522,21 @@ function openDbAdd(prefillName) {
   document.getElementById('db-add-unit').value = '100g';
   document.getElementById('db-add-grams').value = '';
   document.getElementById('db-add-hint').textContent = '';
+  document.getElementById('db-add-newcat').style.display = 'none';
+  document.getElementById('db-add-newcat').value = '';
+  // Populate categories
+  const cats = [...new Set(state.db.map(f=>f.category||'Sonstiges').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+  const sel = document.getElementById('db-add-category');
+  sel.innerHTML = cats.map(c=>`<option value="${c}">${c}</option>`).join('') +
+    '<option value="__new">+ Neue Kategorie…</option>';
+  sel.value = 'Sonstiges';
   openDialog('dialog-db-add');
+}
+
+function toggleNewCatInput(val) {
+  const el = document.getElementById('db-add-newcat');
+  el.style.display = val === '__new' ? 'block' : 'none';
+  if(val === '__new') el.focus();
 }
 
 function updateAddHint() {
@@ -2530,23 +2562,20 @@ function confirmDbAdd() {
   const mode = document.getElementById('db-add-kcal-mode').value;
   const unit = document.getElementById('db-add-unit').value;
   const grams = parseFloat(document.getElementById('db-add-grams').value);
+  const catSel = document.getElementById('db-add-category').value;
+  const catNew = document.getElementById('db-add-newcat').value.trim();
+  const category = catSel === '__new' ? (catNew || 'Sonstiges') : catSel;
   if(!name || !kcalRaw) { toast('Name und kcal eingeben'); return; }
 
   let kcalPer100 = kcalRaw;
-  if(mode === 'total' && grams > 0) {
-    kcalPer100 = Math.round((kcalRaw / grams) * 100);
-  }
+  if(mode === 'total' && grams > 0) kcalPer100 = Math.round((kcalRaw / grams) * 100);
 
-  const entry = { id:'m'+Date.now(), name, kcalPer100, unit };
+  const entry = { id:'m'+Date.now(), name, kcalPer100, unit, category };
   if(grams > 0) entry.gramsPerUnit = grams;
   state.db.push(entry);
   closeDialog('dialog-db-add');
   renderDbPageFull(); saveStateAndSync();
-  toast(`${name} gespeichert`);
-}
-
-function updateEditUnitLabel() {
-  // just triggers hint update if needed
+  toast(`${name} gespeichert (${category})`);
 }
 
 function deleteDbItem(id) { state.db = state.db.filter(f=>f.id!==id); renderDbList(); saveStateAndSync(); }
