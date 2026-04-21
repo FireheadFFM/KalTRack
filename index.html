@@ -366,7 +366,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span><span style="display:inline-block;width:10px;height:10px;background:#2d5a3d;border-radius:2px;margin-right:4px;"></span>Ziel</span>
       </div>
     </div>
-    <div class="section-title">Tageseinträge</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 2px 6px;">
+      <div class="section-title" style="margin:0;">Tageseinträge</div>
+      <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px;" onclick="openManualDay()">+ Tag nacherfassen</button>
+    </div>
     <div id="history-days"></div>
   </div>
 
@@ -481,17 +484,20 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.7 — April 2026</div>
-        <div>· Gemini KI-Suche (kostenlos, Google-Suche) als Stufe 5</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.8 — April 2026</div>
+        <div>· Tage manuell nacherfassen (Historie → + Tag nacherfassen)</div>
+        <div>· Einzelne Mahlzeiten und Aktivitäten bei Nacherfassung eintragbar</div>
+        <div>· Manuell erfasste Tage mit Badge gekennzeichnet</div>
+        <div>· Historientage einzeln löschbar (×)</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.7</div>
+        <div>· Gemini KI-Suche (kostenlos, Google) als Stufe 5</div>
         <div>· Gerichte als Favorit markierbar (★)</div>
-        <div>· Favoriten: Top-5-Chips direkt sichtbar auf Eingabe-Seite</div>
-        <div>· Favoriten: Kalorienvorschau in Chips und Liste</div>
-        <div>· Favoriten: manuell sortierbar (↑↓)</div>
-        <div>· Favoriten: Standardmenge nachträglich änderbar (✎)</div>
+        <div>· Favoriten: Top-5-Chips direkt sichtbar, Kalorienvorschau</div>
+        <div>· Favoriten: sortierbar (↑↓), Menge nachträglich änderbar (✎)</div>
         <div>· Favoriten: Auto-Badge für automatisch erkannte Einträge</div>
-        <div>· Datenbank: Gerichte oben, auf-/zuklappbar</div>
+        <div>· Datenbank: Gerichte oben, auf-/zuklappbar mit Anzahl</div>
         <div>· Datenbank: Kategorie beim Anlegen und Bearbeiten wählbar</div>
-        <div>· Datenbank: neue Kategorie direkt beim Anlegen eintippen</div>
+        <div>· Neue Kategorie direkt beim Anlegen eintippen</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.6</div>
         <div>· Suchquellen einzeln togglebar (OFF, Nutritionix, Claude, Gemini)</div>
         <div>· Open Food Facts Integration (kostenlos, Markenprodukte)</div>
@@ -572,7 +578,14 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <div>· Nach jeder Änderung: automatischer Upload nach 3 Sekunden.</div>
         <div>· Manuell: ⚙ → Cloud & Backup → ↑ Hochladen / ↓ Herunterladen.</div>
         <div>· DB, Gerichte, Einstellungen und Historie werden geräteübergreifend synchronisiert.</div>
-        <div>· Tageslog bleibt gerätespezifisch (aktuellste Quelle gewinnt).</div>
+
+        <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Tage nacherfassen</div>
+        <div>· Historie → „+ Tag nacherfassen" — für vergessene oder verpasste Tage.</div>
+        <div>· Datum, Kalorienziel, aufgenommene Kalorien und Schritte eingeben.</div>
+        <div>· Optional: einzelne Mahlzeiten und Aktivitäten mit Namen und kcal hinzufügen.</div>
+        <div>· Mahlzeiten werden automatisch summiert und als Gesamtkalorien übernommen.</div>
+        <div>· Manuell erfasste Tage sind mit „manuell"-Badge gekennzeichnet.</div>
+        <div>· Bestehende Tage können überschrieben oder per × gelöscht werden.</div>
 
         <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Tageswechsel & Historie</div>
         <div>· Der Tag wechselt um 02:00 Uhr — Spätabend-Einträge zählen noch zum Vortag.</div>
@@ -748,6 +761,52 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
     <div class="dialog-btns">
       <button class="btn btn-secondary" onclick="closeDialog('dialog-db-add')">Abbrechen</button>
       <button class="btn btn-primary" onclick="confirmDbAdd()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="dialog-manual-day" onclick="closeDialog('dialog-manual-day')">
+  <div class="dialog" onclick="event.stopPropagation()" style="max-height:85vh;overflow-y:auto;">
+    <h3>Tag nacherfassen</h3>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:4px;">Datum</div>
+      <input type="date" id="manual-day-date" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" />
+    </div>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:4px;">Kalorienziel an dem Tag</div>
+      <input type="number" id="manual-day-goal" placeholder="z.B. 1800" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" />
+    </div>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:4px;">Aufgenommene Kalorien (gesamt)</div>
+      <input type="number" id="manual-day-eaten" placeholder="z.B. 1650" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" />
+    </div>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:4px;">Schritte</div>
+      <input type="number" id="manual-day-steps" placeholder="z.B. 8000" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" />
+    </div>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Einzelne Mahlzeiten (optional)</div>
+      <div id="manual-day-meals" style="margin-bottom:6px;"></div>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="manual-meal-name" placeholder="Mahlzeit / Lebensmittel" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" />
+        <input type="number" id="manual-meal-kcal" placeholder="kcal" style="width:70px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" />
+        <button class="btn btn-secondary" style="padding:8px 10px;font-size:13px;" onclick="addManualMeal()">+</button>
+      </div>
+    </div>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Aktivitäten (optional)</div>
+      <div id="manual-day-acts" style="margin-bottom:6px;"></div>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="manual-act-name" placeholder="Aktivität" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" />
+        <input type="number" id="manual-act-min" placeholder="Min" style="width:55px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" />
+        <input type="number" id="manual-act-kcal" placeholder="kcal" style="width:60px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" />
+        <button class="btn btn-secondary" style="padding:8px 10px;font-size:13px;" onclick="addManualActivity()">+</button>
+      </div>
+    </div>
+    <div id="manual-day-hint" style="font-size:11px;color:var(--accent);margin-bottom:10px;min-height:14px;"></div>
+    <div class="dialog-btns">
+      <button class="btn btn-secondary" onclick="closeDialog('dialog-manual-day')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="confirmManualDay()">Speichern</button>
     </div>
   </div>
 </div>
@@ -2698,7 +2757,130 @@ function triggerAmountMic() {
 }
 
 // ─── HISTORY ──────────────────────────────────────────────────────────────────
-function renderHistory() {
+// ─── MANUELLER TAG ────────────────────────────────────────────────────────────
+let manualMeals = [];
+let manualActs = [];
+
+function openManualDay() {
+  manualMeals = [];
+  manualActs = [];
+  const today = new Date();
+  today.setDate(today.getDate() - 1);
+  document.getElementById('manual-day-date').value = today.toISOString().slice(0,10);
+  document.getElementById('manual-day-goal').value = state.settings.goal || state.settings.bmr || 1800;
+  document.getElementById('manual-day-eaten').value = '';
+  document.getElementById('manual-day-steps').value = '';
+  document.getElementById('manual-meal-name').value = '';
+  document.getElementById('manual-meal-kcal').value = '';
+  document.getElementById('manual-act-name').value = '';
+  document.getElementById('manual-act-min').value = '';
+  document.getElementById('manual-act-kcal').value = '';
+  document.getElementById('manual-day-hint').textContent = '';
+  renderManualMeals();
+  renderManualActs();
+  openDialog('dialog-manual-day');
+}
+
+function renderManualMeals() {
+  const el = document.getElementById('manual-day-meals');
+  if(!el) return;
+  el.innerHTML = manualMeals.map((m,i) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:3px 0;border-bottom:0.5px solid var(--border);">
+      <span style="color:var(--text);">${m.name}</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="color:var(--text2);">${m.kcal} kcal</span>
+        <button style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:14px;" onclick="removeManualMeal(${i})">×</button>
+      </div>
+    </div>`).join('');
+  // Update total hint
+  const total = manualMeals.reduce((s,m)=>s+m.kcal,0);
+  if(manualMeals.length > 0) {
+    document.getElementById('manual-day-eaten').value = total;
+    document.getElementById('manual-day-hint').textContent = `Summe Mahlzeiten: ${total} kcal`;
+  }
+}
+
+function renderManualActs() {
+  const el = document.getElementById('manual-day-acts');
+  if(!el) return;
+  el.innerHTML = manualActs.map((a,i) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:3px 0;border-bottom:0.5px solid var(--border);">
+      <span style="color:var(--text);">${a.name} · ${a.minutes} Min</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="color:var(--accent);">−${a.kcal} kcal</span>
+        <button style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:14px;" onclick="removeManualAct(${i})">×</button>
+      </div>
+    </div>`).join('');
+}
+
+function addManualMeal() {
+  const name = document.getElementById('manual-meal-name').value.trim();
+  const kcal = parseInt(document.getElementById('manual-meal-kcal').value);
+  if(!name || !kcal) { toast('Name und kcal eingeben'); return; }
+  manualMeals.push({ name, kcal });
+  document.getElementById('manual-meal-name').value = '';
+  document.getElementById('manual-meal-kcal').value = '';
+  renderManualMeals();
+}
+
+function addManualActivity() {
+  const name = document.getElementById('manual-act-name').value.trim();
+  const minutes = parseInt(document.getElementById('manual-act-min').value);
+  const kcal = parseInt(document.getElementById('manual-act-kcal').value);
+  if(!name || !minutes || !kcal) { toast('Name, Minuten und kcal eingeben'); return; }
+  manualActs.push({ name, minutes, kcal });
+  document.getElementById('manual-act-name').value = '';
+  document.getElementById('manual-act-min').value = '';
+  document.getElementById('manual-act-kcal').value = '';
+  renderManualActs();
+}
+
+function removeManualMeal(i) { manualMeals.splice(i,1); renderManualMeals(); }
+function removeManualAct(i) { manualActs.splice(i,1); renderManualActs(); }
+
+function confirmManualDay() {
+  const dateVal = document.getElementById('manual-day-date').value;
+  const eaten = parseInt(document.getElementById('manual-day-eaten').value);
+  const goal = parseInt(document.getElementById('manual-day-goal').value) || state.settings.goal || 1800;
+  const steps = parseInt(document.getElementById('manual-day-steps').value) || 0;
+  if(!dateVal) { toast('Datum angeben'); return; }
+  if(!eaten) { toast('Aufgenommene Kalorien angeben'); return; }
+
+  const dateObj = new Date(dateVal);
+  const dateStr = dateObj.toDateString();
+  const stepsKcal = Math.round(steps * 0.04);
+  const actKcal = manualActs.reduce((s,a)=>s+a.kcal, 0);
+  const burned = (state.settings.bmr||2000) + stepsKcal + actKcal;
+
+  const entry = {
+    date: dateStr,
+    eaten, burned, goal,
+    balance: eaten - burned,
+    steps,
+    log: manualMeals.map(m => ({ name: m.name, kcal: m.kcal, detail: 'Manuell erfasst' })),
+    activityLog: manualActs,
+    manual: true
+  };
+
+  // Bestehenden Tag ersetzen oder neu einfügen
+  if(!state.history) state.history = [];
+  const existing = state.history.findIndex(d => d.date === dateStr);
+  if(existing >= 0) {
+    if(!confirm(`Für den ${dateObj.toLocaleDateString('de-DE')} gibt es bereits Daten. Überschreiben?`)) return;
+    state.history[existing] = entry;
+  } else {
+    state.history.unshift(entry);
+    state.history.sort((a,b) => new Date(b.date) - new Date(a.date));
+    if(state.history.length > 90) state.history.splice(90);
+  }
+
+  closeDialog('dialog-manual-day');
+  saveStateAndSync();
+  renderHistory();
+  toast(`${dateObj.toLocaleDateString('de-DE')} gespeichert`);
+}
+
+
   renderWeekChart();
   const container = document.getElementById('history-days');
   if(!state.history || state.history.length === 0) {
@@ -2733,8 +2915,11 @@ function renderHistory() {
     return `
       <div class="card" style="margin-bottom:8px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <div style="font-size:14px;font-weight:500;color:var(--text);">${dateStr}</div>
-          <div style="font-size:11px;color:var(--text3);">Ziel: ${day.goal} kcal</div>
+          <div style="font-size:14px;font-weight:500;color:var(--text);">${dateStr}${day.manual ? '<span style="font-size:10px;background:var(--warn-bg);color:var(--warn);border-radius:6px;padding:1px 6px;margin-left:6px;">manuell</span>' : ''}</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="font-size:11px;color:var(--text3);">Ziel: ${day.goal} kcal</div>
+            <button style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--text3);padding:0;" onclick="deleteHistoryDay('${day.date}')" title="Tag löschen">×</button>
+          </div>
         </div>
         <div class="stats-grid" style="margin-bottom:8px;">
           <div class="stat-card"><div class="stat-label">Aufgenommen</div><div class="stat-value" style="font-size:18px;">${day.eaten}</div><div class="stat-label">kcal</div></div>
@@ -2753,6 +2938,15 @@ function renderHistory() {
         </div>` : ''}
       </div>`;
   }).join('');
+}
+
+function deleteHistoryDay(dateStr) {
+  const d = new Date(dateStr);
+  if(!confirm(`Eintrag vom ${d.toLocaleDateString('de-DE')} wirklich löschen?`)) return;
+  state.history = state.history.filter(x => x.date !== dateStr);
+  saveStateAndSync();
+  renderHistory();
+  toast('Tag gelöscht');
 }
 
 function toggleDayLog(i) {
