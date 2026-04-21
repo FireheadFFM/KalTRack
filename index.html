@@ -176,9 +176,9 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
 <div class="app">
   <!-- ABEND-REMINDER BANNER -->
   <div id="reminder-banner" style="display:none;background:var(--accent);color:white;padding:10px 16px;align-items:center;justify-content:space-between;gap:8px;font-size:13px;flex-shrink:0;">
-    <span>🏃 Schritte &amp; Aktivitäten schon eingetragen?</span>
+    <span id="reminder-banner-text">🏃 Schritte &amp; Aktivitäten schon eingetragen?</span>
     <div style="display:flex;gap:8px;flex-shrink:0;">
-      <button onclick="showPage('activity');dismissReminder()" style="background:rgba(255,255,255,0.25);border:none;color:white;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;font-family:'DM Sans';">Eintragen</button>
+      <button id="reminder-banner-btn" onclick="reminderBannerAction()" style="background:rgba(255,255,255,0.25);border:none;color:white;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;font-family:'DM Sans';">Eintragen</button>
       <button onclick="dismissReminder()" style="background:none;border:none;color:rgba(255,255,255,0.7);font-size:16px;cursor:pointer;padding:0 2px;">×</button>
     </div>
   </div>
@@ -538,7 +538,13 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.17 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.18 — April 2026</div>
+        <div>· Reminder-Logik komplett überarbeitet — 3 Szenarien:</div>
+        <div>· Abends nach 22:30: Banner „heute noch nichts eingetragen" → zur Aktivitäts-Seite</div>
+        <div>· Push Notification um 22:30 (einmalig, nur wenn heute keine Aktivität/Schritte)</div>
+        <div>· Morgens 07:00–22:30: Banner „gestern noch nichts eingetragen" → direkt zum Vortag</div>
+        <div>· Banner und Push erscheinen nur wenn im jeweiligen Zeitraum nichts eingetragen wurde</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.17 — April 2026</div>
         <div>· Abend-Erinnerung um 22:30 Uhr per Push Notification (einmalig täglich)</div>
         <div>· In-App-Banner beim ersten App-Öffnen zwischen 07:00 und 22:30 Uhr</div>
         <div>· Banner verschwindet automatisch nach Eintragen von Schritten oder Aktivitäten</div>
@@ -1262,28 +1268,97 @@ async function init() {
 }
 
 // ─── ABEND-REMINDER ───────────────────────────────────────────────────────────
+let reminderBannerMode = null; // 'today' | 'yesterday'
+
+function todayHasActivity() {
+  return (state.activityLog||[]).length > 0 || (state.steps||0) > 0;
+}
+
+function yesterdayHasActivity() {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yStr = yesterday.toDateString();
+  const yDay = (state.history||[]).find(d => d.date === yStr);
+  if(!yDay) return false;
+  return (yDay.activityLog||[]).length > 0 || (yDay.steps||0) > 0;
+}
+
+function getYesterdayDateStr() {
+  const y = new Date();
+  y.setDate(y.getDate() - 1);
+  return y.toDateString();
+}
+
 function initReminder() {
-  const today = getFitMoleDay();
   const now = new Date();
   const hour = now.getHours();
+  const min = now.getMinutes();
+  const isAfter2230 = hour > 22 || (hour === 22 && min >= 30);
+  const isMorning = hour >= 7 && (hour < 22 || (hour === 22 && min < 30));
+  const today = getFitMoleDay();
 
-  // In-App-Banner: einmal pro Tag anzeigen beim ersten Öffnen zwischen 07:00 und 22:29
-  // (nach 22:30 kommt die Push Notification)
-  const bannerShownDate = localStorage.getItem('fitmole_banner_shown');
-  const hasActivity = (state.activityLog||[]).length > 0 || (state.steps||0) > 0;
+  // ── Szenario 1: Nach 22:30 Uhr, App geöffnet ──
+  // Banner für HEUTE — wenn heute noch keine Aktivität/Schritte
+  if(isAfter2230) {
+    const shownKey = 'fitmole_banner_evening_' + today;
+    if(!todayHasActivity() && !localStorage.getItem(shownKey)) {
+      localStorage.setItem(shownKey, '1');
+      showReminderBanner('today');
+    }
+  }
 
-  if(!hasActivity && bannerShownDate !== today && hour >= 7 && hour < 22) {
-    showReminderBanner();
-    localStorage.setItem('fitmole_banner_shown', today);
+  // ── Szenario 2: Morgens 07:00–22:30, erstes Öffnen ──
+  // Banner für GESTERN — wenn gestern keine Aktivität/Schritte eingetragen
+  if(isMorning) {
+    const yesterday = getYesterdayDateStr();
+    const shownKey = 'fitmole_banner_morning_' + today;
+    if(!yesterdayHasActivity() && !localStorage.getItem(shownKey)) {
+      localStorage.setItem(shownKey, '1');
+      showReminderBanner('yesterday');
+    }
   }
 
   // Push Notification um 22:30 planen
   scheduleEveningPush();
 }
 
-function showReminderBanner() {
+function showReminderBanner(mode) {
+  reminderBannerMode = mode;
   const banner = document.getElementById('reminder-banner');
-  if(banner) banner.style.display = 'flex';
+  const text = document.getElementById('reminder-banner-text');
+  const btn = document.getElementById('reminder-banner-btn');
+  if(!banner) return;
+  if(mode === 'yesterday') {
+    const y = new Date();
+    y.setDate(y.getDate() - 1);
+    const yLabel = y.toLocaleDateString('de-DE', {weekday:'short', day:'2-digit', month:'2-digit'});
+    if(text) text.textContent = `🏃 Schritte & Aktivitäten für ${yLabel} noch nicht eingetragen`;
+    if(btn) btn.textContent = 'Nachtragen';
+  } else {
+    if(text) text.textContent = '🏃 Schritte & Aktivitäten für heute noch nicht eingetragen';
+    if(btn) btn.textContent = 'Eintragen';
+  }
+  banner.style.display = 'flex';
+}
+
+function reminderBannerAction() {
+  dismissReminder();
+  if(reminderBannerMode === 'yesterday') {
+    // Direkt den Vortag in der Historie zum Bearbeiten öffnen
+    const yStr = getYesterdayDateStr();
+    const yDay = (state.history||[]).find(d => d.date === yStr);
+    showPage('history');
+    if(yDay) {
+      setTimeout(() => editHistoryDay(yStr), 150);
+    } else {
+      // Vortag noch nicht in Historie — openManualDay für gestern
+      const y = new Date();
+      y.setDate(y.getDate() - 1);
+      setTimeout(() => openManualDay(null, y), 150);
+    }
+  } else {
+    showPage('activity');
+  }
 }
 
 function dismissReminder() {
@@ -1299,26 +1374,29 @@ function scheduleEveningPush() {
   const ms = push2230 - now;
 
   setTimeout(async () => {
-    // Nur senden wenn Aktivität noch nicht eingetragen
-    const hasActivity = (state.activityLog||[]).length > 0 || (state.steps||0) > 0;
-    if(hasActivity) { scheduleEveningPush(); return; }
+    // Nur senden wenn heute noch keine Aktivität/Schritte
+    if(todayHasActivity()) { scheduleEveningPush(); return; }
 
-    // Push Notification anfordern/senden
+    // Nicht doppelt senden (in-App-Banner und Push nicht gleichzeitig)
+    const today = getFitMoleDay();
+    const pushKey = 'fitmole_push_' + today;
+    if(localStorage.getItem(pushKey)) { scheduleEveningPush(); return; }
+
     if('Notification' in window) {
-      if(Notification.permission === 'default') {
-        await Notification.requestPermission();
-      }
+      if(Notification.permission === 'default') await Notification.requestPermission();
       if(Notification.permission === 'granted') {
         new Notification('FitMole 🏃', {
-          body: 'Schritte & Aktivitäten schon eingetragen?',
+          body: 'Schritte & Aktivitäten für heute noch nicht eingetragen.',
           icon: '/kaltrack/icon.png',
           tag: 'fitmole-evening-reminder',
           renotify: false
         });
-        localStorage.setItem('fitmole_push_sent', getFitMoleDay());
+        localStorage.setItem(pushKey, '1');
       }
     }
-    // Nächsten Tag wieder planen
+    // In-App-Banner zusätzlich zeigen (falls App gerade offen)
+    if(!todayHasActivity()) showReminderBanner('today');
+
     scheduleEveningPush();
   }, ms);
 }
@@ -1326,7 +1404,7 @@ function scheduleEveningPush() {
 function requestNotificationPermission() {
   if('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission().then(perm => {
-      if(perm === 'granted') toast('Erinnerungen aktiviert ✓');
+      if(perm === 'granted') { toast('Erinnerungen aktiviert ✓'); renderSettings(); }
       else toast('Erinnerungen abgelehnt');
     });
   }
@@ -3274,7 +3352,7 @@ function editHistoryDay(dateStr) {
   openManualDay(day);
 }
 
-function openManualDay(existingDay) {
+function openManualDay(existingDay, dateOverride) {
   manualMeals = existingDay ? (existingDay.log || []).map(l => ({ name: l.name, kcal: l.kcal })) : [];
   manualActs = existingDay ? (existingDay.activityLog || []).map(a => ({ name: a.name, minutes: a.minutes, kcal: a.kcal })) : [];
 
@@ -3282,6 +3360,8 @@ function openManualDay(existingDay) {
   if(existingDay) {
     const d = new Date(existingDay.date);
     dateVal = d.toISOString().slice(0,10);
+  } else if(dateOverride) {
+    dateVal = dateOverride.toISOString().slice(0,10);
   } else {
     const today = new Date();
     today.setDate(today.getDate() - 1);
