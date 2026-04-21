@@ -419,6 +419,15 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
           <div id="toggle-ai-knob" style="width:20px;height:20px;border-radius:50%;background:white;position:absolute;top:1px;left:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
         </div>
       </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">KI-Suche (Gemini)</div>
+          <div class="settings-sub">Stufe 5 · kostenlos · Google</div>
+        </div>
+        <div id="toggle-gemini" onclick="toggleSource('gemini')" style="width:44px;height:24px;border-radius:12px;background:var(--bg2);border:1px solid var(--border);position:relative;cursor:pointer;transition:background 0.2s;flex-shrink:0;">
+          <div id="toggle-gemini-knob" style="width:20px;height:20px;border-radius:50%;background:white;position:absolute;top:1px;left:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -426,6 +435,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <div class="settings-row">
         <div><div class="settings-label">Claude API Key</div><div class="settings-sub">Für KI-Suche (Stufe 4)</div></div>
         <input type="text" id="set-apikey" placeholder="sk-ant-..." onchange="saveSettings()" style="width:110px;font-size:11px;" />
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">Gemini API Key</div><div class="settings-sub">aistudio.google.com · kostenlos</div></div>
+        <input type="text" id="set-geminikey" placeholder="AIza..." onchange="saveSettings()" style="width:110px;font-size:11px;" />
       </div>
       <div class="settings-row">
         <div><div class="settings-label">Nutritionix App ID</div><div class="settings-sub">nutritionix.com/business/api</div></div>
@@ -525,6 +538,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <div>· Stufe 2 (Toggle): Open Food Facts — kostenlos, Markenprodukte</div>
         <div>· Stufe 3 (Toggle + Key): Nutritionix — Restaurants, Fast Food</div>
         <div>· Stufe 4 (Toggle + Key): Claude KI — kostenpflichtig, letzter Fallback</div>
+        <div>· Stufe 5 (Toggle + Key): Gemini KI — kostenlos, Google-Suche</div>
 
         <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Cloud-Sync</div>
         <div>· Änderungen werden automatisch nach 3 Sek. in die Cloud gespeichert.</div>
@@ -711,7 +725,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let state = {
   mode: 'track',
-  settings: { bmr: 2000, goal: 1800, stepsGoal: 10000, apiKey: '', aiSearchEnabled: false, nutritionixAppId: '', nutritionixKey: '', offEnabled: true, nxEnabled: false, aiEnabled: false },
+  settings: { bmr: 2000, goal: 1800, stepsGoal: 10000, apiKey: '', aiSearchEnabled: false, nutritionixAppId: '', nutritionixKey: '', offEnabled: true, nxEnabled: false, aiEnabled: false, geminiKey: '', geminiEnabled: false },
   todayLog: [],
   activityLog: [],
   steps: 0,
@@ -1298,6 +1312,7 @@ function renderSettings() {
   document.getElementById('set-goal').value = state.settings.goal || '';
   document.getElementById('set-steps').value = state.settings.stepsGoal || '';
   document.getElementById('set-apikey').value = state.settings.apiKey || '';
+  document.getElementById('set-geminikey').value = state.settings.geminiKey || '';
   document.getElementById('set-nx-id').value = state.settings.nutritionixAppId || '';
   document.getElementById('set-nx-key').value = state.settings.nutritionixKey || '';
   renderAiToggle();
@@ -1308,6 +1323,7 @@ function saveSettings() {
   state.settings.goal = parseInt(document.getElementById('set-goal').value) || 1800;
   state.settings.stepsGoal = parseInt(document.getElementById('set-steps').value) || 10000;
   state.settings.apiKey = document.getElementById('set-apikey').value.trim();
+  state.settings.geminiKey = document.getElementById('set-geminikey').value.trim();
   state.settings.nutritionixAppId = document.getElementById('set-nx-id').value.trim();
   state.settings.nutritionixKey = document.getElementById('set-nx-key').value.trim();
   saveStateAndSync();
@@ -1318,6 +1334,7 @@ function toggleSource(src) {
   if(src === 'off') state.settings.offEnabled = !state.settings.offEnabled;
   if(src === 'nx') state.settings.nxEnabled = !state.settings.nxEnabled;
   if(src === 'ai') { state.settings.aiEnabled = !state.settings.aiEnabled; state.settings.aiSearchEnabled = state.settings.aiEnabled; }
+  if(src === 'gemini') state.settings.geminiEnabled = !state.settings.geminiEnabled;
   renderSourceToggles();
   saveStateAndSync();
 }
@@ -1325,13 +1342,15 @@ function toggleSource(src) {
 function toggleAiSearch() { toggleSource('ai'); }
 
 function renderSourceToggles() {
-  // offEnabled defaults to true if not yet set
   const off = state.settings.offEnabled !== false;
   const nx = !!state.settings.nxEnabled;
   const ai = !!(state.settings.aiEnabled ?? state.settings.aiSearchEnabled);
+  const gemini = !!state.settings.geminiEnabled;
   setToggle('off', off);
   setToggle('nx', nx);
   setToggle('ai', ai);
+  setToggle('gemini', gemini);
+}
 }
 
 function setToggle(id, on) {
@@ -1478,12 +1497,23 @@ async function processInput(text) {
 
   // Stufe 4: Claude + Web-Search (wenn aktiviert und Key vorhanden)
   if(state.settings.aiEnabled && state.settings.apiKey && state.settings.apiKey.startsWith('sk-ant-')) {
-    document.getElementById('mic-status').textContent = 'KI sucht Nährwerte…';
+    document.getElementById('mic-status').textContent = 'Claude sucht Nährwerte…';
     await processWithClaudeSearch(text, state.settings.apiKey);
-  } else {
-    toast('Nicht gefunden — weitere Quellen in Einstellungen aktivieren');
+    document.getElementById('mic-btn').classList.remove('processing');
+    document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+    return;
   }
 
+  // Stufe 5: Gemini (wenn aktiviert und Key vorhanden)
+  if(state.settings.geminiEnabled && state.settings.geminiKey) {
+    document.getElementById('mic-status').textContent = 'Gemini sucht Nährwerte…';
+    await processWithGemini(text, state.settings.geminiKey);
+    document.getElementById('mic-btn').classList.remove('processing');
+    document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+    return;
+  }
+
+  toast('Nicht gefunden — weitere Quellen in Einstellungen aktivieren');
   document.getElementById('mic-btn').classList.remove('processing');
   document.getElementById('mic-status').textContent = 'Tippen zum Starten';
 }
@@ -1859,6 +1889,57 @@ function tryLocalParser(text) {
     }
   }
   return null; // Nicht lokal erkannt
+}
+
+// ─── GEMINI SEARCH ────────────────────────────────────────────────────────────
+async function processWithGemini(text, apiKey) {
+  const prompt = `Du bist ein Kalorien-Assistent. Der Nutzer hat folgendes eingegeben: "${text}"
+
+Suche im Web nach den genauen Nährwerten. Bei Restaurantketten (McDonald's, Burger King, KFC, Subway etc.) suche nach der offiziellen Nährwerttabelle.
+
+Antworte NUR mit diesem JSON (kein anderer Text, keine Markdown-Blöcke):
+{
+  "items": [
+    {
+      "name": "Name",
+      "amount": 1,
+      "amountUnit": "Stück",
+      "kcal": 450,
+      "detail": "Quelle z.B. Burger King Nährwerttabelle",
+      "saveToDb": false,
+      "kcalPer100": null
+    }
+  ],
+  "totalKcal": 450,
+  "confidence": "hoch",
+  "source": "Gemini + Google"
+}`;
+
+  try {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          tools: [{ google_search: {} }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 1000 }
+        })
+      }
+    );
+    const data = await resp.json();
+    if(data.error) { toast('Gemini: ' + data.error.message); return; }
+
+    const raw = data.candidates?.[0]?.content?.parts?.find(p=>p.text)?.text || '';
+    const clean = raw.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(clean);
+    if(!parsed.items || parsed.items.length === 0) { toast('Gemini: Keine Nährwerte gefunden'); return; }
+    showClaudeSearchResult(parsed, text);
+  } catch(e) {
+    toast('Gemini-Suche fehlgeschlagen');
+    console.error(e);
+  }
 }
 
 async function processWithClaudeSearch(text, apiKey) {
