@@ -539,7 +539,12 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.23 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.25 — April 2026</div>
+        <div>· Schritte werden jetzt in der Übersicht unter „Aktivitäten heute" angezeigt</div>
+        <div>· ✎ neben Schritten führt direkt zur Aktivitäts-Seite zum Bearbeiten</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.24 — April 2026</div>
+        <div>· Favorit wird automatisch mitgelöscht wenn der zugehörige DB-Eintrag oder das Gericht gelöscht wird</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.23 — April 2026</div>
         <div>· Tombstone-System: gelöschte Gerichte, DB-Einträge und Favoriten werden geräteübergreifend synchronisiert</div>
         <div>· Löschen auf einem Gerät → verschwindet beim nächsten Sync auch auf dem anderen</div>
         <div>· Gelöschte Einträge kommen beim Merge nicht mehr zurück</div>
@@ -1815,9 +1820,26 @@ function renderHome() {
 
   // Activity log
   const al = document.getElementById('activity-log-list');
-  if(state.activityLog.length === 0) { al.innerHTML = '<div class="empty-state">Keine Aktivitäten eingetragen</div>'; }
-  else {
-    al.innerHTML = state.activityLog.map((item,i) => `
+  const stepsKcal = Math.round((state.steps||0) * 0.04);
+  const hasSteps = (state.steps||0) > 0;
+  const hasActivities = state.activityLog.length > 0;
+
+  if(!hasSteps && !hasActivities) {
+    al.innerHTML = '<div class="empty-state">Keine Aktivitäten eingetragen</div>';
+  } else {
+    const stepsHtml = hasSteps ? `
+      <div class="log-item">
+        <div class="log-left">
+          <div class="log-name">🚶 Schritte</div>
+          <div class="log-detail">${state.steps.toLocaleString('de-DE')} Schritte</div>
+        </div>
+        <div class="log-right">
+          <div class="log-kcal">−${stepsKcal} kcal</div>
+          <button class="log-del" onclick="showPage('activity')" title="Schritte bearbeiten" style="font-size:13px;">✎</button>
+        </div>
+      </div>` : '';
+
+    const activitiesHtml = state.activityLog.map((item,i) => `
       <div class="log-item">
         <div class="log-left">
           <div class="log-name">${item.name}</div>
@@ -1828,6 +1850,8 @@ function renderHome() {
           <button class="log-del" onclick="deleteActivity(${i})">×</button>
         </div>
       </div>`).join('');
+
+    al.innerHTML = stepsHtml + activitiesHtml;
   }
 }
 
@@ -3391,7 +3415,10 @@ function deleteDbItemConfirm(id) {
   if(!confirm(`"${f.name}" wirklich aus der Datenbank löschen?`)) return;
   addTombstone('deletedDbIds', { id });
   state.db = state.db.filter(x=>x.id!==id);
-  renderDbPageFull(); saveStateAndSync();
+  // Favorit mitlöschen falls vorhanden
+  const favIdx = (state.favorites||[]).findIndex(fav=>fav.name===f.name);
+  if(favIdx >= 0) { addTombstone('deletedFavNames', { name: f.name }); state.favorites.splice(favIdx,1); }
+  renderDbPageFull(); renderFavorites(); saveStateAndSync();
   toast(`${f.name} gelöscht`);
 }
 function deleteDishConfirm(i) {
@@ -3400,7 +3427,10 @@ function deleteDishConfirm(i) {
   if(!confirm(`Gericht "${d.name}" wirklich löschen?`)) return;
   addTombstone('deletedDishNames', { name: d.name });
   state.dishes.splice(i,1);
-  renderDbPageFull(); saveStateAndSync();
+  // Favorit mitlöschen falls vorhanden
+  const favIdx = (state.favorites||[]).findIndex(fav=>fav.name===d.name);
+  if(favIdx >= 0) { addTombstone('deletedFavNames', { name: d.name }); state.favorites.splice(favIdx,1); }
+  renderDbPageFull(); renderFavorites(); saveStateAndSync();
   toast(`${d.name} gelöscht`);
 }
 
@@ -3456,8 +3486,13 @@ function confirmDbDelete() {
   if(!confirm(`"${f?.name}" wirklich löschen?`)) return;
   addTombstone('deletedDbIds', { id: editingDbId });
   state.db = state.db.filter(x=>x.id!==editingDbId);
+  // Favorit mitlöschen falls vorhanden
+  if(f) {
+    const favIdx = (state.favorites||[]).findIndex(fav=>fav.name===f.name);
+    if(favIdx >= 0) { addTombstone('deletedFavNames', { name: f.name }); state.favorites.splice(favIdx,1); }
+  }
   closeDialog('dialog-db-edit');
-  renderDbPageFull(); saveStateAndSync();
+  renderDbPageFull(); renderFavorites(); saveStateAndSync();
   toast('Gelöscht');
 }
 
