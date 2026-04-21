@@ -159,6 +159,17 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
 
 /* SECTION TITLE */
 .section-title { font-size: 13px; font-weight: 600; color: var(--text2); margin: 14px 0 6px; padding: 0 2px; }
+
+/* AUTOCOMPLETE */
+.autocomplete-wrap { position: relative; flex: 1; }
+.autocomplete-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: 0 4px 16px rgba(0,0,0,0.1); z-index: 150; overflow: hidden; display: none; }
+.autocomplete-dropdown.open { display: block; }
+.autocomplete-item { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.1s; }
+.autocomplete-item:last-child { border-bottom: none; }
+.autocomplete-item:active { background: var(--accent-bg); }
+.autocomplete-item-name { font-size: 14px; color: var(--text); font-weight: 500; }
+.autocomplete-item-detail { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.autocomplete-item-kcal { font-size: 13px; font-family: 'DM Mono', monospace; color: var(--text2); white-space: nowrap; margin-left: 8px; }
 </style>
 </head>
 <body>
@@ -284,7 +295,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
     <div class="card">
       <div class="card-label">Oder manuell eingeben</div>
       <div class="manual-row">
-        <input type="text" id="manual-input" placeholder='z.B. "200g Tomaten" oder "Spiegeleier"' />
+        <div class="autocomplete-wrap">
+          <input type="text" id="manual-input" placeholder='z.B. "200g Tomaten" oder "Spiegeleier"' oninput="onManualInput(this.value)" autocomplete="off" />
+          <div class="autocomplete-dropdown" id="manual-autocomplete"></div>
+        </div>
         <button class="btn btn-primary" onclick="processManual()">→</button>
       </div>
     </div>
@@ -341,7 +355,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <div style="display:flex;gap:8px;margin-bottom:10px;">
         <div class="search-wrap" style="flex:1;margin-bottom:0;">
           <span class="search-icon">⌕</span>
-          <input type="text" id="db-search" placeholder="Suchen…" oninput="filterDb(this.value)" />
+          <div class="autocomplete-wrap" style="flex:1;">
+            <input type="text" id="db-search" placeholder="Suchen…" oninput="filterDb(this.value); onDbSearchInput(this.value)" autocomplete="off" style="width:100%;padding:9px 12px 9px 36px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans',sans-serif;background:var(--card);color:var(--text);outline:none;" />
+            <div class="autocomplete-dropdown" id="db-autocomplete"></div>
+          </div>
         </div>
         <button class="btn btn-primary" onclick="openDbAdd(document.getElementById('db-search').value.trim())" style="white-space:nowrap;">+ Neu</button>
       </div>
@@ -501,7 +518,12 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.12 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.13 — April 2026</div>
+        <div>· Autocomplete: Vorschläge ab 2 Buchstaben in der Texteingabe (Eingabe-Seite)</div>
+        <div>· Autocomplete: Vorschläge auch in der Datenbank-Suche</div>
+        <div>· Gerichte erscheinen zuerst in den Vorschlägen, mit Badge gekennzeichnet</div>
+        <div>· Vorhandene Mengenangabe (z.B. „200g") wird beim Antippen eines Vorschlags übernommen</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.12 — April 2026</div>
         <div>· Gemini-Modell auf gemini-2.5-flash aktualisiert (2.0-flash seit März 2026 eingestellt)</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.11 — April 2026</div>
         <div>· Sync-Button (⟳) neben dem Datum auf der Übersicht zum manuellen Nachladen</div>
@@ -576,6 +598,8 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <div>3. Mikrofon-Button drücken und Eingabe sprechen — oder im Textfeld tippen.</div>
 
         <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Sprach- und Texteingabe</div>
+        <div>· <b>Autocomplete:</b> Ab 2 Buchstaben erscheinen Vorschläge aus der Datenbank — antippen zum Übernehmen.</div>
+        <div>· <b>Menge + Vorschlag:</b> „200g Hä…" → Vorschlag antippen → wird als „200g Hähnchenbrust" verarbeitet.</div>
         <div>· <b>Menge + Lebensmittel:</b> „200g Tomaten", „3 Eier", „einen Apfel"</div>
         <div>· <b>Flüssigkeiten:</b> „5cl Hafermilch", „2dl Orangensaft", „300ml Wasser"</div>
         <div>· <b>Gericht:</b> Name des gespeicherten Gerichts sprechen</div>
@@ -1139,7 +1163,7 @@ async function init() {
   loadState();
   renderAll();
   document.getElementById('today-date').textContent = new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
-  document.getElementById('manual-input').addEventListener('keydown', e => { if(e.key==='Enter') processManual(); });
+  document.getElementById('manual-input').addEventListener('keydown', e => { if(e.key==='Enter') { closeAutocomplete('manual-autocomplete'); processManual(); } });
   initSpeech();
   renderActivityGrid();
   renderAiToggle();
@@ -1943,7 +1967,110 @@ function updateAutoFavorites() {
   });
 }
 
-// ─── FUZZY MATCHING ───────────────────────────────────────────────────────────
+// ─── AUTOCOMPLETE ─────────────────────────────────────────────────────────────
+function getAutocompleteSuggestions(query, limit) {
+  if(!query || query.length < 2) return [];
+  const q = query.toLowerCase();
+  const results = [];
+
+  // Gerichte zuerst
+  state.dishes.forEach(d => {
+    if(d.name.toLowerCase().includes(q)) {
+      results.push({ type:'dish', name:d.name, detail:'Gericht', kcalLabel: d.kcal + ' kcal', score: d.name.toLowerCase().startsWith(q) ? 200 : 100 });
+    }
+  });
+
+  // Lebensmittel
+  state.db.forEach(f => {
+    if(f.name.toLowerCase().includes(q)) {
+      const isPiece = f.unit && !f.unit.startsWith('100');
+      const kcalLabel = isPiece
+        ? f.kcalPer100 + ' kcal/' + f.unit
+        : f.kcalPer100 + ' kcal/100' + (f.unit==='100ml'?'ml':'g');
+      results.push({ type:'food', name:f.name, detail: f.category||'', kcalLabel, score: f.name.toLowerCase().startsWith(q) ? 190 : 90, food: f });
+    }
+  });
+
+  return results.sort((a,b) => b.score - a.score).slice(0, limit||6);
+}
+
+function renderAutocomplete(inputId, dropdownId, suggestions, onSelect) {
+  const dropdown = document.getElementById(dropdownId);
+  if(!dropdown) return;
+  if(suggestions.length === 0) { dropdown.classList.remove('open'); dropdown.innerHTML = ''; return; }
+  dropdown.innerHTML = suggestions.map((s,i) => `
+    <div class="autocomplete-item" onmousedown="event.preventDefault()" onclick="(${onSelect.toString()})(${i})">
+      <div>
+        <div class="autocomplete-item-name">${s.name}${s.type==='dish' ? '<span style="font-size:10px;background:var(--accent-bg);color:var(--accent);border-radius:6px;padding:1px 5px;margin-left:5px;">Gericht</span>' : ''}</div>
+        ${s.detail ? `<div class="autocomplete-item-detail">${s.detail}</div>` : ''}
+      </div>
+      <div class="autocomplete-item-kcal">${s.kcalLabel}</div>
+    </div>`).join('');
+  dropdown.classList.add('open');
+}
+
+// Autocomplete für Eingabe-Seite
+let manualAcSuggestions = [];
+function onManualInput(val) {
+  const q = val.trim();
+  // Menge aus dem Query extrahieren und nur den Lebensmittelanteil suchen
+  const clean = q.replace(/^\d+\s*(g|gramm|kg|ml|cl|dl|l|stück|stuck)?\s*/i, '').trim();
+  manualAcSuggestions = getAutocompleteSuggestions(clean || q, 6);
+  renderAutocomplete('manual-input', 'manual-autocomplete', manualAcSuggestions, (i) => {
+    selectManualAcItem(i);
+  });
+}
+
+function selectManualAcItem(i) {
+  const s = manualAcSuggestions[i];
+  if(!s) return;
+  closeAutocomplete('manual-autocomplete');
+  const input = document.getElementById('manual-input');
+  // Menge aus bisheriger Eingabe übernehmen wenn vorhanden
+  const existing = input.value.trim();
+  const amountMatch = existing.match(/^(\d+(?:[,.]\d+)?)\s*(g|gramm|kg|ml|cl|dl|l|stück|stuck)?/i);
+  if(amountMatch) {
+    input.value = amountMatch[0].trim() + ' ' + s.name;
+  } else {
+    input.value = s.name;
+  }
+  // Direkt verarbeiten
+  const val = input.value.trim();
+  input.value = '';
+  processInput(val);
+}
+
+// Autocomplete für DB-Suche
+let dbAcSuggestions = [];
+function onDbSearchInput(val) {
+  const q = val.trim();
+  if(q.length < 2) { closeAutocomplete('db-autocomplete'); return; }
+  dbAcSuggestions = getAutocompleteSuggestions(q, 6);
+  renderAutocomplete('db-search', 'db-autocomplete', dbAcSuggestions, (i) => {
+    selectDbAcItem(i);
+  });
+}
+
+function selectDbAcItem(i) {
+  const s = dbAcSuggestions[i];
+  if(!s) return;
+  closeAutocomplete('db-autocomplete');
+  document.getElementById('db-search').value = s.name;
+  filterDb(s.name);
+}
+
+function closeAutocomplete(id) {
+  const el = document.getElementById(id);
+  if(el) { el.classList.remove('open'); el.innerHTML = ''; }
+}
+
+// Autocomplete schließen wenn Fokus verloren geht
+document.addEventListener('click', (e) => {
+  if(!e.target.closest('#manual-input') && !e.target.closest('#manual-autocomplete')) closeAutocomplete('manual-autocomplete');
+  if(!e.target.closest('#db-search') && !e.target.closest('#db-autocomplete')) closeAutocomplete('db-autocomplete');
+});
+
+
 function levenshtein(a, b) {
   const m = a.length, n = b.length;
   const dp = Array.from({length:m+1}, (_,i) => Array.from({length:n+1}, (_,j) => i===0?j:j===0?i:0));
