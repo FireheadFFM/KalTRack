@@ -174,6 +174,15 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
 </head>
 <body>
 <div class="app">
+  <!-- ABEND-REMINDER BANNER -->
+  <div id="reminder-banner" style="display:none;background:var(--accent);color:white;padding:10px 16px;align-items:center;justify-content:space-between;gap:8px;font-size:13px;flex-shrink:0;">
+    <span>🏃 Schritte &amp; Aktivitäten schon eingetragen?</span>
+    <div style="display:flex;gap:8px;flex-shrink:0;">
+      <button onclick="showPage('activity');dismissReminder()" style="background:rgba(255,255,255,0.25);border:none;color:white;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;font-family:'DM Sans';">Eintragen</button>
+      <button onclick="dismissReminder()" style="background:none;border:none;color:rgba(255,255,255,0.7);font-size:16px;cursor:pointer;padding:0 2px;">×</button>
+    </div>
+  </div>
+
   <div class="header">
     <div class="header-top">
       <div class="app-name" onclick="switchToTrack()" style="cursor:pointer;display:flex;align-items:center;gap:8px;">
@@ -508,6 +517,17 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
     </div>
 
     <div class="card">
+      <div class="card-label">Erinnerungen</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Abend-Erinnerung</div>
+          <div class="settings-sub">22:30 Uhr — Schritte & Aktivitäten</div>
+        </div>
+        <button onclick="requestNotificationPermission()" id="notif-btn" style="font-size:12px;padding:5px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text2);cursor:pointer;font-family:'DM Sans';">Aktivieren</button>
+      </div>
+    </div>
+
+    <div class="card">
       <div class="card-label">Gefahrenzone</div>
       <button class="btn btn-danger btn-full" onclick="resetDay()">Heutigen Tag zurücksetzen</button>
     </div>
@@ -518,7 +538,18 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.15 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.17 — April 2026</div>
+        <div>· Abend-Erinnerung um 22:30 Uhr per Push Notification (einmalig täglich)</div>
+        <div>· In-App-Banner beim ersten App-Öffnen zwischen 07:00 und 22:30 Uhr</div>
+        <div>· Banner verschwindet automatisch nach Eintragen von Schritten oder Aktivitäten</div>
+        <div>· Historientage bearbeitbar: ✎-Button öffnet den Tag vorausgefüllt zum Bearbeiten</div>
+        <div>· Mahlzeiten, Schritte und Aktivitäten für vergangene Tage nachträglich änderbar</div>
+        <div>· Notification-Berechtigung in ⚙ → Erinnerungen aktivierbar</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.16 — April 2026</div>
+        <div>· OFF-Kontext wird an Gemini/Claude weitergegeben wenn Portionsgröße fehlt</div>
+        <div>· KI nutzt kcal/100g aus OFF als Basis und ergänzt nur noch die Portionsgröße</div>
+        <div>· Genauere Ergebnisse bei Produkten die OFF kennt aber ohne Portionsdaten</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.15 — April 2026</div>
         <div>· Open Food Facts: unvollständige Portionsdaten blockieren nicht mehr die Suche</div>
         <div>· Suchreihenfolge: OFF-Fallback wird erst nach Nutritionix und KI-Suche gezeigt</div>
         <div>· Gemini/Claude werden jetzt immer erreicht wenn OFF keine vollständigen Daten hat</div>
@@ -652,8 +683,17 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <div>· Tageslog und Aktivitäten werden per Eintrags-ID gemergt — Einträge von beiden Geräten bleiben erhalten.</div>
         <div>· Laufende Sitzungen (mehrere Zutaten) nicht mittendrin auf anderem Gerät unterbrechen.</div>
 
-        <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Tage nacherfassen</div>
+        <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Erinnerungen</div>
+        <div>· Unter ⚙ → Erinnerungen: Push Notification einmalig aktivieren.</div>
+        <div>· Um 22:30 Uhr erscheint täglich eine Erinnerung „Schritte &amp; Aktivitäten eingetragen?".</div>
+        <div>· Beim ersten App-Öffnen zwischen 07:00 und 22:30 Uhr erscheint ein grünes Banner.</div>
+        <div>· Banner und Notification verschwinden sobald Schritte oder eine Aktivität eingetragen sind.</div>
+
+        <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Tage nacherfassen &amp; bearbeiten</div>
         <div>· Historie → „+ Tag nacherfassen" — für vergessene oder verpasste Tage.</div>
+        <div>· ✎-Symbol an jedem Historientag → Tag vorausgefüllt bearbeiten.</div>
+        <div>· Mahlzeiten ergänzen, Schritte korrigieren oder Aktivitäten nachtragen.</div>
+        <div>· Datum ist beim Bearbeiten gesperrt — nur Inhalte änderbar.</div>
         <div>· Datum, Kalorienziel, aufgenommene Kalorien und Schritte eingeben.</div>
         <div>· Optional: einzelne Mahlzeiten und Aktivitäten mit Namen und kcal hinzufügen.</div>
         <div>· Mahlzeiten werden automatisch summiert und als Gesamtkalorien übernommen.</div>
@@ -1200,6 +1240,7 @@ async function init() {
   updateAutoFavorites();
   renderFavorites();
   scheduleDayRollover();
+  initReminder();
   if(state.mode === 'db') {
     switchToDb();
   } else {
@@ -1218,6 +1259,77 @@ async function init() {
       autoLoadFromCloud();
     }
   });
+}
+
+// ─── ABEND-REMINDER ───────────────────────────────────────────────────────────
+function initReminder() {
+  const today = getFitMoleDay();
+  const now = new Date();
+  const hour = now.getHours();
+
+  // In-App-Banner: einmal pro Tag anzeigen beim ersten Öffnen zwischen 07:00 und 22:29
+  // (nach 22:30 kommt die Push Notification)
+  const bannerShownDate = localStorage.getItem('fitmole_banner_shown');
+  const hasActivity = (state.activityLog||[]).length > 0 || (state.steps||0) > 0;
+
+  if(!hasActivity && bannerShownDate !== today && hour >= 7 && hour < 22) {
+    showReminderBanner();
+    localStorage.setItem('fitmole_banner_shown', today);
+  }
+
+  // Push Notification um 22:30 planen
+  scheduleEveningPush();
+}
+
+function showReminderBanner() {
+  const banner = document.getElementById('reminder-banner');
+  if(banner) banner.style.display = 'flex';
+}
+
+function dismissReminder() {
+  const banner = document.getElementById('reminder-banner');
+  if(banner) banner.style.display = 'none';
+}
+
+function scheduleEveningPush() {
+  const now = new Date();
+  const push2230 = new Date(now);
+  push2230.setHours(22, 30, 0, 0);
+  if(now >= push2230) push2230.setDate(push2230.getDate() + 1);
+  const ms = push2230 - now;
+
+  setTimeout(async () => {
+    // Nur senden wenn Aktivität noch nicht eingetragen
+    const hasActivity = (state.activityLog||[]).length > 0 || (state.steps||0) > 0;
+    if(hasActivity) { scheduleEveningPush(); return; }
+
+    // Push Notification anfordern/senden
+    if('Notification' in window) {
+      if(Notification.permission === 'default') {
+        await Notification.requestPermission();
+      }
+      if(Notification.permission === 'granted') {
+        new Notification('FitMole 🏃', {
+          body: 'Schritte & Aktivitäten schon eingetragen?',
+          icon: '/kaltrack/icon.png',
+          tag: 'fitmole-evening-reminder',
+          renotify: false
+        });
+        localStorage.setItem('fitmole_push_sent', getFitMoleDay());
+      }
+    }
+    // Nächsten Tag wieder planen
+    scheduleEveningPush();
+  }, ms);
+}
+
+function requestNotificationPermission() {
+  if('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().then(perm => {
+      if(perm === 'granted') toast('Erinnerungen aktiviert ✓');
+      else toast('Erinnerungen abgelehnt');
+    });
+  }
 }
 
 function scheduleDayRollover() {
@@ -1546,6 +1658,24 @@ function renderSettings() {
   document.getElementById('set-nx-id').value = state.settings.nutritionixAppId || '';
   document.getElementById('set-nx-key').value = state.settings.nutritionixKey || '';
   renderAiToggle();
+  // Notification-Button Status
+  const notifBtn = document.getElementById('notif-btn');
+  if(notifBtn && 'Notification' in window) {
+    if(Notification.permission === 'granted') {
+      notifBtn.textContent = '✓ Aktiv';
+      notifBtn.style.background = 'var(--accent-bg)';
+      notifBtn.style.color = 'var(--accent)';
+      notifBtn.style.borderColor = 'var(--accent)';
+      notifBtn.onclick = null;
+    } else if(Notification.permission === 'denied') {
+      notifBtn.textContent = 'Blockiert (Browser-Einstellungen)';
+      notifBtn.style.color = 'var(--danger)';
+      notifBtn.onclick = null;
+    }
+  } else if(notifBtn) {
+    notifBtn.textContent = 'Nicht verfügbar';
+    notifBtn.disabled = true;
+  }
 }
 
 function saveSettings() {
@@ -1733,7 +1863,7 @@ async function processInput(text) {
   // Stufe 4: Claude + Web-Search (wenn aktiviert und Key vorhanden)
   if(state.settings.aiEnabled && state.settings.apiKey && state.settings.apiKey.startsWith('sk-ant-')) {
     document.getElementById('mic-status').textContent = 'Claude sucht Nährwerte…';
-    await processWithClaudeSearch(text, state.settings.apiKey);
+    await processWithClaudeSearch(text, state.settings.apiKey, offFallback);
     document.getElementById('mic-btn').classList.remove('processing');
     document.getElementById('mic-status').textContent = 'Tippen zum Starten';
     return;
@@ -1742,7 +1872,7 @@ async function processInput(text) {
   // Stufe 5: Gemini (wenn aktiviert und Key vorhanden)
   if(state.settings.geminiEnabled && state.settings.geminiKey) {
     document.getElementById('mic-status').textContent = 'Gemini sucht Nährwerte…';
-    await processWithGemini(text, state.settings.geminiKey);
+    await processWithGemini(text, state.settings.geminiKey, offFallback);
     document.getElementById('mic-btn').classList.remove('processing');
     document.getElementById('mic-status').textContent = 'Tippen zum Starten';
     return;
@@ -2388,8 +2518,12 @@ function confirmPortionInput() {
 }
 
 
-async function processWithGemini(text, apiKey) {
-  const prompt = `Du bist ein Kalorien-Assistent. Der Nutzer hat folgendes eingegeben: "${text}"
+async function processWithGemini(text, apiKey, offContext) {
+  const offHint = offContext
+    ? `\nHinweis: Open Food Facts hat für "${offContext.productName}" bereits ${offContext.kcalPer100} kcal/100g gefunden, aber keine Portionsgröße. Nutze diesen Wert und ergänze die typische Portionsgröße in Gramm um die Gesamtkalorien zu berechnen.`
+    : '';
+
+  const prompt = `Du bist ein Kalorien-Assistent. Der Nutzer hat folgendes eingegeben: "${text}"${offHint}
 
 Suche im Web nach den genauen Nährwerten. Bei Restaurantketten (McDonald's, Burger King, KFC, Subway etc.) suche nach der offiziellen Nährwerttabelle.
 
@@ -2438,11 +2572,14 @@ Antworte NUR mit diesem JSON (kein anderer Text, keine Markdown-Blöcke):
   }
 }
 
-async function processWithClaudeSearch(text, apiKey) {
+async function processWithClaudeSearch(text, apiKey, offContext) {
   const dbNames = state.db.map(f=>f.name).slice(0,50).join(', ');
   const dishNames = state.dishes.map(d=>d.name).join(', ');
+  const offHint = offContext
+    ? `\nHinweis von Open Food Facts: "${offContext.productName}" hat ${offContext.kcalPer100} kcal/100g. Portionsgröße fehlt — bitte typische Portionsgröße in Gramm ergänzen und Gesamtkalorien berechnen.`
+    : '';
 
-  const prompt = `Du bist ein Kalorien-Assistent für eine Tracking-App. Der Nutzer hat folgendes eingegeben: "${text}"
+  const prompt = `Du bist ein Kalorien-Assistent für eine Tracking-App. Der Nutzer hat folgendes eingegeben: "${text}"${offHint}
 
 Bekannte Lebensmittel in der App-DB (erste 50): ${dbNames}
 Bekannte Gerichte: ${dishNames||'keine'}
@@ -2741,6 +2878,7 @@ function confirmActivity() {
   state.activityLog.push({ id: 'a'+Date.now(), name: currentActivity.name, minutes: min, kcal });
   closeDialog('dialog-activity');
   renderHome();
+  dismissReminder();
   saveStateAndSync();
   toast(`${currentActivity.name}: −${kcal} kcal`);
 }
@@ -2765,6 +2903,7 @@ function saveSteps() {
   state.steps = steps;
   saveStateAndSync();
   renderHome();
+  dismissReminder();
   toast(`${steps.toLocaleString('de-DE')} Schritte gespeichert`);
 }
 
@@ -3129,21 +3268,42 @@ function triggerAmountMic() {
 let manualMeals = [];
 let manualActs = [];
 
-function openManualDay() {
-  manualMeals = [];
-  manualActs = [];
-  const today = new Date();
-  today.setDate(today.getDate() - 1);
-  document.getElementById('manual-day-date').value = today.toISOString().slice(0,10);
-  document.getElementById('manual-day-goal').value = state.settings.goal || state.settings.bmr || 1800;
-  document.getElementById('manual-day-eaten').value = '';
-  document.getElementById('manual-day-steps').value = '';
+function editHistoryDay(dateStr) {
+  const day = state.history.find(d => d.date === dateStr);
+  if(!day) return;
+  openManualDay(day);
+}
+
+function openManualDay(existingDay) {
+  manualMeals = existingDay ? (existingDay.log || []).map(l => ({ name: l.name, kcal: l.kcal })) : [];
+  manualActs = existingDay ? (existingDay.activityLog || []).map(a => ({ name: a.name, minutes: a.minutes, kcal: a.kcal })) : [];
+
+  let dateVal;
+  if(existingDay) {
+    const d = new Date(existingDay.date);
+    dateVal = d.toISOString().slice(0,10);
+  } else {
+    const today = new Date();
+    today.setDate(today.getDate() - 1);
+    dateVal = today.toISOString().slice(0,10);
+  }
+
+  document.getElementById('manual-day-date').value = dateVal;
+  document.getElementById('manual-day-date').disabled = !!existingDay; // Datum sperren beim Bearbeiten
+  document.getElementById('manual-day-goal').value = existingDay ? existingDay.goal : (state.settings.goal || state.settings.bmr || 1800);
+  document.getElementById('manual-day-eaten').value = existingDay ? existingDay.eaten : '';
+  document.getElementById('manual-day-steps').value = existingDay ? (existingDay.steps || '') : '';
   document.getElementById('manual-meal-name').value = '';
   document.getElementById('manual-meal-kcal').value = '';
   document.getElementById('manual-act-name').value = '';
   document.getElementById('manual-act-min').value = '';
   document.getElementById('manual-act-kcal').value = '';
-  document.getElementById('manual-day-hint').textContent = '';
+  document.getElementById('manual-day-hint').textContent = existingDay ? 'Bestehende Daten werden beim Speichern überschrieben.' : '';
+
+  // Dialog-Titel anpassen
+  const h3 = document.querySelector('#dialog-manual-day h3');
+  if(h3) h3.textContent = existingDay ? 'Tag bearbeiten' : 'Tag nacherfassen';
+
   renderManualMeals();
   renderManualActs();
   openDialog('dialog-manual-day');
@@ -3243,6 +3403,9 @@ function confirmManualDay() {
   }
 
   closeDialog('dialog-manual-day');
+  document.getElementById('manual-day-date').disabled = false;
+  const h3 = document.querySelector('#dialog-manual-day h3');
+  if(h3) h3.textContent = 'Tag nacherfassen';
   saveStateAndSync();
   renderHistory();
   toast(`${dateObj.toLocaleDateString('de-DE')} gespeichert`);
@@ -3286,6 +3449,7 @@ function renderHistory() {
           <div style="font-size:14px;font-weight:500;color:var(--text);">${dateStr}${day.manual ? '<span style="font-size:10px;background:var(--warn-bg);color:var(--warn);border-radius:6px;padding:1px 6px;margin-left:6px;">manuell</span>' : ''}</div>
           <div style="display:flex;align-items:center;gap:8px;">
             <div style="font-size:11px;color:var(--text3);">Ziel: ${day.goal} kcal</div>
+            <button style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--accent);padding:0;" onclick="editHistoryDay('${day.date}')" title="Tag bearbeiten">✎</button>
             <button style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--text3);padding:0;" onclick="deleteHistoryDay('${day.date}')" title="Tag löschen">×</button>
           </div>
         </div>
