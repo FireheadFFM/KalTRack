@@ -223,7 +223,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span>Fit<span style="color:var(--accent2);">Mole</span></span>
       </div>
       <div class="mode-toggle">
-        <button class="mode-btn active" id="modeTrack" onclick="switchToTrack()">Heute tracken</button>
+        <button class="mode-btn active" id="modeTrack" onclick="switchToTrack()">Tracken</button>
         <button class="mode-btn db-mode" id="modeDb" onclick="switchToDb()">Datenbank</button>
       </div>
     </div>
@@ -338,7 +338,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
     <div class="card">
       <div class="card-label">Schritte heute</div>
       <div class="manual-row">
-        <input type="number" id="steps-input" placeholder="z.B. 8000" />
+        <input type="number" id="steps-input" placeholder="z.B. 8000" onkeydown="if(event.key==='Enter')saveSteps()" />
         <button class="btn btn-primary" onclick="saveSteps()">Speichern</button>
       </div>
       <div style="font-size:12px;color:var(--text3);margin-top:8px;">≈ 0,04 kcal pro Schritt</div>
@@ -582,7 +582,15 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.32 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.33 — April 2026</div>
+        <div>· Mode-Toggle: „Heute tracken" → „Tracken" (kürzer)</div>
+        <div>· Sitzungs-Button: „Sitzung abschließen" → „Zum Tageslog hinzufügen"</div>
+        <div>· Favoriten-Chips: „+" als visueller Hinweis dass man sie antippen kann</div>
+        <div>· Datenbank: Suchfeld bekommt automatisch Fokus beim Öffnen</div>
+        <div>· Schritte: Enter-Taste speichert direkt</div>
+        <div>· Eingabefeld: visueller Ladezustand während Suche läuft</div>
+        <div>· Wochenchart: Tage ohne Eintrag werden nicht mehr als Nullbalken dargestellt</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.32 — April 2026</div>
         <div>· Neue Kategorie „Fertiggerichte" mit 15 vorinstallierten Einträgen</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.31 — April 2026</div>
         <div>· Backlog: Beschreibungsfeld für Nahrungsmittel ergänzt (Priorität 2)</div>
@@ -1918,6 +1926,10 @@ function switchToDb() {
   document.getElementById('page-db').classList.add('active');
   renderDbPageFull();
   saveState();
+  setTimeout(() => {
+    const s = document.getElementById('db-search');
+    if(s) s.focus();
+  }, 150);
 }
 
 function setMode(m) {
@@ -2105,7 +2117,7 @@ function renderSession() {
       </div>
     </div>`).join('');
   const btn = document.getElementById('session-save-btn');
-  btn.textContent = state.mode==='db' ? 'Als Gericht in DB speichern' : 'Sitzung abschließen';
+  btn.textContent = state.mode==='db' ? 'Als Gericht in DB speichern' : 'Zum Tageslog hinzufügen';
 }
 
 function renderActivityGrid() {
@@ -2233,40 +2245,38 @@ async function processInputFromStage2(text) {
 async function processInput(text) {
   document.getElementById('mic-btn').classList.add('processing');
   document.getElementById('mic-status').textContent = 'Verarbeite…';
+  // Eingabefeld visuell sperren während Suche
+  const manualInput = document.getElementById('manual-input');
+  if(manualInput) { manualInput.placeholder = '⏳ Suche läuft…'; manualInput.disabled = true; }
+
+  const cleanup = () => {
+    document.getElementById('mic-btn').classList.remove('processing');
+    document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+    if(manualInput) { manualInput.placeholder = 'z.B. "200g Tomaten" oder "Spiegeleier"'; manualInput.disabled = false; }
+  };
 
   // Stufe 1: Lokale DB
   const localResult = tryLocalParser(text);
   if(localResult) {
     handleParsedInput(localResult, text);
-    document.getElementById('mic-btn').classList.remove('processing');
-    document.getElementById('mic-status').textContent = 'Tippen zum Starten';
-    return;
+    cleanup(); return;
   }
 
   // Stufe 1b: Fuzzy-Matching in lokaler DB
   const fuzzyMatches = findFuzzyMatches(text);
   if(fuzzyMatches.length > 0) {
     showFuzzySuggestions(text, fuzzyMatches);
-    document.getElementById('mic-btn').classList.remove('processing');
-    document.getElementById('mic-status').textContent = 'Tippen zum Starten';
-    return;
+    cleanup(); return;
   }
 
   // Stufe 2: Open Food Facts (wenn aktiviert)
-  let offFallback = null; // merken falls nur kcal/100g ohne Portionsdaten
+  let offFallback = null;
   if(state.settings.offEnabled !== false) {
     document.getElementById('mic-status').textContent = 'Suche in Open Food Facts…';
     const offResult = await searchOpenFoodFacts(text);
     if(offResult) {
-      if(offResult.needsPortionInput) {
-        // Portionsdaten unvollständig → als Fallback merken, erstmal weitersuchen
-        offFallback = offResult;
-      } else {
-        showClaudeSearchResult(offResult, text);
-        document.getElementById('mic-btn').classList.remove('processing');
-        document.getElementById('mic-status').textContent = 'Tippen zum Starten';
-        return;
-      }
+      if(offResult.needsPortionInput) { offFallback = offResult; }
+      else { showClaudeSearchResult(offResult, text); cleanup(); return; }
     }
   }
 
@@ -2274,43 +2284,28 @@ async function processInput(text) {
   if(state.settings.nxEnabled && state.settings.nutritionixAppId && state.settings.nutritionixKey) {
     document.getElementById('mic-status').textContent = 'Suche in Nutritionix…';
     const nxResult = await searchNutritionix(text);
-    if(nxResult) {
-      showClaudeSearchResult(nxResult, text);
-      document.getElementById('mic-btn').classList.remove('processing');
-      document.getElementById('mic-status').textContent = 'Tippen zum Starten';
-      return;
-    }
+    if(nxResult) { showClaudeSearchResult(nxResult, text); cleanup(); return; }
   }
 
   // Stufe 4: Claude + Web-Search (wenn aktiviert und Key vorhanden)
   if(state.settings.aiEnabled && state.settings.apiKey && state.settings.apiKey.startsWith('sk-ant-')) {
     document.getElementById('mic-status').textContent = 'Claude sucht Nährwerte…';
     await processWithClaudeSearch(text, state.settings.apiKey, offFallback);
-    document.getElementById('mic-btn').classList.remove('processing');
-    document.getElementById('mic-status').textContent = 'Tippen zum Starten';
-    return;
+    cleanup(); return;
   }
 
   // Stufe 5: Gemini (wenn aktiviert und Key vorhanden)
   if(state.settings.geminiEnabled && state.settings.geminiKey) {
     document.getElementById('mic-status').textContent = 'Gemini sucht Nährwerte…';
     await processWithGemini(text, state.settings.geminiKey, offFallback);
-    document.getElementById('mic-btn').classList.remove('processing');
-    document.getElementById('mic-status').textContent = 'Tippen zum Starten';
-    return;
+    cleanup(); return;
   }
 
   // Stufe 6: OFF-Fallback — Portionsdaten unbekannt, jetzt Nutzer fragen
-  if(offFallback) {
-    showPortionInputDialog(offFallback.productName, offFallback.kcalPer100);
-    document.getElementById('mic-btn').classList.remove('processing');
-    document.getElementById('mic-status').textContent = 'Tippen zum Starten';
-    return;
-  }
+  if(offFallback) { showPortionInputDialog(offFallback.productName, offFallback.kcalPer100); cleanup(); return; }
 
   toast('Nicht gefunden — weitere Quellen in Einstellungen aktivieren');
-  document.getElementById('mic-btn').classList.remove('processing');
-  document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+  cleanup();
 }
 
 // ─── OPEN FOOD FACTS ──────────────────────────────────────────────────────────
@@ -2459,7 +2454,7 @@ function renderFavorites() {
         const kcalHint = getFavKcalHint(fav);
         const autoBadge = fav.auto ? '<span style="font-size:10px;background:var(--warn-bg);color:var(--warn);border-radius:6px;padding:1px 5px;margin-left:4px;">Auto</span>' : '';
         return `<div onclick="useFavorite(${i})" style="display:flex;flex-direction:column;align-items:flex-start;padding:7px 11px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);cursor:pointer;min-width:80px;max-width:140px;">
-          <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">${fav.name}${autoBadge}</div>
+          <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;"><span style="color:var(--accent2);margin-right:3px;">+</span>${fav.name}${autoBadge}</div>
           <div style="font-size:11px;color:var(--text3);">${kcalHint}</div>
         </div>`;
       }).join('');
@@ -4032,7 +4027,8 @@ function renderWeekChart() {
   }
 
   const balances = days.map(d => d.balance);
-  const colors = balances.map(v => v === null ? 'rgba(128,128,128,0.15)' : v <= 0 ? '#0F6E56' : '#993C1D');
+  const colors = balances.map(v => v === null ? 'transparent' : v <= 0 ? '#0F6E56' : '#993C1D');
+  const displayBalances = balances.map(v => v === null ? 0 : v);
 
   // Destroy old chart if exists
   if(weekChartInstance) { weekChartInstance.destroy(); weekChartInstance = null; }
@@ -4044,10 +4040,19 @@ function renderWeekChart() {
       data: {
         labels: days.map(d=>d.label),
         datasets: [{
-          data: balances.map(v => v === null ? 0 : v),
+          data: displayBalances,
           backgroundColor: colors,
           borderRadius: 4,
           borderSkipped: false
+        }, {
+          // Gestrichelte Markierung für Tage ohne Eintrag
+          type: 'scatter',
+          data: days.map((d,i) => d.balance === null ? { x: i, y: 0 } : null).filter(Boolean),
+          pointStyle: 'line',
+          pointRadius: 12,
+          pointBorderColor: 'rgba(160,160,160,0.4)',
+          pointBorderWidth: 1,
+          showLine: false
         }]
       },
       options: {
