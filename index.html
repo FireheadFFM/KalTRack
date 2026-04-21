@@ -539,7 +539,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.21 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.22 — April 2026</div>
+        <div>· Gerichte-Sync repariert: Merge-Logik erkennt jetzt auch Gerichte die nur auf einem Gerät vorhanden sind</div>
+        <div>· DB-Sync verbessert: beide Geräte behalten ihre eigenen Einträge, Merge per ID statt „größere Liste gewinnt"</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.21 — April 2026</div>
         <div>· Autocomplete-Dropdown klappt nach oben auf wenn nicht genug Platz darunter (Tastatur)</div>
         <div>· Autocomplete: „Nichts passendes — in OFF &amp; KI suchen" am Ende der Vorschläge</div>
         <div>· „Meintest du"-Dialog: Button „In OFF &amp; KI suchen" — überspringt lokale Suche</div>
@@ -1487,18 +1490,28 @@ async function autoLoadFromCloud() {
     const cloud = JSON.parse(rows[0].payload);
     let changed = false;
 
-    // DB: größere Liste gewinnt (mehr Einträge = mehr gepflegt)
-    if(cloud.db && cloud.db.length > (state.db?.length || 0)) {
-      state.db = cloud.db; changed = true;
+    // DB: zusammenführen per ID — beide Seiten behalten ihre Einträge
+    if(cloud.db && cloud.db.length > 0) {
+      const merged = [...(state.db||[])];
+      cloud.db.forEach(cd => {
+        if(!merged.find(d => d.id === cd.id)) merged.push(cd);
+      });
+      if(merged.length !== (state.db||[]).length) {
+        state.db = merged; changed = true;
+      }
     }
 
-    // Gerichte: zusammenführen, Duplikate per Name vermeiden
+    // Gerichte: zusammenführen per Name — beide Seiten behalten ihre Gerichte
     if(cloud.dishes && cloud.dishes.length > 0) {
       const merged = [...(state.dishes||[])];
+      let dishChanged = false;
       cloud.dishes.forEach(cd => {
-        if(!merged.find(d => d.name === cd.name)) merged.push(cd);
+        if(!merged.find(d => d.name === cd.name)) {
+          merged.push(cd);
+          dishChanged = true;
+        }
       });
-      if(merged.length !== (state.dishes||[]).length) {
+      if(dishChanged) {
         state.dishes = merged; changed = true;
       }
     }
