@@ -2880,7 +2880,7 @@ function confirmManualDay() {
   toast(`${dateObj.toLocaleDateString('de-DE')} gespeichert`);
 }
 
-
+function renderHistory() {
   renderWeekChart();
   const container = document.getElementById('history-days');
   if(!state.history || state.history.length === 0) {
