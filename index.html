@@ -534,12 +534,61 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
     </div>
 
     <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleCard('backlog-body')">
+        <div class="card-label" style="margin:0;">Ideen-Backlog</div>
+        <span style="font-size:12px;color:var(--text3);">▾</span>
+      </div>
+      <div id="backlog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.8;">
+
+        <!-- Eingabe neue Idee -->
+        <div style="display:flex;gap:6px;margin-bottom:12px;">
+          <input type="text" id="backlog-input" placeholder="Neue Idee eingeben…" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" onkeydown="if(event.key==='Enter')addBacklogIdea()" />
+          <button onclick="backlogMic()" id="backlog-mic-btn" style="padding:8px 10px;border-radius:var(--radius-sm);border:none;background:var(--accent);color:white;cursor:pointer;font-size:14px;">🎙</button>
+          <button onclick="addBacklogIdea()" style="padding:8px 12px;border-radius:var(--radius-sm);border:none;background:var(--accent);color:white;cursor:pointer;font-size:13px;font-family:'DM Sans';font-weight:500;">+</button>
+        </div>
+
+        <!-- Eigene Ideen (dynamisch) -->
+        <div id="backlog-custom-section"></div>
+
+        <!-- Fest eingetragene Ideen -->
+        <div style="font-weight:500;color:var(--text);margin-bottom:6px;">Priorität 1 — Als nächstes ⭐</div>
+        <div>📷 Barcode-Scanner — Kamera öffnen, Produkt scannen, Open Food Facts liefert direkt die Daten</div>
+        <div>🏃 Google Fit / Health Connect — Schritte automatisch importieren</div>
+        <div>⚖️ Beurer-Integration via Health Connect — Gewicht, Körperfett, Muskelmasse automatisch übernehmen</div>
+
+        <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Priorität 2 — Kurzfristig</div>
+        <div>💧 Wasser-Schnelleingabe direkt auf der Übersichtsseite (+Becher-Button)</div>
+        <div>📸 Foto-Eingabe — Foto vom Teller machen, Gemini schätzt die Kalorien</div>
+        <div>🔢 Rezept-Rechner — Zutaten + Portionen → kcal/Portion → als Gericht speichern</div>
+        <div>🔥 Streak-Anzeige — „Du trackst seit 12 Tagen in Folge"</div>
+        <div>📅 Wochentag-Muster — „Du isst montags durchschnittlich 300 kcal mehr"</div>
+        <div>📊 CSV-Export für Excel / Numbers</div>
+
+        <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Priorität 3 — Mittelfristig</div>
+        <div>⚖️ Gewicht-Tracking manuell — Verlaufskurve, Zielgewicht, BMI</div>
+        <div>🩺 Blutdruck-Tracking — Systolisch / Diastolisch / Puls, Ampelfarben nach WHO</div>
+        <div>💊 Medikamenten-Tracker — Einnahmezeiten, tägliche Bestätigung, Erinnerung</div>
+        <div>🥗 Nährwert-Wochenbilanz — Protein, Kohlenhydrate, Fett, Zucker, Alkohol</div>
+        <div>👥 Multi-User — gemeinsame DB, getrennte Tagesdaten (z.B. Florian + Frau)</div>
+
+      </div>
+    </div>
+
+    <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleCard('changelog-body')">
         <div class="card-label" style="margin:0;">Changelog</div>
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.27 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.30 — April 2026</div>
+        <div>· Backlog: eigene Ideen per Texteingabe oder Sprache hinzufügen</div>
+        <div>· Eigene Ideen mit ⭐ priorisierbar — Sterne erscheinen oben</div>
+        <div>· Eigene Ideen werden geräteübergreifend synchronisiert</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.29 — April 2026</div>
+        <div>· Ideen-Backlog in den Einstellungen (auf-/zuklappbar, vor Changelog)</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.28 — April 2026</div>
+        <div>· Kategorie „Saucen" umbenannt in „Saucen &amp; Gewürze"</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.27 — April 2026</div>
         <div>· Schritte können jetzt in der Übersicht mit × gelöscht werden</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.26 — April 2026</div>
         <div>· Fehler behoben: doppelte stepsKcal-Deklaration in renderHome (SyntaxError)</div>
@@ -1002,7 +1051,8 @@ let state = {
   // Tombstones: gelöschte Einträge mit Timestamp für geräteübergreifendes Löschen
   deletedDbIds: [],      // [{id, ts}]
   deletedDishNames: [],  // [{name, ts}]
-  deletedFavNames: []    // [{name, ts}]
+  deletedFavNames: [],   // [{name, ts}]
+  backlogIdeas: []       // [{id, text, ts}] — eigene Ideen
 };
 
 const FOOD_DB_DEFAULT = [
@@ -1239,16 +1289,16 @@ const FOOD_DB_DEFAULT = [
   {id:'g020',name:'Smoothie',kcalPer100:60,unit:'100ml',category:'Getränke'},
 
   // ── SAUCEN & DRESSINGS ────────────────────────────────────────────────────
-  {id:'c001',name:'Ketchup',kcalPer100:112,unit:'100g',category:'Saucen'},
-  {id:'c002',name:'Senf',kcalPer100:77,unit:'100g',category:'Saucen'},
-  {id:'c003',name:'Balsamico',kcalPer100:88,unit:'100g',category:'Saucen'},
-  {id:'c004',name:'Sojasauce',kcalPer100:60,unit:'100g',category:'Saucen'},
-  {id:'c005',name:'Hummus',kcalPer100:177,unit:'100g',category:'Saucen'},
-  {id:'c006',name:'Pesto',kcalPer100:454,unit:'100g',category:'Saucen'},
-  {id:'c007',name:'Tomatensoße',kcalPer100:48,unit:'100g',category:'Saucen'},
-  {id:'c008',name:'Bolognese-Sauce',kcalPer100:105,unit:'100g',category:'Saucen'},
-  {id:'c009',name:'Guacamole',kcalPer100:150,unit:'100g',category:'Saucen'},
-  {id:'c010',name:'Tzatziki',kcalPer100:82,unit:'100g',category:'Saucen'},
+  {id:'c001',name:'Ketchup',kcalPer100:112,unit:'100g',category:'Saucen & Gewürze'},
+  {id:'c002',name:'Senf',kcalPer100:77,unit:'100g',category:'Saucen & Gewürze'},
+  {id:'c003',name:'Balsamico',kcalPer100:88,unit:'100g',category:'Saucen & Gewürze'},
+  {id:'c004',name:'Sojasauce',kcalPer100:60,unit:'100g',category:'Saucen & Gewürze'},
+  {id:'c005',name:'Hummus',kcalPer100:177,unit:'100g',category:'Saucen & Gewürze'},
+  {id:'c006',name:'Pesto',kcalPer100:454,unit:'100g',category:'Saucen & Gewürze'},
+  {id:'c007',name:'Tomatensoße',kcalPer100:48,unit:'100g',category:'Saucen & Gewürze'},
+  {id:'c008',name:'Bolognese-Sauce',kcalPer100:105,unit:'100g',category:'Saucen & Gewürze'},
+  {id:'c009',name:'Guacamole',kcalPer100:150,unit:'100g',category:'Saucen & Gewürze'},
+  {id:'c010',name:'Tzatziki',kcalPer100:82,unit:'100g',category:'Saucen & Gewürze'},
 ];
 
 const ACTIVITIES_DEFAULT = [
@@ -1303,7 +1353,74 @@ async function init() {
   });
 }
 
-// ─── ABEND-REMINDER ───────────────────────────────────────────────────────────
+// ─── BACKLOG ──────────────────────────────────────────────────────────────────
+function renderBacklogIdeas() {
+  const section = document.getElementById('backlog-custom-section');
+  if(!section) return;
+  const ideas = state.backlogIdeas || [];
+  if(ideas.length === 0) { section.innerHTML = ''; return; }
+
+  // Sortieren: Sterne zuerst, dann nach Timestamp
+  const sorted = [...ideas].sort((a,b) => {
+    if(a.star && !b.star) return -1;
+    if(!a.star && b.star) return 1;
+    return b.ts - a.ts;
+  });
+
+  section.innerHTML = `
+    <div style="font-weight:500;color:var(--text);margin-bottom:6px;">💡 Meine Ideen</div>
+    ${sorted.map(idea => `
+      <div style="display:flex;align-items:flex-start;gap:6px;padding:5px 0;border-bottom:0.5px solid var(--border);">
+        <button onclick="toggleBacklogStar('${idea.id}')" style="background:none;border:none;cursor:pointer;font-size:15px;padding:0;flex-shrink:0;line-height:1.4;">${idea.star ? '⭐' : '☆'}</button>
+        <div style="flex:1;font-size:13px;color:var(--text);line-height:1.5;">${idea.text}</div>
+        <button onclick="deleteBacklogIdea('${idea.id}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:15px;padding:0;flex-shrink:0;line-height:1.4;">×</button>
+      </div>`).join('')}
+    <div style="height:1px;background:var(--border);margin:12px 0;"></div>`;
+}
+
+function addBacklogIdea() {
+  const input = document.getElementById('backlog-input');
+  const text = input ? input.value.trim() : '';
+  if(!text) { toast('Bitte Idee eingeben'); return; }
+  if(!state.backlogIdeas) state.backlogIdeas = [];
+  state.backlogIdeas.push({ id: 'bi' + Date.now(), text, star: false, ts: Date.now() });
+  input.value = '';
+  saveStateAndSync();
+  renderBacklogIdeas();
+  toast('Idee gespeichert ✓');
+}
+
+function deleteBacklogIdea(id) {
+  state.backlogIdeas = (state.backlogIdeas||[]).filter(i => i.id !== id);
+  saveStateAndSync();
+  renderBacklogIdeas();
+}
+
+function toggleBacklogStar(id) {
+  const idea = (state.backlogIdeas||[]).find(i => i.id === id);
+  if(idea) { idea.star = !idea.star; saveStateAndSync(); renderBacklogIdeas(); }
+}
+
+function backlogMic() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition) { toast('Spracheingabe nicht verfügbar'); return; }
+  const r = new SpeechRecognition();
+  r.lang = 'de-DE'; r.continuous = false; r.interimResults = false;
+  const btn = document.getElementById('backlog-mic-btn');
+  if(btn) { btn.textContent = '⏹'; btn.style.background = 'var(--danger)'; }
+  r.onresult = (e) => {
+    const text = e.results[0][0].transcript;
+    const input = document.getElementById('backlog-input');
+    if(input) input.value = text;
+    if(btn) { btn.textContent = '🎙'; btn.style.background = 'var(--accent)'; }
+  };
+  r.onerror = r.onend = () => {
+    if(btn) { btn.textContent = '🎙'; btn.style.background = 'var(--accent)'; }
+  };
+  r.start();
+}
+
+
 let reminderBannerMode = null; // 'today' | 'yesterday'
 
 function todayHasActivity() {
@@ -1593,8 +1710,17 @@ async function autoLoadFromCloud() {
       }
     }
 
-    // Einstellungen: Cloud gewinnt (neueste Einstellung zählt)
-    if(cloud.settings) { state.settings = cloud.settings; changed = true; }
+    // Backlog-Ideen: zusammenführen per ID
+    if(cloud.backlogIdeas && cloud.backlogIdeas.length > 0) {
+      const merged = [...(state.backlogIdeas||[])];
+      let changed2 = false;
+      cloud.backlogIdeas.forEach(ci => {
+        const idx = merged.findIndex(i => i.id === ci.id);
+        if(idx === -1) { merged.push(ci); changed2 = true; }
+        else if(ci.star !== merged[idx].star) { merged[idx].star = ci.star; changed2 = true; }
+      });
+      if(changed2) { state.backlogIdeas = merged; changed = true; }
+    }
 
     // Tageslog: per ID mergen — Einträge von beiden Geräten zusammenführen
     if(cloud.todayLog && cloud.todayLog.length > 0) {
@@ -1699,8 +1825,11 @@ function loadState() {
   if(!state.deletedDbIds) state.deletedDbIds = [];
   if(!state.deletedDishNames) state.deletedDishNames = [];
   if(!state.deletedFavNames) state.deletedFavNames = [];
+  if(!state.backlogIdeas) state.backlogIdeas = [];
 
-  // Selbstheilung: Einträge ohne ID bekommen eine neue ID (für Merge-Kompatibilität)
+  // Migration: Kategorie "Saucen" → "Saucen & Gewürze"
+  (state.db||[]).forEach(f => { if(f.category === 'Saucen') f.category = 'Saucen & Gewürze'; });
+
   let healed = false;
   (state.todayLog||[]).forEach((item, i) => {
     if(!item.id) { item.id = 'l' + (Date.now() + i); healed = true; }
@@ -1733,7 +1862,7 @@ function showPage(p) {
   const idx = ['home','input','activity','history','settings'].indexOf(p);
   if(idx >= 0) document.querySelectorAll('.nav-btn')[idx].classList.add('active');
   if(p === 'home') renderHome();
-  if(p === 'settings') renderSettings();
+  if(p === 'settings') { renderSettings(); renderBacklogIdeas(); }
   if(p === 'input') renderModeHint();
   if(p === 'history') renderHistory();
   if(p === 'db') renderDbPageFull();
