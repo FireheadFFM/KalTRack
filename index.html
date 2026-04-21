@@ -539,7 +539,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.25 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.26 — April 2026</div>
+        <div>· Fehler behoben: doppelte stepsKcal-Deklaration in renderHome (SyntaxError)</div>
+        <div>· Fehler behoben: showPage-Referenzfehler im Aktivitäten-Log</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.25 — April 2026</div>
         <div>· Schritte werden jetzt in der Übersicht unter „Aktivitäten heute" angezeigt</div>
         <div>· ✎ neben Schritten führt direkt zur Aktivitäts-Seite zum Bearbeiten</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.24 — April 2026</div>
@@ -1820,7 +1823,6 @@ function renderHome() {
 
   // Activity log
   const al = document.getElementById('activity-log-list');
-  const stepsKcal = Math.round((state.steps||0) * 0.04);
   const hasSteps = (state.steps||0) > 0;
   const hasActivities = state.activityLog.length > 0;
 
@@ -1835,7 +1837,7 @@ function renderHome() {
         </div>
         <div class="log-right">
           <div class="log-kcal">−${stepsKcal} kcal</div>
-          <button class="log-del" onclick="showPage('activity')" title="Schritte bearbeiten" style="font-size:13px;">✎</button>
+          <button class="log-del" onclick="document.querySelectorAll('.nav-btn')[2].click()" title="Schritte bearbeiten" style="font-size:13px;">✎</button>
         </div>
       </div>` : '';
 
