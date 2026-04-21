@@ -2517,10 +2517,19 @@ let dbActiveCat = 'Alle';
 function filterDb(q) { dbFilter = q; renderDbPageFull(); }
 
 let dbCollapsed = {};
+function isCustomEntry(f) {
+  // Eigene Einträge: ID beginnt mit m, u, ai, oder hat keine Standard-Präfixe
+  return f.id && /^(m|u|ai|ca)/.test(f.id);
+}
+
 function renderDbPageFull() {
   const catEl = document.getElementById('db-cat-filter');
   if(catEl) {
-    const cats = ['Alle', ...new Set(state.db.map(f=>f.category||'Sonstiges').filter(Boolean))].sort((a,b)=>a==='Alle'?-1:b==='Alle'?1:a.localeCompare(b));
+    const cats = ['Alle', 'Eigene', ...new Set(state.db.map(f=>f.category||'Sonstiges').filter(Boolean))].sort((a,b)=>{
+      if(a==='Alle') return -1; if(b==='Alle') return 1;
+      if(a==='Eigene') return -1; if(b==='Eigene') return 1;
+      return a.localeCompare(b,'de');
+    });
     catEl.innerHTML = cats.map(c => `
       <button onclick="setDbCat('${c}')" style="white-space:nowrap;padding:5px 12px;border-radius:14px;border:1px solid ${c===dbActiveCat?'var(--accent)':'var(--border)'};background:${c===dbActiveCat?'var(--accent)':'var(--bg)'};color:${c===dbActiveCat?'white':'var(--text2)'};font-size:12px;font-family:'DM Sans';cursor:pointer;">${c}</button>`).join('');
   }
@@ -2528,7 +2537,7 @@ function renderDbPageFull() {
   const q = dbFilter.toLowerCase();
   let filtered = state.db.filter(f => {
     const matchQ = !q || f.name.toLowerCase().includes(q);
-    const matchCat = dbActiveCat==='Alle' || (f.category||'Sonstiges')===dbActiveCat;
+    const matchCat = dbActiveCat==='Alle' || (dbActiveCat==='Eigene' ? isCustomEntry(f) : (f.category||'Sonstiges')===dbActiveCat);
     return matchQ && matchCat;
   });
   filtered.sort((a,b)=>a.name.localeCompare(b.name,'de'));
@@ -2546,8 +2555,12 @@ function renderDbPageFull() {
       if(!grouped[cat]) grouped[cat] = [];
       grouped[cat].push(f);
     });
-    container.innerHTML = Object.entries(grouped).sort(([a],[b])=>a.localeCompare(b,'de')).map(([cat, items]) => {
-      const isOpen = dbCollapsed[cat] !== true;
+    container.innerHTML = Object.entries(grouped).sort(([a],[b])=>{
+      if(a==='Sonstiges') return -1;
+      if(b==='Sonstiges') return 1;
+      return a.localeCompare(b,'de');
+    }).map(([cat, items]) => {
+      const isOpen = dbCollapsed[cat] === true; // default: collapsed
       const arrow = isOpen ? '▴' : '▾';
       return `
         <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;margin:12px 0 4px;padding:0 2px;" onclick="toggleDbCat('${cat}')">
@@ -2559,6 +2572,7 @@ function renderDbPageFull() {
         </div>`;
     }).join('');
   } else {
+    // Flache Liste für Kategorie-Filter, Suche, oder "Eigene"
     container.innerHTML = `<div class="card">${filtered.map(f => dbItemHtml(f)).join('')}</div>`;
   }
 
@@ -2595,7 +2609,7 @@ function renderDbPageFull() {
 }
 
 function toggleDbCat(cat) {
-  dbCollapsed[cat] = !dbCollapsed[cat];
+  dbCollapsed[cat] = !dbCollapsed[cat]; // true = open, undefined/false = closed
   if(cat === '__dishes') {
     const el = document.getElementById('dbcat-__dishes');
     const arrow = document.getElementById('dbcat-dishes-arrow');
@@ -2603,7 +2617,8 @@ function toggleDbCat(cat) {
     if(arrow) arrow.textContent = dbCollapsed[cat] ? '▾' : '▴';
   } else {
     const el = document.getElementById('dbcat-'+cat.replace(/\s/g,'_'));
-    if(el) el.style.display = dbCollapsed[cat] ? 'none' : 'block';
+    const isOpen = dbCollapsed[cat] === true;
+    if(el) el.style.display = isOpen ? 'block' : 'none';
     renderDbPageFull();
   }
 }
