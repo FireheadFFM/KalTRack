@@ -291,6 +291,17 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <div class="log-list" id="session-list"></div>
       <button class="btn btn-primary btn-full" id="session-save-btn" onclick="finishSession()">Sitzung abschließen</button>
     </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleFavorites()">
+        <div class="card-label" style="margin:0;">Favoriten</div>
+        <span id="fav-arrow" style="font-size:12px;color:var(--text3);">▾</span>
+      </div>
+      <div id="fav-list" style="display:none;margin-top:10px;">
+        <div id="fav-items"></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px;">Favoriten werden in der Datenbank unter dem jeweiligen Eintrag gepflegt.</div>
+      </div>
+    </div>
   </div>
 
   <!-- ACTIVITY PAGE -->
@@ -445,10 +456,133 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <div class="card-label">Gefahrenzone</div>
       <button class="btn btn-danger btn-full" onclick="resetDay()">Heutigen Tag zurücksetzen</button>
     </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleCard('changelog-body')">
+        <div class="card-label" style="margin:0;">Changelog</div>
+        <span style="font-size:12px;color:var(--text3);">▾</span>
+      </div>
+      <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.5 — April 2026</div>
+        <div>· Favoriten: häufig genutzte Einträge schnell hinzufügen</div>
+        <div>· Fuzzy-Suche: „Mai Tai" findet auch bei ungenauen Eingaben</div>
+        <div>· Einheiten: cl und dl werden automatisch umgerechnet</div>
+        <div>· Tageswechsel um 02:00 Uhr (nicht Mitternacht)</div>
+        <div>· Datenbank: Kategorien auf-/zuklappbar</div>
+        <div>· Löschen überall mit Bestätigung</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.4</div>
+        <div>· Suchquellen-Toggles (Open Food Facts, Nutritionix, KI)</div>
+        <div>· Einstellungen neu strukturiert</div>
+        <div>· Maulwurf-Logo und App-Name FitMole</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.3</div>
+        <div>· Cloud-Sync via Supabase</div>
+        <div>· PWA-Installation auf dem Homescreen</div>
+        <div>· Export/Import als JSON</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.2</div>
+        <div>· Lebensmittel-Datenbank mit ~220 Einträgen</div>
+        <div>· Kategoriefilter und Bearbeitung in der DB</div>
+        <div>· Historie mit Wochenchart</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.0</div>
+        <div>· Erste Version mit Spracheingabe</div>
+        <div>· Tagesbilanz mit Grundumsatz, Schritten, Aktivitäten</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleCard('docs-body')">
+        <div class="card-label" style="margin:0;">Anleitung</div>
+        <span style="font-size:12px;color:var(--text3);">▾</span>
+      </div>
+      <div id="docs-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.8;">
+        <div style="font-weight:500;color:var(--text);margin-bottom:6px;">Erste Schritte</div>
+        <div>1. Unter ⚙ → Mein Profil: Grundumsatz und Kalorienziel eintragen.</div>
+        <div>2. App oben auf „Heute tracken" stellen.</div>
+        <div>3. Mikrofon-Button drücken und Eingabe sprechen — oder im Textfeld tippen.</div>
+
+        <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Sprach- und Texteingabe</div>
+        <div>· <b>Menge + Lebensmittel:</b> „200g Tomaten", „3 Eier", „einen Apfel"</div>
+        <div>· <b>Gericht:</b> „Spiegeleier mit Würstchen" (vorher als Gericht gespeichert)</div>
+        <div>· <b>Unbekannt mit kcal:</b> „Gummibärchen, 300 Kalorien"</div>
+        <div>· <b>Einheiten:</b> g, ml, cl (→ml), dl (→ml), Stück, Scheibe, Portion</div>
+        <div>· Bei ungenauen Eingaben erscheint eine Vorschlagsliste.</div>
+
+        <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Datenbank</div>
+        <div>· Oben per Kategorie filtern oder Suchfeld nutzen.</div>
+        <div>· ✎ zum Bearbeiten, − zum Löschen (immer mit Bestätigung).</div>
+        <div>· ★ macht einen Eintrag zum Favoriten.</div>
+        <div>· Getränke haben eine eigene Kategorie.</div>
+        <div>· Im Datenbank-Modus (oben rechts) werden Eingaben nicht im Tageslog erfasst.</div>
+
+        <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Favoriten</div>
+        <div>· Auf der Eingabe-Seite unten: Favoriten aufklappen.</div>
+        <div>· Favorit antippen → direkt hinzufügen (mit gespeicherter Menge).</div>
+        <div>· Beim ersten Mal wird die Menge abgefragt und gespeichert.</div>
+        <div>· Einträge die 5× genutzt wurden, werden automatisch vorgeschlagen.</div>
+
+        <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Suchquellen</div>
+        <div>· Stufe 1 (immer): Lokale Datenbank</div>
+        <div>· Stufe 1b: Fuzzy-Suche (ähnliche Begriffe)</div>
+        <div>· Stufe 2 (Toggle): Open Food Facts — kostenlos, Markenprodukte</div>
+        <div>· Stufe 3 (Toggle + Key): Nutritionix — Restaurants, Fast Food</div>
+        <div>· Stufe 4 (Toggle + Key): Claude KI — kostenpflichtig, letzter Fallback</div>
+
+        <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Cloud-Sync</div>
+        <div>· Änderungen werden automatisch nach 3 Sek. in die Cloud gespeichert.</div>
+        <div>· Beim App-Start werden Cloud-Daten automatisch geladen.</div>
+        <div>· Manuell: ⚙ → Cloud & Backup → ↑ Hochladen / ↓ Herunterladen.</div>
+
+        <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Tageswechsel</div>
+        <div>· Der Tag wechselt um 02:00 Uhr nachts.</div>
+        <div>· Einträge vor 02:00 zählen noch zum Vortag.</div>
+        <div>· Die Historie speichert bis zu 90 Tage.</div>
+      </div>
+    </div>
   </div>
 </div>
 
 <!-- DIALOGS -->
+<div class="overlay" id="dialog-fav-amount" onclick="closeDialog('dialog-fav-amount')">
+  <div class="dialog" onclick="event.stopPropagation()">
+    <h3 id="dialog-fav-name">Menge?</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:8px;">Standardmenge (wird beim nächsten Mal vorgeschlagen):</p>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <input type="number" id="dialog-fav-amount-val" placeholder="Menge" style="flex:1;" />
+      <select id="dialog-fav-amount-unit" style="width:90px;padding:9px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;">
+        <option value="g">g</option>
+        <option value="ml">ml</option>
+        <option value="Stück">Stück</option>
+        <option value="Portion">Portion</option>
+      </select>
+    </div>
+    <div class="dialog-btns">
+      <button class="btn btn-secondary" onclick="closeDialog('dialog-fav-amount')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="confirmFavAmount()">Hinzufügen</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="dialog-fuzzy" onclick="closeDialog('dialog-fuzzy')">
+  <div class="dialog" onclick="event.stopPropagation()">
+    <h3>Meintest du...?</h3>
+    <div id="dialog-fuzzy-list" style="margin-bottom:10px;"></div>
+    <div class="dialog-btns">
+      <button class="btn btn-secondary" onclick="closeDialog('dialog-fuzzy')">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="dialog-fuzzy-amount" onclick="closeDialog('dialog-fuzzy-amount')">
+  <div class="dialog" onclick="event.stopPropagation()">
+    <h3>Menge angeben</h3>
+    <p style="font-size:14px;color:var(--text2);margin-bottom:10px;"><span id="dialog-fuzzy-amount-name"></span></p>
+    <input type="text" id="dialog-fuzzy-amount-input" placeholder="z.B. 200g, 150ml, 2 Stück" />
+    <div class="dialog-btns">
+      <button class="btn btn-secondary" onclick="closeDialog('dialog-fuzzy-amount')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="confirmFuzzyAmount()">Hinzufügen</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="dialog-ai-result" onclick="closeDialog('dialog-ai-result')">
   <div class="dialog" onclick="event.stopPropagation()">
     <h3>KI hat gefunden</h3>
@@ -585,7 +719,8 @@ let state = {
   db: [],
   dishes: [],
   activities: [],
-  history: []
+  history: [],
+  favorites: [] // [{id, name, type:'food'|'dish', defaultAmount, defaultUnit}]
 };
 
 const FOOD_DB_DEFAULT = [
@@ -862,7 +997,8 @@ async function init() {
   initSpeech();
   renderActivityGrid();
   renderAiToggle();
-  // Immer auf Eingabe-Seite starten
+  updateAutoFavorites();
+  scheduleDayRollover();
   if(state.mode === 'db') {
     switchToDb();
   } else {
@@ -874,6 +1010,43 @@ async function init() {
     renderModeHint();
   }
   await autoLoadFromCloud();
+}
+
+function scheduleDayRollover() {
+  const now = new Date();
+  const next2am = new Date(now);
+  next2am.setHours(2, 0, 0, 500);
+  if(now.getHours() >= 2) next2am.setDate(next2am.getDate() + 1);
+  const ms = next2am - now;
+  setTimeout(() => {
+    performDayRollover();
+    setInterval(performDayRollover, 24 * 60 * 60 * 1000);
+  }, ms);
+}
+
+function performDayRollover() {
+  const today = getFitMoleDay();
+  if(state.lastDate && state.lastDate !== today) {
+    if(!state.history) state.history = [];
+    const stepsKcal = Math.round((state.steps||0) * 0.04);
+    const actKcal = (state.activityLog||[]).reduce((s,i)=>s+i.kcal,0);
+    const eaten = (state.todayLog||[]).reduce((s,i)=>s+i.kcal,0);
+    const burned = (state.settings.bmr||2000) + stepsKcal + actKcal;
+    const goal = state.settings.goal || state.settings.bmr || 2000;
+    state.history.unshift({
+      date: state.lastDate, eaten, burned, goal,
+      balance: eaten - burned,
+      steps: state.steps||0,
+      log: [...(state.todayLog||[])],
+      activityLog: [...(state.activityLog||[])]
+    });
+    if(state.history.length > 90) state.history.splice(90);
+    state.todayLog = []; state.activityLog = []; state.steps = 0; state.sessionItems = [];
+    saveStateAndSync();
+    renderAll();
+    document.getElementById('today-date').textContent = new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+    toast('Neuer Tag — guten Morgen!');
+  }
 }
 
 async function autoLoadFromCloud() {
@@ -963,7 +1136,7 @@ function loadState() {
     const s = localStorage.getItem('fitmole_state');
     if(s) {
       const loaded = JSON.parse(s);
-      const today = new Date().toDateString();
+      const today = getFitMoleDay();
       if(loaded.lastDate && loaded.lastDate !== today) {
         // Archive yesterday before resetting
         if(!loaded.history) loaded.history = [];
@@ -993,12 +1166,13 @@ function loadState() {
   if(!state.activities || state.activities.length === 0) state.activities = [...ACTIVITIES_DEFAULT];
   if(!state.dishes) state.dishes = [];
   if(!state.history) state.history = [];
+  if(!state.favorites) state.favorites = [];
   // Merke: Default-DB wird nur beim allerersten Start geladen.
   // Danach kommt die DB immer aus Cloud (autoLoadFromCloud) oder localStorage.
 }
 
 function saveState() {
-  state.lastDate = new Date().toDateString();
+  state.lastDate = getFitMoleDay();
   localStorage.setItem('fitmole_state', JSON.stringify(state));
 }
 
@@ -1269,6 +1443,15 @@ async function processInput(text) {
     return;
   }
 
+  // Stufe 1b: Fuzzy-Matching in lokaler DB
+  const fuzzyMatches = findFuzzyMatches(text);
+  if(fuzzyMatches.length > 0) {
+    showFuzzySuggestions(text, fuzzyMatches);
+    document.getElementById('mic-btn').classList.remove('processing');
+    document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+    return;
+  }
+
   // Stufe 2: Open Food Facts (wenn aktiviert)
   if(state.settings.offEnabled !== false) {
     document.getElementById('mic-status').textContent = 'Suche in Open Food Facts…';
@@ -1385,6 +1568,242 @@ async function searchNutritionix(text) {
   } catch(e) { return null; }
 }
 
+// ─── FAVORITES ────────────────────────────────────────────────────────────────
+let favOpen = false;
+let pendingFavItem = null;
+
+function toggleFavorites() {
+  favOpen = !favOpen;
+  document.getElementById('fav-list').style.display = favOpen ? 'block' : 'none';
+  document.getElementById('fav-arrow').textContent = favOpen ? '▴' : '▾';
+  if(favOpen) renderFavorites();
+}
+
+function renderFavorites() {
+  if(!state.favorites) state.favorites = [];
+  const el = document.getElementById('fav-items');
+  if(!el) return;
+  if(state.favorites.length === 0) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:8px 0;">Noch keine Favoriten — Stern ★ in der Datenbank antippen.</div>';
+    return;
+  }
+  el.innerHTML = state.favorites.map((fav,i) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--border);">
+      <div>
+        <div style="font-size:14px;font-weight:500;color:var(--text);">${fav.name}</div>
+        <div style="font-size:11px;color:var(--text3);">${fav.defaultAmount ? fav.defaultAmount + ' ' + fav.defaultUnit : 'Menge wird abgefragt'}</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-primary" style="font-size:12px;padding:6px 12px;" onclick="useFavorite(${i})">+ Hinzufügen</button>
+        <button class="btn btn-danger" style="font-size:12px;padding:6px 10px;" onclick="removeFavorite(${i})">★</button>
+      </div>
+    </div>`).join('');
+}
+
+function toggleFavoriteDb(name, type) {
+  if(!state.favorites) state.favorites = [];
+  const idx = state.favorites.findIndex(f => f.name === name);
+  if(idx >= 0) {
+    state.favorites.splice(idx, 1);
+    toast(`${name} aus Favoriten entfernt`);
+  } else {
+    state.favorites.push({ name, type, defaultAmount: null, defaultUnit: 'g' });
+    toast(`${name} zu Favoriten hinzugefügt ★`);
+  }
+  saveStateAndSync();
+  renderDbPageFull();
+  if(favOpen) renderFavorites();
+}
+
+function removeFavorite(i) {
+  if(!confirm('Aus Favoriten entfernen?')) return;
+  state.favorites.splice(i, 1);
+  saveStateAndSync();
+  renderFavorites();
+}
+
+function useFavorite(i) {
+  const fav = state.favorites[i];
+  if(!fav) return;
+  if(fav.defaultAmount) {
+    // Direkt hinzufügen mit gespeicherter Menge
+    if(fav.type === 'dish') {
+      handleParsedInput({ type:'dish', name:fav.name, matchedDbName:fav.name }, fav.name);
+    } else {
+      const {amt, unit} = normalizeUnit(fav.defaultAmount, fav.defaultUnit);
+      handleParsedInput({ type:'food', name:fav.name, amount:amt, amountUnit:unit, matchedDbName:fav.name }, fav.name);
+    }
+  } else if(fav.type === 'dish') {
+    handleParsedInput({ type:'dish', name:fav.name, matchedDbName:fav.name }, fav.name);
+  } else {
+    // Menge abfragen
+    pendingFavItem = { fav, idx: i };
+    document.getElementById('dialog-fav-name').textContent = fav.name;
+    document.getElementById('dialog-fav-amount-val').value = '';
+    openDialog('dialog-fav-amount');
+  }
+}
+
+function confirmFavAmount() {
+  if(!pendingFavItem) return;
+  const amt = parseFloat(document.getElementById('dialog-fav-amount-val').value);
+  const unit = document.getElementById('dialog-fav-amount-unit').value;
+  if(!amt) { toast('Bitte Menge eingeben'); return; }
+  // Menge als Standard speichern
+  state.favorites[pendingFavItem.idx].defaultAmount = amt;
+  state.favorites[pendingFavItem.idx].defaultUnit = unit;
+  saveStateAndSync();
+  const {amt: normAmt, unit: normUnit} = normalizeUnit(amt, unit);
+  handleParsedInput({ type:'food', name:pendingFavItem.fav.name, amount:normAmt, amountUnit:normUnit, matchedDbName:pendingFavItem.fav.name }, pendingFavItem.fav.name);
+  closeDialog('dialog-fav-amount');
+  pendingFavItem = null;
+  renderFavorites();
+}
+
+// Auto-Favoriten: häufig genutzte Einträge erkennen
+function updateAutoFavorites() {
+  if(!state.favorites) state.favorites = [];
+  const counts = {};
+  (state.history||[]).forEach(day => {
+    (day.log||[]).forEach(item => { counts[item.name] = (counts[item.name]||0) + 1; });
+  });
+  (state.todayLog||[]).forEach(item => { counts[item.name] = (counts[item.name]||0) + 1; });
+  // Items die 5+ mal genutzt wurden automatisch vorschlagen
+  Object.entries(counts).filter(([,v])=>v>=5).forEach(([name]) => {
+    if(!state.favorites.find(f=>f.name===name)) {
+      const food = state.db.find(f=>f.name===name);
+      const dish = state.dishes.find(d=>d.name===name);
+      if(food || dish) {
+        state.favorites.push({ name, type: dish?'dish':'food', defaultAmount:null, defaultUnit:'g', auto:true });
+      }
+    }
+  });
+}
+
+// ─── FUZZY MATCHING ───────────────────────────────────────────────────────────
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length:m+1}, (_,i) => Array.from({length:n+1}, (_,j) => i===0?j:j===0?i:0));
+  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++)
+    dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+function fuzzyScore(query, name) {
+  const q = query.toLowerCase(), n = name.toLowerCase();
+  if(n.includes(q)) return 100; // Exakter Substring → top score
+  // Wörter einzeln prüfen
+  const qWords = q.split(/\s+/);
+  const nWords = n.split(/\s+/);
+  let wordScore = 0;
+  qWords.forEach(qw => {
+    const best = Math.min(...nWords.map(nw => levenshtein(qw, nw)));
+    const maxLen = Math.max(qw.length, 1);
+    wordScore += Math.max(0, 1 - best / maxLen);
+  });
+  wordScore = (wordScore / qWords.length) * 80;
+  // Levenshtein auf Gesamtstring
+  const dist = levenshtein(q, n);
+  const strScore = Math.max(0, 1 - dist / Math.max(q.length, n.length)) * 60;
+  return Math.max(wordScore, strScore);
+}
+
+function findFuzzyMatches(query, limit=5) {
+  if(!query || query.length < 2) return [];
+  const clean = query.toLowerCase()
+    .replace(/\d+\s*(g|gramm|ml|cl|dl|stück|stuck|kcal|kalorien)/gi,'')
+    .replace(/\b(einen?|eine?|zwei|drei|vier|fünf|halb[e]?r?s?n?)\b/gi,'')
+    .trim();
+  if(clean.length < 2) return [];
+
+  const results = [];
+  // Lebensmittel
+  state.db.forEach(f => {
+    const score = fuzzyScore(clean, f.name);
+    if(score > 35) results.push({ type:'food', name:f.name, score, detail: f.kcalPer100 + ' kcal/100g', id:f.id });
+  });
+  // Gerichte
+  state.dishes.forEach(d => {
+    const score = fuzzyScore(clean, d.name);
+    if(score > 35) results.push({ type:'dish', name:d.name, score, detail: d.kcal + ' kcal', id:d.id });
+  });
+  return results.sort((a,b)=>b.score-a.score).slice(0,limit);
+}
+
+// ─── FUZZY SUGGESTION DIALOG ──────────────────────────────────────────────────
+let pendingSuggestionText = '';
+function showFuzzySuggestions(text, matches) {
+  pendingSuggestionText = text;
+  const list = document.getElementById('dialog-fuzzy-list');
+  list.innerHTML = matches.map(m => `
+    <div onclick="selectFuzzySuggestion('${m.name.replace(/'/g,"\\'")}','${m.type}')"
+         style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid var(--border);cursor:pointer;">
+      <div>
+        <div style="font-size:14px;font-weight:500;color:var(--text);">${m.name}</div>
+        <div style="font-size:11px;color:var(--text3);">${m.type==='dish'?'Gericht':'Lebensmittel'} · ${m.detail}</div>
+      </div>
+      <div style="font-size:12px;color:var(--accent);margin-left:8px;">→</div>
+    </div>`).join('');
+  openDialog('dialog-fuzzy');
+}
+
+function selectFuzzySuggestion(name, type) {
+  closeDialog('dialog-fuzzy');
+  if(type === 'dish') {
+    handleParsedInput({ type:'dish', name, matchedDbName:name }, name);
+  } else {
+    const food = state.db.find(f=>f.name===name);
+    if(food) {
+      const unit = food.unit||'';
+      const isPiece = unit && !unit.startsWith('100');
+      if(food.gramsPerUnit || isPiece) {
+        handleParsedInput({ type:'food', name, amount:1, amountUnit:food.unit||'Stück', matchedDbName:name }, name);
+      } else {
+        // Menge fehlt noch — kurz nachfragen
+        pendingFuzzyFood = food;
+        document.getElementById('dialog-fuzzy-amount-name').textContent = name;
+        document.getElementById('dialog-fuzzy-amount-input').value = '';
+        openDialog('dialog-fuzzy-amount');
+      }
+    }
+  }
+}
+
+let pendingFuzzyFood = null;
+function confirmFuzzyAmount() {
+  if(!pendingFuzzyFood) return;
+  const raw = document.getElementById('dialog-fuzzy-amount-input').value.trim();
+  const m = raw.match(/(\d+(?:[,.]\d+)?)\s*(g|gramm|ml|cl|dl|stück|stuck)?/i);
+  if(!m) { toast('Bitte Menge eingeben, z.B. 200g'); return; }
+  const {amt, unit} = normalizeUnit(parseFloat(m[1].replace(',','.')), m[2]||'g');
+  handleParsedInput({ type:'food', name:pendingFuzzyFood.name, amount:amt, amountUnit:unit, matchedDbName:pendingFuzzyFood.name }, raw);
+  closeDialog('dialog-fuzzy-amount');
+  pendingFuzzyFood = null;
+}
+
+// FitMole-Tag: vor 02:00 Uhr gilt noch der Vortag
+function getFitMoleDay(date) {
+  const d = date || new Date();
+  if(d.getHours() < 2) {
+    const prev = new Date(d);
+    prev.setDate(prev.getDate() - 1);
+    return prev.toDateString();
+  }
+  return d.toDateString();
+}
+function normalizeUnit(amount, unit) {
+  const u = (unit||'').toLowerCase();
+  if(u === 'cl') return { amt: Math.round(amount * 10), unit: 'ml' };
+  if(u === 'dl') return { amt: Math.round(amount * 100), unit: 'ml' };
+  if(u === 'liter' || u === 'l') return { amt: Math.round(amount * 1000), unit: 'ml' };
+  if(u === 'kg') return { amt: Math.round(amount * 1000), unit: 'g' };
+  if(u === 'gramm') return { amt: amount, unit: 'g' };
+  if(u === 'tasse') return { amt: Math.round(amount * 240), unit: 'ml' };
+  if(u === 'esslöffel' || u === 'el') return { amt: Math.round(amount * 15), unit: 'g' };
+  if(u === 'tl' || u === 'teelöffel') return { amt: Math.round(amount * 5), unit: 'g' };
+  return { amt: amount, unit: u };
+}
+
 // Lokaler Parser gibt Ergebnis zurück oder null wenn nicht erkannt
 function tryLocalParser(text) {
   const t = text.toLowerCase().trim();
@@ -1403,7 +1822,7 @@ function tryLocalParser(text) {
     ['halb',0.5],['halbe',0.5],['halber',0.5],['halben',0.5],['halbes',0.5]
   ];
   const kcalMatch = t.match(/(\d+)\s*(kcal|kalorien|cal)/i);
-  const amountMatch = t.match(/(\d+(?:[,.]\d+)?)\s*(g|gramm|ml|stück|stuck|scheibe|scheiben|tasse|esslöffel|el|tl|teelöffel)/i);
+  const amountMatch = t.match(/(\d+(?:[,.]\d+)?)\s*(g|gramm|kg|ml|cl|dl|liter|l|stück|stuck|scheibe|scheiben|tasse|esslöffel|el|tl|teelöffel)/i);
   const leadingNumMatch = t.match(/^(\d+)\s+\S/);
   let wordAmount = null;
   for(const [word, val] of wordNumbers) {
@@ -1420,13 +1839,15 @@ function tryLocalParser(text) {
   }
 
   if(matchedFood && amountMatch) {
-    return { type:'food', name:matchedFood.name, amount: parseFloat(amountMatch[1].replace(',','.')), amountUnit: amountMatch[2], matchedDbName:matchedFood.name };
+    const {amt, unit} = normalizeUnit(parseFloat(amountMatch[1].replace(',','.')), amountMatch[2]);
+    return { type:'food', name:matchedFood.name, amount: amt, amountUnit: unit, matchedDbName:matchedFood.name };
   } else if(matchedFood && leadingNumMatch) {
     return { type:'food', name:matchedFood.name, amount: parseInt(leadingNumMatch[1]), amountUnit:'Stück', matchedDbName:matchedFood.name };
   } else if(matchedFood && wordAmount !== null) {
     return { type:'food', name:matchedFood.name, amount: wordAmount, amountUnit:'Stück', matchedDbName:matchedFood.name };
   } else if(kcalMatch && amountMatch) {
-    return { type:'unknown_with_kcal', name:text.split(/\d/)[0].trim(), amount: parseFloat(amountMatch[1].replace(',','.')), amountUnit: amountMatch[2], directKcal: parseInt(kcalMatch[1]) };
+    const {amt, unit} = normalizeUnit(parseFloat(amountMatch[1].replace(',','.')), amountMatch[2]);
+    return { type:'unknown_with_kcal', name:text.split(/\d/)[0].trim(), amount: amt, amountUnit: unit, directKcal: parseInt(kcalMatch[1]) };
   } else if(kcalMatch) {
     const foodName = t.replace(/\d+\s*(kcal|kalorien|cal)/i,'').replace(/,/,'').trim();
     return { type:'unknown_no_amount', name:foodName, directKcal: parseInt(kcalMatch[1]) };
@@ -1777,8 +2198,16 @@ function openDialog(id) { document.getElementById(id).classList.add('open'); }
 function closeDialog(id) { document.getElementById(id).classList.remove('open'); }
 
 // ─── LOG ACTIONS ──────────────────────────────────────────────────────────────
-function deleteLog(i) { state.todayLog.splice(i,1); saveStateAndSync(); renderHome(); }
-function deleteActivity(i) { state.activityLog.splice(i,1); saveStateAndSync(); renderHome(); }
+function deleteLog(i) {
+  const item = state.todayLog[i];
+  if(!item || !confirm(`"${item.name}" aus dem Tageslog entfernen?`)) return;
+  state.todayLog.splice(i,1); saveStateAndSync(); renderHome();
+}
+function deleteActivity(i) {
+  const item = state.activityLog[i];
+  if(!item || !confirm(`"${item.name}" aus den Aktivitäten entfernen?`)) return;
+  state.activityLog.splice(i,1); saveStateAndSync(); renderHome();
+}
 function resetDay() {
   if(!confirm('Heutigen Tag wirklich zurücksetzen?')) return;
   state.todayLog = []; state.activityLog = []; state.steps = 0; state.sessionItems = [];
@@ -1809,10 +2238,11 @@ window.addEventListener('DOMContentLoaded', () => {
 let dbActiveCat = 'Alle';
 function filterDb(q) { dbFilter = q; renderDbPageFull(); }
 
+let dbCollapsed = {};
 function renderDbPageFull() {
-  const cats = ['Alle', ...new Set(state.db.map(f=>f.category||'Sonstiges').filter(Boolean))].sort((a,b)=>a==='Alle'?-1:b==='Alle'?1:a.localeCompare(b));
   const catEl = document.getElementById('db-cat-filter');
   if(catEl) {
+    const cats = ['Alle', ...new Set(state.db.map(f=>f.category||'Sonstiges').filter(Boolean))].sort((a,b)=>a==='Alle'?-1:b==='Alle'?1:a.localeCompare(b));
     catEl.innerHTML = cats.map(c => `
       <button onclick="setDbCat('${c}')" style="white-space:nowrap;padding:5px 12px;border-radius:14px;border:1px solid ${c===dbActiveCat?'var(--accent)':'var(--border)'};background:${c===dbActiveCat?'var(--accent)':'var(--bg)'};color:${c===dbActiveCat?'white':'var(--text2)'};font-size:12px;font-family:'DM Sans';cursor:pointer;">${c}</button>`).join('');
   }
@@ -1830,29 +2260,35 @@ function renderDbPageFull() {
 
   if(filtered.length === 0) {
     container.innerHTML = '<div class="card"><div class="empty-state">Keine Einträge gefunden</div></div>';
-  } else {
-    // Group by category when showing all
-    if(dbActiveCat === 'Alle' && !q) {
-      const grouped = {};
-      filtered.forEach(f => {
-        const cat = f.category||'Sonstiges';
-        if(!grouped[cat]) grouped[cat] = [];
-        grouped[cat].push(f);
-      });
-      container.innerHTML = Object.entries(grouped).sort(([a],[b])=>a.localeCompare(b,'de')).map(([cat, items]) => `
-        <div class="section-title">${cat} <span style="font-weight:400;color:var(--text3);">(${items.length})</span></div>
-        <div class="card" style="margin-bottom:4px;">
+  } else if(dbActiveCat === 'Alle' && !q) {
+    // Getränke als eigene Gruppe, Rest gruppiert — alle auf-/zuklappbar
+    const grouped = {};
+    filtered.forEach(f => {
+      const cat = f.category||'Sonstiges';
+      if(!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(f);
+    });
+    container.innerHTML = Object.entries(grouped).sort(([a],[b])=>a.localeCompare(b,'de')).map(([cat, items]) => {
+      const isOpen = dbCollapsed[cat] !== true;
+      const arrow = isOpen ? '▴' : '▾';
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;margin:12px 0 4px;padding:0 2px;" onclick="toggleDbCat('${cat}')">
+          <div class="section-title" style="margin:0;">${cat} <span style="font-weight:400;color:var(--text3);">(${items.length})</span></div>
+          <span style="font-size:12px;color:var(--text3);">${arrow}</span>
+        </div>
+        <div id="dbcat-${cat.replace(/\s/g,'_')}" class="card" style="margin-bottom:4px;${isOpen?'':'display:none;'}">
           ${items.map(f => dbItemHtml(f)).join('')}
-        </div>`).join('');
-    } else {
-      container.innerHTML = `<div class="card">${filtered.map(f => dbItemHtml(f)).join('')}</div>`;
-    }
+        </div>`;
+    }).join('');
+  } else {
+    container.innerHTML = `<div class="card">${filtered.map(f => dbItemHtml(f)).join('')}</div>`;
   }
 
-  // Dishes
-  const dishes = document.getElementById('dishes-list');
-  if(dishes) {
-    dishes.innerHTML = state.dishes.length === 0
+  // Gerichte — auf-/zuklappbar
+  const dishesContainer = document.getElementById('dishes-list');
+  if(dishesContainer) {
+    const dishOpen = dbCollapsed['__dishes'] !== true;
+    dishesContainer.innerHTML = state.dishes.length === 0
       ? '<div class="empty-state">Noch keine Gerichte gespeichert</div>'
       : state.dishes.map((d,i) => `
           <div class="db-item">
@@ -1862,7 +2298,7 @@ function renderDbPageFull() {
             </div>
             <div class="db-actions">
               <button class="btn btn-secondary" style="font-size:12px;padding:6px 10px;" onclick="toggleDishDetail(${i})">Details</button>
-              <button class="btn btn-danger" style="font-size:12px;padding:6px 10px;" onclick="deleteDish(${i})">−</button>
+              <button class="btn btn-danger" style="font-size:12px;padding:6px 10px;" onclick="deleteDishConfirm(${i})">−</button>
             </div>
           </div>
           <div id="dish-detail-${i}" style="display:none;padding:6px 0 4px;">
@@ -1871,26 +2307,49 @@ function renderDbPageFull() {
   }
 }
 
+function toggleDbCat(cat) {
+  dbCollapsed[cat] = !dbCollapsed[cat];
+  const el = document.getElementById('dbcat-'+cat.replace(/\s/g,'_'));
+  if(el) el.style.display = dbCollapsed[cat] ? 'none' : 'block';
+  renderDbPageFull();
+}
+
 function dbItemHtml(f) {
   const isPerPiece = f.unit && !f.unit.startsWith('100');
   let detail;
-  if(isPerPiece && f.gramsPerUnit) {
-    detail = `${f.kcalPer100} kcal/${f.unit} · ${f.gramsPerUnit}g`;
-  } else if(isPerPiece && !f.gramsPerUnit) {
-    detail = `${f.kcalPer100} kcal/${f.unit}`;
-  } else {
-    detail = `${f.kcalPer100} kcal/100${f.unit==='100ml'?'ml':'g'}`;
-  }
+  if(isPerPiece && f.gramsPerUnit) detail = `${f.kcalPer100} kcal/${f.unit} · ${f.gramsPerUnit}g`;
+  else if(isPerPiece) detail = `${f.kcalPer100} kcal/${f.unit}`;
+  else detail = `${f.kcalPer100} kcal/100${f.unit==='100ml'?'ml':'g'}`;
+  const isFav = (state.favorites||[]).find(fav=>fav.name===f.name);
   return `<div class="db-item">
     <div class="log-left">
       <div class="db-name">${f.name}</div>
       <div class="db-detail">${detail}</div>
     </div>
     <div class="db-actions">
+      <button style="background:none;border:none;cursor:pointer;font-size:15px;padding:4px;" onclick="toggleFavoriteDb('${f.name.replace(/'/g,"\\'")}','food')" title="Favorit">${isFav?'★':'☆'}</button>
       <button class="btn btn-secondary" style="font-size:12px;padding:6px 10px;" onclick="openDbEdit('${f.id}')">✎</button>
-      <button class="btn btn-danger" style="font-size:12px;padding:6px 10px;" onclick="deleteDbItem('${f.id}')">−</button>
+      <button class="btn btn-danger" style="font-size:12px;padding:6px 10px;" onclick="deleteDbItemConfirm('${f.id}')">−</button>
     </div>
   </div>`;
+}
+
+// Point 5: Delete confirmations
+function deleteDbItemConfirm(id) {
+  const f = state.db.find(x=>x.id===id);
+  if(!f) return;
+  if(!confirm(`"${f.name}" wirklich aus der Datenbank löschen?`)) return;
+  state.db = state.db.filter(x=>x.id!==id);
+  renderDbPageFull(); saveStateAndSync();
+  toast(`${f.name} gelöscht`);
+}
+function deleteDishConfirm(i) {
+  const d = state.dishes[i];
+  if(!d) return;
+  if(!confirm(`Gericht "${d.name}" wirklich löschen?`)) return;
+  state.dishes.splice(i,1);
+  renderDbPageFull(); saveStateAndSync();
+  toast(`${d.name} gelöscht`);
 }
 
 function setDbCat(cat) { dbActiveCat = cat; renderDbPageFull(); }
@@ -1948,6 +2407,12 @@ function confirmDbDelete() {
   closeDialog('dialog-db-edit');
   renderDbPageFull(); saveStateAndSync();
   toast('Gelöscht');
+}
+
+function toggleCard(id) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
 function renderDbList() { renderDbPageFull(); }
