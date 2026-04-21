@@ -403,7 +403,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <div style="display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:11px;color:var(--text3);flex-wrap:wrap;">
         <span><span style="display:inline-block;width:10px;height:10px;background:#0F6E56;border-radius:2px;margin-right:4px;"></span>Defizit</span>
         <span><span style="display:inline-block;width:10px;height:10px;background:#993C1D;border-radius:2px;margin-right:4px;"></span>Überschuss</span>
-        <span><span style="display:inline-block;width:10px;height:2px;background:#4a8c5c;margin-right:4px;vertical-align:middle;"></span>Schritte</span>
+        <span><span style="display:inline-block;width:10px;height:2px;background:#3b82f6;margin-right:4px;vertical-align:middle;"></span>Schritte</span>
       </div>
       <div class="stats-grid" style="margin-top:10px;">
         <div class="stat-card">
@@ -590,7 +590,9 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.34 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.35 — April 2026</div>
+        <div>· Wochenchart: Schritte-Linie von Grün auf Blau geändert — besser von Kaloriendefizit unterscheidbar</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.34 — April 2026</div>
         <div>· Schrittziel wird jetzt genutzt: Fortschrittsbalken auf der Aktivitäts-Seite</div>
         <div>· Übersicht: Schritte zeigen „x / Ziel" und „✓ Ziel erreicht" wenn geschafft</div>
         <div>· Wochenchart: Schritte als grüne Linie auf zweiter Y-Achse, Ziel-Erreichen farblich markiert</div>
@@ -4088,9 +4090,9 @@ function renderWeekChart() {
           type: 'line',
           yAxisID: 'y2',
           data: stepsData.map(s => s === null ? null : s),
-          borderColor: '#4a8c5c',
-          backgroundColor: 'rgba(74,140,92,0.1)',
-          pointBackgroundColor: stepsData.map(s => s !== null && s >= stepGoal ? '#2d5a3d' : '#4a8c5c'),
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59,130,246,0.1)',
+          pointBackgroundColor: stepsData.map(s => s !== null && s >= stepGoal ? '#1d4ed8' : '#3b82f6'),
           pointRadius: stepsData.map(s => s !== null && s > 0 ? 4 : 0),
           pointHoverRadius: 6,
           borderWidth: 2,
@@ -4147,7 +4149,7 @@ function renderWeekChart() {
             grid: { display: false },
             min: 0,
             ticks: {
-              color: 'rgba(74,140,92,0.7)',
+              color: 'rgba(59,130,246,0.7)',
               font: { size:9 },
               callback: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v,
               maxTicksLimit: 4
