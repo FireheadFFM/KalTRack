@@ -539,7 +539,12 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.22 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.23 — April 2026</div>
+        <div>· Tombstone-System: gelöschte Gerichte, DB-Einträge und Favoriten werden geräteübergreifend synchronisiert</div>
+        <div>· Löschen auf einem Gerät → verschwindet beim nächsten Sync auch auf dem anderen</div>
+        <div>· Gelöschte Einträge kommen beim Merge nicht mehr zurück</div>
+        <div>· Tombstones werden nach 30 Tagen automatisch bereinigt</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.22 — April 2026</div>
         <div>· Gerichte-Sync repariert: Merge-Logik erkennt jetzt auch Gerichte die nur auf einem Gerät vorhanden sind</div>
         <div>· DB-Sync verbessert: beide Geräte behalten ihre eigenen Einträge, Merge per ID statt „größere Liste gewinnt"</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.21 — April 2026</div>
@@ -983,7 +988,11 @@ let state = {
   dishes: [],
   activities: [],
   history: [],
-  favorites: [] // [{id, name, type:'food'|'dish', defaultAmount, defaultUnit}]
+  favorites: [],
+  // Tombstones: gelöschte Einträge mit Timestamp für geräteübergreifendes Löschen
+  deletedDbIds: [],      // [{id, ts}]
+  deletedDishNames: [],  // [{name, ts}]
+  deletedFavNames: []    // [{name, ts}]
 };
 
 const FOOD_DB_DEFAULT = [
@@ -1490,11 +1499,39 @@ async function autoLoadFromCloud() {
     const cloud = JSON.parse(rows[0].payload);
     let changed = false;
 
+    // ── Tombstones anwenden: Cloud-Löschungen lokal durchsetzen ──
+    // DB-Einträge löschen
+    if(cloud.deletedDbIds && cloud.deletedDbIds.length > 0) {
+      const cloudDeletedIds = new Set(cloud.deletedDbIds.map(t=>t.id));
+      const before = state.db.length;
+      state.db = (state.db||[]).filter(f => !cloudDeletedIds.has(f.id));
+      if(state.db.length !== before) changed = true;
+      // Lokale Tombstone-Liste mit Cloud zusammenführen
+      cloud.deletedDbIds.forEach(t => addTombstone('deletedDbIds', t));
+    }
+    // Gerichte löschen
+    if(cloud.deletedDishNames && cloud.deletedDishNames.length > 0) {
+      const cloudDeletedNames = new Set(cloud.deletedDishNames.map(t=>t.name));
+      const before = state.dishes.length;
+      state.dishes = (state.dishes||[]).filter(d => !cloudDeletedNames.has(d.name));
+      if(state.dishes.length !== before) changed = true;
+      cloud.deletedDishNames.forEach(t => addTombstone('deletedDishNames', t));
+    }
+    // Favoriten löschen
+    if(cloud.deletedFavNames && cloud.deletedFavNames.length > 0) {
+      const cloudDeletedFavs = new Set(cloud.deletedFavNames.map(t=>t.name));
+      const before = (state.favorites||[]).length;
+      state.favorites = (state.favorites||[]).filter(f => !cloudDeletedFavs.has(f.name));
+      if(state.favorites.length !== before) changed = true;
+      cloud.deletedFavNames.forEach(t => addTombstone('deletedFavNames', t));
+    }
+
     // DB: zusammenführen per ID — beide Seiten behalten ihre Einträge
     if(cloud.db && cloud.db.length > 0) {
+      const localDeletedIds = new Set((state.deletedDbIds||[]).map(t=>t.id));
       const merged = [...(state.db||[])];
       cloud.db.forEach(cd => {
-        if(!merged.find(d => d.id === cd.id)) merged.push(cd);
+        if(!localDeletedIds.has(cd.id) && !merged.find(d => d.id === cd.id)) merged.push(cd);
       });
       if(merged.length !== (state.db||[]).length) {
         state.db = merged; changed = true;
@@ -1503,10 +1540,11 @@ async function autoLoadFromCloud() {
 
     // Gerichte: zusammenführen per Name — beide Seiten behalten ihre Gerichte
     if(cloud.dishes && cloud.dishes.length > 0) {
+      const localDeletedNames = new Set((state.deletedDishNames||[]).map(t=>t.name));
       const merged = [...(state.dishes||[])];
       let dishChanged = false;
       cloud.dishes.forEach(cd => {
-        if(!merged.find(d => d.name === cd.name)) {
+        if(!localDeletedNames.has(cd.name) && !merged.find(d => d.name === cd.name)) {
           merged.push(cd);
           dishChanged = true;
         }
@@ -1528,18 +1566,16 @@ async function autoLoadFromCloud() {
     }
 
     // Favoriten: zusammenführen per Name — Cloud-Einträge ergänzen lokale
-    // Bei Konflikt (gleicher Name) gewinnt die Cloud-Version (hat ggf. aktuellere defaultAmount)
     if(cloud.favorites && cloud.favorites.length > 0) {
+      const localDeletedFavs = new Set((state.deletedFavNames||[]).map(t=>t.name));
       const merged = [...(state.favorites||[])];
       cloud.favorites.forEach(cf => {
+        if(localDeletedFavs.has(cf.name)) return; // lokal gelöscht → nicht wiederherstellen
         const idx = merged.findIndex(f => f.name === cf.name);
         if(idx === -1) {
-          merged.push(cf); // neu auf Cloud, lokal nicht vorhanden
-        } else {
-          // Gleicher Eintrag — Cloud-Version übernehmen wenn defaultAmount gesetzt ist
-          if(cf.defaultAmount && !merged[idx].defaultAmount) {
-            merged[idx] = cf;
-          }
+          merged.push(cf);
+        } else if(cf.defaultAmount && !merged[idx].defaultAmount) {
+          merged[idx] = cf;
         }
       });
       if(JSON.stringify(merged) !== JSON.stringify(state.favorites||[])) {
@@ -1650,6 +1686,9 @@ function loadState() {
   if(!state.dishes) state.dishes = [];
   if(!state.history) state.history = [];
   if(!state.favorites) state.favorites = [];
+  if(!state.deletedDbIds) state.deletedDbIds = [];
+  if(!state.deletedDishNames) state.deletedDishNames = [];
+  if(!state.deletedFavNames) state.deletedFavNames = [];
 
   // Selbstheilung: Einträge ohne ID bekommen eine neue ID (für Merge-Kompatibilität)
   let healed = false;
@@ -2307,6 +2346,7 @@ function toggleFavoriteDb(name, type) {
   if(!state.favorites) state.favorites = [];
   const idx = state.favorites.findIndex(f => f.name === name);
   if(idx >= 0) {
+    addTombstone('deletedFavNames', { name });
     state.favorites.splice(idx, 1);
     toast(`${name} aus Favoriten entfernt`);
   } else {
@@ -2320,8 +2360,22 @@ function toggleFavoriteDb(name, type) {
   renderFavorites();
 }
 
+function addTombstone(list, entry) {
+  if(!state[list]) state[list] = [];
+  // Nicht doppelt eintragen
+  const key = entry.id || entry.name;
+  if(!state[list].find(t => (t.id || t.name) === key)) {
+    state[list].push({ ...entry, ts: Date.now() });
+  }
+  // Tombstones älter als 30 Tage bereinigen
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  state[list] = state[list].filter(t => t.ts > cutoff);
+}
+
 function removeFavorite(i) {
   if(!confirm('Aus Favoriten entfernen?')) return;
+  const fav = state.favorites[i];
+  if(fav) addTombstone('deletedFavNames', { name: fav.name });
   state.favorites.splice(i, 1);
   saveStateAndSync();
   renderFavorites();
@@ -3335,6 +3389,7 @@ function deleteDbItemConfirm(id) {
   const f = state.db.find(x=>x.id===id);
   if(!f) return;
   if(!confirm(`"${f.name}" wirklich aus der Datenbank löschen?`)) return;
+  addTombstone('deletedDbIds', { id });
   state.db = state.db.filter(x=>x.id!==id);
   renderDbPageFull(); saveStateAndSync();
   toast(`${f.name} gelöscht`);
@@ -3343,6 +3398,7 @@ function deleteDishConfirm(i) {
   const d = state.dishes[i];
   if(!d) return;
   if(!confirm(`Gericht "${d.name}" wirklich löschen?`)) return;
+  addTombstone('deletedDishNames', { name: d.name });
   state.dishes.splice(i,1);
   renderDbPageFull(); saveStateAndSync();
   toast(`${d.name} gelöscht`);
@@ -3398,6 +3454,7 @@ function confirmDbDelete() {
   if(!editingDbId) return;
   const f = state.db.find(x=>x.id===editingDbId);
   if(!confirm(`"${f?.name}" wirklich löschen?`)) return;
+  addTombstone('deletedDbIds', { id: editingDbId });
   state.db = state.db.filter(x=>x.id!==editingDbId);
   closeDialog('dialog-db-edit');
   renderDbPageFull(); saveStateAndSync();
