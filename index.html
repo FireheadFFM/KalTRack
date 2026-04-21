@@ -164,6 +164,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
 .autocomplete-wrap { position: relative; flex: 1; }
 .autocomplete-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: 0 4px 16px rgba(0,0,0,0.1); z-index: 150; overflow: hidden; display: none; }
 .autocomplete-dropdown.open { display: block; }
+.autocomplete-dropdown.open-up { top: auto; bottom: calc(100% + 4px); box-shadow: 0 -4px 16px rgba(0,0,0,0.1); }
 .autocomplete-item { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.1s; }
 .autocomplete-item:last-child { border-bottom: none; }
 .autocomplete-item:active { background: var(--accent-bg); }
@@ -538,7 +539,19 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.18 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.21 — April 2026</div>
+        <div>· Autocomplete-Dropdown klappt nach oben auf wenn nicht genug Platz darunter (Tastatur)</div>
+        <div>· Autocomplete: „Nichts passendes — in OFF &amp; KI suchen" am Ende der Vorschläge</div>
+        <div>· „Meintest du"-Dialog: Button „In OFF &amp; KI suchen" — überspringt lokale Suche</div>
+        <div>· Spracheingabe führt jetzt immer zur vollen Suchkette wenn lokal nichts gefunden</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.20 — April 2026</div>
+        <div>· Favoriten werden jetzt geräteübergreifend synchronisiert</div>
+        <div>· Merge-Logik: neue Favoriten von Cloud ergänzen lokale, Standardmengen werden übernommen</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.19 — April 2026</div>
+        <div>· Sync-Selbstheilung: Einträge ohne ID werden beim Laden automatisch repariert</div>
+        <div>· Cloud-Merge: Einträge ohne ID werden nicht mehr ignoriert sondern übernommen</div>
+        <div>· Verhindert dass ältere Einträge beim geräteübergreifenden Sync verloren gehen</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.18 — April 2026</div>
         <div>· Reminder-Logik komplett überarbeitet — 3 Szenarien:</div>
         <div>· Abends nach 22:30: Banner „heute noch nichts eingetragen" → zur Aktivitäts-Seite</div>
         <div>· Push Notification um 22:30 (einmalig, nur wenn heute keine Aktivität/Schritte)</div>
@@ -742,6 +755,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
     <div id="dialog-fuzzy-list" style="margin-bottom:10px;"></div>
     <div class="dialog-btns">
       <button class="btn btn-secondary" onclick="closeDialog('dialog-fuzzy')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="fuzzySearchFurther()">🔍 In OFF &amp; KI suchen</button>
     </div>
   </div>
 </div>
@@ -1500,16 +1514,37 @@ async function autoLoadFromCloud() {
       }
     }
 
+    // Favoriten: zusammenführen per Name — Cloud-Einträge ergänzen lokale
+    // Bei Konflikt (gleicher Name) gewinnt die Cloud-Version (hat ggf. aktuellere defaultAmount)
+    if(cloud.favorites && cloud.favorites.length > 0) {
+      const merged = [...(state.favorites||[])];
+      cloud.favorites.forEach(cf => {
+        const idx = merged.findIndex(f => f.name === cf.name);
+        if(idx === -1) {
+          merged.push(cf); // neu auf Cloud, lokal nicht vorhanden
+        } else {
+          // Gleicher Eintrag — Cloud-Version übernehmen wenn defaultAmount gesetzt ist
+          if(cf.defaultAmount && !merged[idx].defaultAmount) {
+            merged[idx] = cf;
+          }
+        }
+      });
+      if(JSON.stringify(merged) !== JSON.stringify(state.favorites||[])) {
+        state.favorites = merged; changed = true;
+      }
+    }
+
     // Einstellungen: Cloud gewinnt (neueste Einstellung zählt)
     if(cloud.settings) { state.settings = cloud.settings; changed = true; }
 
     // Tageslog: per ID mergen — Einträge von beiden Geräten zusammenführen
     if(cloud.todayLog && cloud.todayLog.length > 0) {
+      // Einträge ohne ID bekommen eine neue (Selbstheilung für alte Einträge)
+      cloud.todayLog.forEach((item, i) => { if(!item.id) item.id = 'lc'+(Date.now()+i); });
       const localIds = new Set((state.todayLog||[]).map(i=>i.id).filter(Boolean));
       const cloudOnly = cloud.todayLog.filter(i => i.id && !localIds.has(i.id));
       if(cloudOnly.length > 0) {
         state.todayLog = [...(state.todayLog||[]), ...cloudOnly];
-        // Sortieren nach ID (chronologisch)
         state.todayLog.sort((a,b) => (a.id||'').localeCompare(b.id||''));
         changed = true;
       }
@@ -1517,6 +1552,7 @@ async function autoLoadFromCloud() {
 
     // Aktivitätslog heute: per ID mergen
     if(cloud.activityLog && cloud.activityLog.length > 0) {
+      cloud.activityLog.forEach((item, i) => { if(!item.id) item.id = 'ac'+(Date.now()+i); });
       const localIds = new Set((state.activityLog||[]).map(i=>i.id).filter(Boolean));
       const cloudOnly = cloud.activityLog.filter(i => i.id && !localIds.has(i.id));
       if(cloudOnly.length > 0) {
@@ -1601,8 +1637,24 @@ function loadState() {
   if(!state.dishes) state.dishes = [];
   if(!state.history) state.history = [];
   if(!state.favorites) state.favorites = [];
-  // Merke: Default-DB wird nur beim allerersten Start geladen.
-  // Danach kommt die DB immer aus Cloud (autoLoadFromCloud) oder localStorage.
+
+  // Selbstheilung: Einträge ohne ID bekommen eine neue ID (für Merge-Kompatibilität)
+  let healed = false;
+  (state.todayLog||[]).forEach((item, i) => {
+    if(!item.id) { item.id = 'l' + (Date.now() + i); healed = true; }
+  });
+  (state.activityLog||[]).forEach((item, i) => {
+    if(!item.id) { item.id = 'a' + (Date.now() + i); healed = true; }
+  });
+  (state.history||[]).forEach(day => {
+    (day.log||[]).forEach((item, i) => {
+      if(!item.id) { item.id = 'h' + (Date.now() + i); }
+    });
+    (day.activityLog||[]).forEach((item, i) => {
+      if(!item.id) { item.id = 'ha' + (Date.now() + i); }
+    });
+  });
+  if(healed) saveState();
 }
 
 function saveState() {
@@ -1884,6 +1936,61 @@ function processManual() {
   if(!val) return;
   document.getElementById('manual-input').value = '';
   processInput(val);
+}
+
+// Startet die Suche direkt bei Stufe 2 (OFF) — überspringt lokale DB und Fuzzy
+// Wird verwendet wenn Nutzer „In OFF & KI suchen" wählt
+async function processInputFromStage2(text) {
+  document.getElementById('mic-btn').classList.add('processing');
+  document.getElementById('mic-status').textContent = 'Suche in OFF & KI…';
+  let offFallback = null;
+
+  if(state.settings.offEnabled !== false) {
+    document.getElementById('mic-status').textContent = 'Suche in Open Food Facts…';
+    const offResult = await searchOpenFoodFacts(text);
+    if(offResult) {
+      if(offResult.needsPortionInput) { offFallback = offResult; }
+      else {
+        showClaudeSearchResult(offResult, text);
+        document.getElementById('mic-btn').classList.remove('processing');
+        document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+        return;
+      }
+    }
+  }
+  if(state.settings.nxEnabled && state.settings.nutritionixAppId && state.settings.nutritionixKey) {
+    document.getElementById('mic-status').textContent = 'Suche in Nutritionix…';
+    const nxResult = await searchNutritionix(text);
+    if(nxResult) {
+      showClaudeSearchResult(nxResult, text);
+      document.getElementById('mic-btn').classList.remove('processing');
+      document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+      return;
+    }
+  }
+  if(state.settings.aiEnabled && state.settings.apiKey && state.settings.apiKey.startsWith('sk-ant-')) {
+    document.getElementById('mic-status').textContent = 'Claude sucht Nährwerte…';
+    await processWithClaudeSearch(text, state.settings.apiKey, offFallback);
+    document.getElementById('mic-btn').classList.remove('processing');
+    document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+    return;
+  }
+  if(state.settings.geminiEnabled && state.settings.geminiKey) {
+    document.getElementById('mic-status').textContent = 'Gemini sucht Nährwerte…';
+    await processWithGemini(text, state.settings.geminiKey, offFallback);
+    document.getElementById('mic-btn').classList.remove('processing');
+    document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+    return;
+  }
+  if(offFallback) {
+    showPortionInputDialog(offFallback.productName, offFallback.kcalPer100);
+    document.getElementById('mic-btn').classList.remove('processing');
+    document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+    return;
+  }
+  toast('Nicht gefunden — API-Keys unter ⚙ eintragen');
+  document.getElementById('mic-btn').classList.remove('processing');
+  document.getElementById('mic-status').textContent = 'Tippen zum Starten';
 }
 
 async function processInput(text) {
@@ -2287,11 +2394,26 @@ function getAutocompleteSuggestions(query, limit) {
   return results.sort((a,b) => b.score - a.score).slice(0, limit||6);
 }
 
-function renderAutocomplete(inputId, dropdownId, suggestions, onSelect) {
+function renderAutocomplete(inputId, dropdownId, suggestions, onSelect, showSearchFurther) {
   const dropdown = document.getElementById(dropdownId);
   if(!dropdown) return;
-  if(suggestions.length === 0) { dropdown.classList.remove('open'); dropdown.innerHTML = ''; return; }
-  dropdown.innerHTML = suggestions.map((s,i) => `
+  if(suggestions.length === 0 && !showSearchFurther) { dropdown.classList.remove('open'); dropdown.innerHTML = ''; return; }
+
+  // Richtung berechnen: genug Platz nach unten?
+  const input = document.getElementById(inputId);
+  if(input) {
+    const rect = input.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const estimatedHeight = Math.min(suggestions.length + 1, 7) * 52;
+    if(spaceBelow < estimatedHeight && spaceAbove > spaceBelow) {
+      dropdown.classList.add('open-up');
+    } else {
+      dropdown.classList.remove('open-up');
+    }
+  }
+
+  const itemsHtml = suggestions.map((s,i) => `
     <div class="autocomplete-item" onmousedown="event.preventDefault()" onclick="(${onSelect.toString()})(${i})">
       <div>
         <div class="autocomplete-item-name">${s.name}${s.type==='dish' ? '<span style="font-size:10px;background:var(--accent-bg);color:var(--accent);border-radius:6px;padding:1px 5px;margin-left:5px;">Gericht</span>' : ''}</div>
@@ -2299,19 +2421,41 @@ function renderAutocomplete(inputId, dropdownId, suggestions, onSelect) {
       </div>
       <div class="autocomplete-item-kcal">${s.kcalLabel}</div>
     </div>`).join('');
+
+  const searchFurtherHtml = showSearchFurther ? `
+    <div class="autocomplete-item" onmousedown="event.preventDefault()" onclick="autocompleteSearchFurther()" style="border-top: 1px solid var(--border);">
+      <div>
+        <div class="autocomplete-item-name" style="color:var(--accent);">🔍 Nichts passendes — in OFF &amp; KI suchen</div>
+        <div class="autocomplete-item-detail">Open Food Facts · Gemini · Claude</div>
+      </div>
+    </div>` : '';
+
+  dropdown.innerHTML = itemsHtml + searchFurtherHtml;
   dropdown.classList.add('open');
+}
+
+let currentAutocompleteQuery = '';
+
+function autocompleteSearchFurther() {
+  const input = document.getElementById('manual-input');
+  const query = currentAutocompleteQuery || (input ? input.value.trim() : '');
+  closeAutocomplete('manual-autocomplete');
+  if(input) input.value = '';
+  if(query) processInput(query);
 }
 
 // Autocomplete für Eingabe-Seite
 let manualAcSuggestions = [];
 function onManualInput(val) {
   const q = val.trim();
+  currentAutocompleteQuery = q;
+  if(q.length < 2) { closeAutocomplete('manual-autocomplete'); return; }
   // Menge aus dem Query extrahieren und nur den Lebensmittelanteil suchen
   const clean = q.replace(/^\d+\s*(g|gramm|kg|ml|cl|dl|l|stück|stuck)?\s*/i, '').trim();
   manualAcSuggestions = getAutocompleteSuggestions(clean || q, 6);
   renderAutocomplete('manual-input', 'manual-autocomplete', manualAcSuggestions, (i) => {
     selectManualAcItem(i);
-  });
+  }, true); // showSearchFurther: immer anzeigen auf Eingabe-Seite
 }
 
 function selectManualAcItem(i) {
@@ -2428,6 +2572,12 @@ function showFuzzySuggestions(text, matches) {
       <div style="font-size:12px;color:var(--accent);margin-left:8px;">→</div>
     </div>`).join('');
   openDialog('dialog-fuzzy');
+}
+
+function fuzzySearchFurther() {
+  closeDialog('dialog-fuzzy');
+  if(!pendingSuggestionText) return;
+  processInputFromStage2(pendingSuggestionText);
 }
 
 function selectFuzzySuggestion(name, type) {
@@ -2900,7 +3050,8 @@ function commitSessionToLog(dishName, dishKcal) {
     state.todayLog.push({ id: 'l'+ts, name: dishName, kcal: dishKcal, detail: 'Gericht' });
   } else {
     state.sessionItems.forEach((item, i) => {
-      state.todayLog.push({ ...item, id: 'l'+(ts+i) });
+      const id = item.id || 'l'+(ts+i);
+      state.todayLog.push({ ...item, id });
     });
   }
   state.sessionItems = [];
