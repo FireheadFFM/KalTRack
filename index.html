@@ -563,6 +563,8 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <div>🔥 Streak-Anzeige — „Du trackst seit 12 Tagen in Folge"</div>
         <div>📅 Wochentag-Muster — „Du isst montags durchschnittlich 300 kcal mehr"</div>
         <div>📊 CSV-Export für Excel / Numbers</div>
+        <div>📝 Beschreibungsfeld für Nahrungsmittel — wird in der Autocomplete-Vorschau angezeigt</div>
+        <div>🍽️ Gerichte direkt in der Datenbank anlegen — nicht nur über die Sitzungs-Funktion</div>
 
         <div style="font-weight:500;color:var(--text);margin:12px 0 6px;">Priorität 3 — Mittelfristig</div>
         <div>⚖️ Gewicht-Tracking manuell — Verlaufskurve, Zielgewicht, BMI</div>
@@ -580,7 +582,12 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.30 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.32 — April 2026</div>
+        <div>· Neue Kategorie „Fertiggerichte" mit 15 vorinstallierten Einträgen</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.31 — April 2026</div>
+        <div>· Backlog: Beschreibungsfeld für Nahrungsmittel ergänzt (Priorität 2)</div>
+        <div>· Backlog: Gerichte direkt in DB anlegen ergänzt (Priorität 2)</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.30 — April 2026</div>
         <div>· Backlog: eigene Ideen per Texteingabe oder Sprache hinzufügen</div>
         <div>· Eigene Ideen mit ⭐ priorisierbar — Sterne erscheinen oben</div>
         <div>· Eigene Ideen werden geräteübergreifend synchronisiert</div>
@@ -1299,6 +1306,23 @@ const FOOD_DB_DEFAULT = [
   {id:'c008',name:'Bolognese-Sauce',kcalPer100:105,unit:'100g',category:'Saucen & Gewürze'},
   {id:'c009',name:'Guacamole',kcalPer100:150,unit:'100g',category:'Saucen & Gewürze'},
   {id:'c010',name:'Tzatziki',kcalPer100:82,unit:'100g',category:'Saucen & Gewürze'},
+
+  // ── FERTIGGERICHTE ────────────────────────────────────────────────────────
+  {id:'fg001',name:'Tiefkühlpizza (Margherita)',kcalPer100:230,unit:'100g',category:'Fertiggerichte'},
+  {id:'fg002',name:'Tiefkühlpizza (Salami)',kcalPer100:255,unit:'100g',category:'Fertiggerichte'},
+  {id:'fg003',name:'Dosenravioli',kcalPer100:85,unit:'100g',category:'Fertiggerichte'},
+  {id:'fg004',name:'Instantnudeln',kcalPer100:436,unit:'Portion',gramsPerUnit:85,category:'Fertiggerichte'},
+  {id:'fg005',name:'Fertigsuppe (Tomatencremesuppe)',kcalPer100:45,unit:'100ml',category:'Fertiggerichte'},
+  {id:'fg006',name:'Fertigsuppe (Hühnersuppe)',kcalPer100:35,unit:'100ml',category:'Fertiggerichte'},
+  {id:'fg007',name:'Dosenthunfisch in Wasser',kcalPer100:116,unit:'100g',category:'Fertiggerichte'},
+  {id:'fg008',name:'Fertig-Bolognese (Glas)',kcalPer100:72,unit:'100g',category:'Fertiggerichte'},
+  {id:'fg009',name:'Tiefkühl-Spinat',kcalPer100:24,unit:'100g',category:'Fertiggerichte'},
+  {id:'fg010',name:'Tiefkühl-Erbsen',kcalPer100:77,unit:'100g',category:'Fertiggerichte'},
+  {id:'fg011',name:'Fertig-Currywurst',kcalPer100:195,unit:'Portion',gramsPerUnit:300,category:'Fertiggerichte'},
+  {id:'fg012',name:'Fertig-Gulasch',kcalPer100:98,unit:'100g',category:'Fertiggerichte'},
+  {id:'fg013',name:'Tiefkühl-Pommes',kcalPer100:155,unit:'100g',category:'Fertiggerichte'},
+  {id:'fg014',name:'Tiefkühl-Fischstäbchen',kcalPer100:202,unit:'Stück',gramsPerUnit:28,category:'Fertiggerichte'},
+  {id:'fg015',name:'Fertig-Linsensuppe',kcalPer100:72,unit:'100g',category:'Fertiggerichte'},
 ];
 
 const ACTIVITIES_DEFAULT = [
@@ -1827,7 +1851,11 @@ function loadState() {
   if(!state.deletedFavNames) state.deletedFavNames = [];
   if(!state.backlogIdeas) state.backlogIdeas = [];
 
-  // Migration: Kategorie "Saucen" → "Saucen & Gewürze"
+  // Migration: neue Default-Einträge ergänzen wenn noch nicht vorhanden
+  const defaultIds = new Set(FOOD_DB_DEFAULT.map(f => f.id));
+  const existingIds = new Set((state.db||[]).map(f => f.id));
+  const newEntries = FOOD_DB_DEFAULT.filter(f => !existingIds.has(f.id));
+  if(newEntries.length > 0) { state.db = [...(state.db||[]), ...newEntries]; }
   (state.db||[]).forEach(f => { if(f.category === 'Saucen') f.category = 'Saucen & Gewürze'; });
 
   let healed = false;
