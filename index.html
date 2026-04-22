@@ -590,7 +590,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.35 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.36 — April 2026</div>
+        <div>· Tageswechsel-Bug behoben: Cloud-Einträge vom Vortag werden nach Tageswechsel nicht mehr in den neuen Tag gemergt</div>
+        <div>· Schritte und Aktivitätslog werden beim Cloud-Sync ebenfalls nur übernommen wenn Cloud vom heutigen Tag ist</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.35 — April 2026</div>
         <div>· Wochenchart: Schritte-Linie von Grün auf Blau geändert — besser von Kaloriendefizit unterscheidbar</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.34 — April 2026</div>
         <div>· Schrittziel wird jetzt genutzt: Fortschrittsbalken auf der Aktivitäts-Seite</div>
@@ -1768,8 +1771,12 @@ async function autoLoadFromCloud() {
       if(changed2) { state.backlogIdeas = merged; changed = true; }
     }
 
-    // Tageslog: per ID mergen — Einträge von beiden Geräten zusammenführen
-    if(cloud.todayLog && cloud.todayLog.length > 0) {
+    // Tageslog: per ID mergen — aber NUR wenn Cloud-Daten vom heutigen FitMole-Tag sind
+    // Wenn cloud.lastDate von gestern ist, wurden die Einträge bereits in die Historie überführt
+    const today = getFitMoleDay();
+    const cloudIsToday = !cloud.lastDate || cloud.lastDate === today;
+
+    if(cloudIsToday && cloud.todayLog && cloud.todayLog.length > 0) {
       // Einträge ohne ID bekommen eine neue (Selbstheilung für alte Einträge)
       cloud.todayLog.forEach((item, i) => { if(!item.id) item.id = 'lc'+(Date.now()+i); });
       const localIds = new Set((state.todayLog||[]).map(i=>i.id).filter(Boolean));
@@ -1781,8 +1788,8 @@ async function autoLoadFromCloud() {
       }
     }
 
-    // Aktivitätslog heute: per ID mergen
-    if(cloud.activityLog && cloud.activityLog.length > 0) {
+    // Aktivitätslog heute: per ID mergen — ebenfalls nur wenn Cloud von heute
+    if(cloudIsToday && cloud.activityLog && cloud.activityLog.length > 0) {
       cloud.activityLog.forEach((item, i) => { if(!item.id) item.id = 'ac'+(Date.now()+i); });
       const localIds = new Set((state.activityLog||[]).map(i=>i.id).filter(Boolean));
       const cloudOnly = cloud.activityLog.filter(i => i.id && !localIds.has(i.id));
@@ -1790,6 +1797,11 @@ async function autoLoadFromCloud() {
         state.activityLog = [...(state.activityLog||[]), ...cloudOnly];
         changed = true;
       }
+    }
+
+    // Schritte: nur übernehmen wenn Cloud von heute
+    if(cloudIsToday && cloud.steps && cloud.steps > (state.steps||0)) {
+      state.steps = cloud.steps; changed = true;
     }
 
     // Historie: tagesweise mergen — für jeden Tag die Version mit mehr eaten-Einträgen nehmen
