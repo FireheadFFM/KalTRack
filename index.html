@@ -592,7 +592,11 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.39 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.40 — April 2026</div>
+        <div>· Gerichte, Portionen und Stück-Einträge landen direkt im Tageslog — kein Zwischenschritt mehr</div>
+        <div>· Gramm/ml-Eingaben gehen weiterhin in die Sitzung (für Kombinationen/Gerichte)</div>
+        <div>· KI-Ergebnisse zeigen weiterhin den Bestätigungsdialog</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.39 — April 2026</div>
         <div>· API-Keys (Claude, Gemini, Nutritionix) werden jetzt ebenfalls geräteübergreifend synchronisiert</div>
         <div>· Quellen-Toggles (OFF, KI, Nutritionix) bleiben weiterhin lokal</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.38 — April 2026</div>
@@ -3231,29 +3235,30 @@ function handleParsedInput(parsed, originalText) {
     const unitLower = (parsed.amountUnit||'').toLowerCase();
     const isPieceUnit = unitLower.match(/stück|stuck|portion|scheibe/);
     const isPer100Unit = (food.unit||'').startsWith('100');
+    let directLog = false; // direkt ins Tageslog ohne Sitzung?
 
     if(food.gramsPerUnit && isPieceUnit) {
-      // Stück mit bekanntem Gramm-Gewicht
       kcal = Math.round((food.gramsPerUnit * parseFloat(parsed.amount) * food.kcalPer100) / 100);
       detail = `${parsed.amount} ${food.unit} (${food.gramsPerUnit}g)`;
+      directLog = true;
     } else if(!isPer100Unit && isPieceUnit) {
-      // Portion/Stück/Scheibe ohne Gramm → kcalPer100 IST der Gesamtwert pro Einheit
       kcal = Math.round(food.kcalPer100 * parseFloat(parsed.amount));
       detail = `${parsed.amount} ${food.unit}`;
+      directLog = true;
     } else if(!isPer100Unit && unitLower === food.unit.toLowerCase()) {
-      // Einheit stimmt direkt überein (z.B. "Portion")
       kcal = Math.round(food.kcalPer100 * parseFloat(parsed.amount));
       detail = `${parsed.amount} ${food.unit}`;
+      directLog = true;
     } else {
-      // Gramm/ml-Angabe
+      // Gramm/ml-Angabe → in Sitzung (könnte Zutat sein)
       kcal = Math.round((parseFloat(parsed.amount) * food.kcalPer100) / 100);
       detail = `${parsed.amount}${parsed.amountUnit||'g'} · ${food.kcalPer100} kcal/100${food.unit==='100ml'?'ml':'g'}`;
     }
-    addToSession({ name: food.name, kcal, detail });
+    addToLog({ name: food.name, kcal, detail }, directLog);
 
   } else if(parsed.type === 'dish') {
     const dish = state.dishes.find(d=>d.name===parsed.name);
-    if(dish) { addToSession({ name: dish.name, kcal: dish.kcal, detail: 'Gespeichertes Gericht' }); }
+    if(dish) { addToLog({ name: dish.name, kcal: dish.kcal, detail: 'Gespeichertes Gericht' }, true); }
     else { toast('Gericht nicht gefunden'); }
 
   } else if(parsed.type === 'unknown_with_kcal') {
@@ -3275,20 +3280,37 @@ function handleParsedInput(parsed, originalText) {
   }
 }
 
-function addToSession(item) {
+// directLog=true → sofort ins Tageslog, directLog=false → in Sitzung
+function addToLog(item, directLog) {
   if(state.mode === 'db') {
-    // DB mode: add to session for potential dish creation
     state.sessionItems.push(item);
     renderSession();
     showPage('input');
     toast('Zur Sitzung hinzugefügt (DB-Modus)');
-  } else {
-    state.sessionItems.push(item);
-    renderSession();
-    showPage('input');
+    saveStateAndSync();
+    return;
+  }
+  if(directLog && state.sessionItems.length === 0) {
+    // Direkt ins Tageslog — kein Umweg über Sitzung
+    const ts = Date.now();
+    state.todayLog.push({ ...item, id: 'l'+ts });
     speak(`${item.name}, ${item.kcal} Kilokalorien`);
     toast(`${item.name}: ${item.kcal} kcal`);
+    renderHome();
+    showPage('home');
+    saveStateAndSync();
+  } else {
+    // In Sitzung (Gramm-Eingabe, oder Sitzung läuft bereits)
+    addToSession(item);
   }
+}
+
+function addToSession(item) {
+  state.sessionItems.push(item);
+  renderSession();
+  showPage('input');
+  speak(`${item.name}, ${item.kcal} Kilokalorien`);
+  toast(`${item.name}: ${item.kcal} kcal`);
   saveStateAndSync();
 }
 
