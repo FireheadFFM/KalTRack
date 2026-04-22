@@ -592,7 +592,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.38 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.39 — April 2026</div>
+        <div>· API-Keys (Claude, Gemini, Nutritionix) werden jetzt ebenfalls geräteübergreifend synchronisiert</div>
+        <div>· Quellen-Toggles (OFF, KI, Nutritionix) bleiben weiterhin lokal</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.38 — April 2026</div>
         <div>· Persönliche Einstellungen (Grundumsatz, Kalorienziel, Schrittziel) werden jetzt geräteübergreifend synchronisiert</div>
         <div>· API-Keys und Toggles bleiben weiterhin lokal (geräteabhängig)</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.37 — April 2026</div>
@@ -1714,7 +1717,7 @@ async function autoLoadFromCloud() {
     // Einstellungen: persönliche Werte aus Cloud übernehmen (bmr, goal, stepsGoal, voiceEnabled)
     // API-Keys und Toggles bleiben lokal (geräteabhängig)
     if(cloud.settings) {
-      const personalKeys = ['bmr','goal','stepsGoal','voiceEnabled'];
+      const personalKeys = ['bmr','goal','stepsGoal','voiceEnabled','apiKey','geminiKey','nutritionixAppId','nutritionixKey'];
       let settingsChanged = false;
       personalKeys.forEach(k => {
         if(cloud.settings[k] !== undefined && cloud.settings[k] !== state.settings[k]) {
