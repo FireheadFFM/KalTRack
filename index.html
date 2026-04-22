@@ -689,7 +689,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.42 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.43 — April 2026</div>
+        <div>· Gemini/Claude JSON-Parser robuster: extrahiert JSON auch wenn Gemini Text davor/danach schreibt</div>
+        <div>· Schritte-Linie im Wochenchart auf Grau geändert (war blau wie Kalorienbalken)</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.42 — April 2026</div>
         <div>· Neues Maskottchen: Maulwurf im Stil des „kleinen Maulwurfs" — weiße Augen, rote Nase, Schweißband auf Stirn</div>
         <div>· Farbschema: Grün → Blau (#2563eb) in der gesamten App</div>
         <div>· FitMole-Schriftzug zweifarbig: „Fit" dunkel, „Mole" blau</div>
@@ -3301,10 +3304,21 @@ Antworte NUR mit diesem JSON (kein anderer Text, keine Markdown-Blöcke):
       toast('Gemini: Keine Antwort → siehe ⚙ Fehlerlog');
       return;
     }
-    const clean = raw.replace(/```json|```/g,'').trim();
+
+    // Robustes JSON-Extrahieren: suche erstes { ... } Objekt im Text
     let parsed;
-    try { parsed = JSON.parse(clean); } catch(pe) {
-      logError('Gemini JSON', 'Antwort konnte nicht als JSON gelesen werden', raw.slice(0,200));
+    try {
+      // 1. Versuch: Markdown-Blöcke entfernen und direkt parsen
+      let clean = raw.replace(/```json\s*/gi,'').replace(/```/g,'').trim();
+      // 2. Versuch: JSON-Objekt aus dem Text extrahieren (zwischen erstem { und letztem })
+      if(clean[0] !== '{') {
+        const start = clean.indexOf('{');
+        const end = clean.lastIndexOf('}');
+        if(start >= 0 && end > start) clean = clean.slice(start, end + 1);
+      }
+      parsed = JSON.parse(clean);
+    } catch(pe) {
+      logError('Gemini JSON', 'Antwort konnte nicht als JSON gelesen werden', raw.slice(0,300));
       toast('Gemini: Ungültiges Format → siehe ⚙ Fehlerlog');
       return;
     }
@@ -3383,7 +3397,12 @@ Regeln:
     // Extrahiere den letzten Text-Block (nach Web-Search)
     const textBlocks = (data.content||[]).filter(b => b.type === 'text');
     const raw = textBlocks[textBlocks.length - 1]?.text || '';
-    const clean = raw.replace(/```json|```/g,'').trim();
+    let clean = raw.replace(/```json\s*/gi,'').replace(/```/g,'').trim();
+    if(clean[0] !== '{') {
+      const start = clean.indexOf('{');
+      const end = clean.lastIndexOf('}');
+      if(start >= 0 && end > start) clean = clean.slice(start, end + 1);
+    }
     const parsed = JSON.parse(clean);
 
     if(!parsed.items || parsed.items.length === 0) {
