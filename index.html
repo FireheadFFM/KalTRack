@@ -76,7 +76,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
 .progress-labels { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; color: var(--text3); }
 
 /* MIC */
-.mic-section { text-align: center; padding: 8px 0 4px; }
+.mic-section { text-align: center; padding: 8px 0 4px; position: relative; }
 .mic-btn { width: 76px; height: 76px; border-radius: 50%; background: var(--accent); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; transition: all 0.2s; position: relative; box-shadow: 0 4px 16px rgba(45,90,61,0.3); }
 .mic-btn:active { transform: scale(0.95); }
 .mic-btn.listening { background: var(--danger); box-shadow: 0 4px 16px rgba(139,46,26,0.4); animation: pulseRed 1.4s infinite; }
@@ -300,6 +300,8 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       </button>
       <div class="mic-status" id="mic-status">Tippen zum Starten</div>
       <div class="mic-transcript" id="mic-transcript"></div>
+      <button id="voice-toggle" onclick="toggleVoiceOutput()" title="Sprachausgabe ein/aus"
+        style="position:absolute;top:12px;right:12px;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3);padding:4px;line-height:1;">🔊</button>
     </div>
 
     <div class="card">
@@ -590,7 +592,13 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.36 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.38 — April 2026</div>
+        <div>· Persönliche Einstellungen (Grundumsatz, Kalorienziel, Schrittziel) werden jetzt geräteübergreifend synchronisiert</div>
+        <div>· API-Keys und Toggles bleiben weiterhin lokal (geräteabhängig)</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.37 — April 2026</div>
+        <div>· 🔊/🔇-Toggle auf der Eingabe-Seite — Sprachausgabe nach Eintrag ein- oder ausschalten</div>
+        <div>· Einstellung wird gespeichert und gesynct</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.36 — April 2026</div>
         <div>· Tageswechsel-Bug behoben: Cloud-Einträge vom Vortag werden nach Tageswechsel nicht mehr in den neuen Tag gemergt</div>
         <div>· Schritte und Aktivitätslog werden beim Cloud-Sync ebenfalls nur übernommen wenn Cloud vom heutigen Tag ist</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.35 — April 2026</div>
@@ -1380,6 +1388,7 @@ async function init() {
   renderAiToggle();
   updateAutoFavorites();
   renderFavorites();
+  renderVoiceToggle();
   scheduleDayRollover();
   initReminder();
   if(state.mode === 'db') {
@@ -1702,6 +1711,20 @@ async function autoLoadFromCloud() {
       cloud.deletedFavNames.forEach(t => addTombstone('deletedFavNames', t));
     }
 
+    // Einstellungen: persönliche Werte aus Cloud übernehmen (bmr, goal, stepsGoal, voiceEnabled)
+    // API-Keys und Toggles bleiben lokal (geräteabhängig)
+    if(cloud.settings) {
+      const personalKeys = ['bmr','goal','stepsGoal','voiceEnabled'];
+      let settingsChanged = false;
+      personalKeys.forEach(k => {
+        if(cloud.settings[k] !== undefined && cloud.settings[k] !== state.settings[k]) {
+          state.settings[k] = cloud.settings[k];
+          settingsChanged = true;
+        }
+      });
+      if(settingsChanged) changed = true;
+    }
+
     // DB: zusammenführen per ID — beide Seiten behalten ihre Einträge
     if(cloud.db && cloud.db.length > 0) {
       const localDeletedIds = new Set((state.deletedDbIds||[]).map(t=>t.id));
@@ -1925,7 +1948,7 @@ function showPage(p) {
   if(idx >= 0) document.querySelectorAll('.nav-btn')[idx].classList.add('active');
   if(p === 'home') renderHome();
   if(p === 'settings') { renderSettings(); renderBacklogIdeas(); }
-  if(p === 'input') renderModeHint();
+  if(p === 'input') { renderModeHint(); renderVoiceToggle(); }
   if(p === 'history') renderHistory();
   if(p === 'activity') renderStepsProgress();
   if(p === 'db') renderDbPageFull();
@@ -3477,9 +3500,26 @@ function toast(msg) {
 
 function speak(text) {
   if(!window.speechSynthesis) return;
+  if(state.settings.voiceEnabled === false) return;
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'de-DE'; u.rate = 1.1;
   window.speechSynthesis.speak(u);
+}
+
+function toggleVoiceOutput() {
+  state.settings.voiceEnabled = state.settings.voiceEnabled === false ? true : false;
+  renderVoiceToggle();
+  saveStateAndSync();
+  toast(state.settings.voiceEnabled === false ? 'Sprachausgabe aus' : 'Sprachausgabe an');
+}
+
+function renderVoiceToggle() {
+  const btn = document.getElementById('voice-toggle');
+  if(!btn) return;
+  const on = state.settings.voiceEnabled !== false;
+  btn.textContent = on ? '🔊' : '🔇';
+  btn.style.color = on ? 'var(--text3)' : 'var(--danger)';
+  btn.title = on ? 'Sprachausgabe an — tippen zum Stummmachen' : 'Sprachausgabe aus — tippen zum Aktivieren';
 }
 
 // ─── DB MANAGEMENT ────────────────────────────────────────────────────────────
