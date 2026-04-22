@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="FitMole">
-<meta name="theme-color" content="#2d5a3d">
+<meta name="theme-color" content="#2563eb">
 <link rel="manifest" id="pwa-manifest">
 <title>FitMole</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,9 +19,9 @@
   --text: #1a1814;
   --text2: #6b6760;
   --text3: #9e9b95;
-  --accent: #2d5a3d;
-  --accent2: #4a8c5c;
-  --accent-bg: #e8f0ea;
+  --accent: #2563eb;
+  --accent2: #3b82f6;
+  --accent-bg: #eff6ff;
   --danger: #8b2e1a;
   --danger-bg: #f5e8e5;
   --warn: #8b5e1a;
@@ -77,7 +77,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
 
 /* MIC */
 .mic-section { text-align: center; padding: 8px 0 4px; position: relative; }
-.mic-btn { width: 76px; height: 76px; border-radius: 50%; background: var(--accent); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; transition: all 0.2s; position: relative; box-shadow: 0 4px 16px rgba(45,90,61,0.3); }
+.mic-btn { width: 76px; height: 76px; border-radius: 50%; background: var(--accent); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; transition: all 0.2s; position: relative; box-shadow: 0 4px 16px rgba(37,99,235,0.3); }
 .mic-btn:active { transform: scale(0.95); }
 .mic-btn.listening { background: var(--danger); box-shadow: 0 4px 16px rgba(139,46,26,0.4); animation: pulseRed 1.4s infinite; }
 .mic-btn.processing { background: var(--warn); box-shadow: 0 4px 16px rgba(139,94,26,0.4); }
@@ -174,6 +174,58 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
 </style>
 </head>
 <body>
+<div id="splash-screen" style="display:none;position:fixed;inset:0;background:#f5f3ef;z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:0;">
+  <svg width="180" height="200" viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Körper -->
+    <ellipse cx="50" cy="72" rx="30" ry="34" fill="#222"/>
+    <ellipse cx="50" cy="76" rx="19" ry="24" fill="#aaa"/>
+    <!-- Kopf -->
+    <circle cx="50" cy="38" r="27" fill="#222"/>
+    <ellipse cx="50" cy="41" rx="19" ry="21" fill="#b8b8b8"/>
+    <!-- Schweißband -->
+    <path d="M24,24 Q50,12 76,24" stroke="#e63030" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <path d="M24,24 Q50,12 76,24" stroke="#ff9999" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
+    <!-- Schweißtropfen -->
+    <ellipse cx="72" cy="29" rx="2.5" ry="4" fill="#60a5fa" opacity="0.9"/>
+    <ellipse cx="77" cy="35" rx="1.8" ry="2.8" fill="#60a5fa" opacity="0.6"/>
+    <!-- Augen -->
+    <circle cx="41" cy="36" r="7" fill="white"/>
+    <circle cx="43" cy="36" r="3.2" fill="#111"/>
+    <circle cx="44" cy="34" r="1.3" fill="white"/>
+    <circle cx="59" cy="36" r="7" fill="white"/>
+    <circle cx="61" cy="36" r="3.2" fill="#111"/>
+    <circle cx="62" cy="34" r="1.3" fill="white"/>
+    <!-- V-Brauen -->
+    <path d="M34,29 Q41,25 47,27" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M53,27 Q59,25 66,29" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <!-- Nase -->
+    <circle cx="50" cy="48" r="6" fill="#e63030"/>
+    <!-- Lächeln -->
+    <path d="M43,56 Q50,62 57,56" stroke="#555" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <!-- Linker Arm + Hantel -->
+    <path d="M24,60 Q10,52 8,42" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
+    <circle cx="8" cy="42" r="7" fill="#e8b89a"/>
+    <rect x="-8" y="36" width="32" height="6" rx="3" fill="#2563eb"/>
+    <rect x="-10" y="31" width="7" height="16" rx="3.5" fill="#2563eb"/>
+    <rect x="15" y="31" width="7" height="16" rx="3.5" fill="#2563eb"/>
+    <!-- Rechter Arm + Hantel -->
+    <path d="M76,60 Q90,52 92,42" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
+    <circle cx="92" cy="42" r="7" fill="#e8b89a"/>
+    <rect x="68" y="36" width="32" height="6" rx="3" fill="#2563eb"/>
+    <rect x="66" y="31" width="7" height="16" rx="3.5" fill="#2563eb"/>
+    <rect x="91" y="31" width="7" height="16" rx="3.5" fill="#2563eb"/>
+    <!-- Beine -->
+    <ellipse cx="38" cy="103" rx="10" ry="7" fill="#222"/>
+    <ellipse cx="62" cy="103" rx="10" ry="7" fill="#222"/>
+    <ellipse cx="33" cy="108" rx="7" ry="4" fill="#e8b89a"/>
+    <ellipse cx="43" cy="109" rx="7" ry="4" fill="#e8b89a"/>
+    <ellipse cx="57" cy="109" rx="7" ry="4" fill="#e8b89a"/>
+    <ellipse cx="67" cy="108" rx="7" ry="4" fill="#e8b89a"/>
+  </svg>
+  <div style="font-family:'DM Sans',sans-serif;font-size:36px;font-weight:600;letter-spacing:-1px;margin-top:8px;">Fit<span style="color:#2563eb;">Mole</span></div>
+  <div style="font-family:'DM Mono',monospace;font-size:11px;color:#9e9b95;margin-top:6px;" id="splash-version">v1.42</div>
+</div>
+
 <div class="app">
   <!-- ABEND-REMINDER BANNER -->
   <div id="reminder-banner" style="display:none;background:var(--accent);color:white;padding:10px 16px;align-items:center;justify-content:space-between;gap:8px;font-size:13px;flex-shrink:0;">
@@ -187,40 +239,56 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
   <div class="header">
     <div class="header-top">
       <div class="app-name" onclick="switchToTrack()" style="cursor:pointer;display:flex;align-items:center;gap:8px;">
-        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Body -->
-          <ellipse cx="18" cy="22" rx="11" ry="9" fill="#5a3e2b"/>
-          <!-- Head -->
-          <ellipse cx="18" cy="13" rx="8" ry="7" fill="#7a5540"/>
-          <!-- Snout -->
-          <ellipse cx="18" cy="17" rx="4" ry="2.5" fill="#c4876a"/>
-          <!-- Nose -->
-          <circle cx="18" cy="16" r="1.2" fill="#2d1a0e"/>
-          <!-- Eyes -->
-          <circle cx="14.5" cy="11.5" r="1.4" fill="#1a0e07"/>
-          <circle cx="21.5" cy="11.5" r="1.4" fill="#1a0e07"/>
-          <circle cx="15" cy="11" r="0.5" fill="white"/>
-          <circle cx="22" cy="11" r="0.5" fill="white"/>
-          <!-- Schweißband -->
-          <path d="M10.5 10.5 Q18 6 25.5 10.5" stroke="#e84040" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-          <path d="M11 9.5 Q18 5 25 9.5" stroke="#ff6b6b" stroke-width="1" fill="none" stroke-linecap="round" opacity="0.5"/>
-          <!-- Left arm with dumbbell -->
-          <line x1="7" y1="20" x2="4" y2="17" stroke="#5a3e2b" stroke-width="2.5" stroke-linecap="round"/>
-          <rect x="1.5" y="15.5" width="4" height="1.5" rx="0.7" fill="#2d5a3d"/>
-          <rect x="1" y="14.5" width="1.5" height="3.5" rx="0.7" fill="#2d5a3d"/>
-          <rect x="4" y="14.5" width="1.5" height="3.5" rx="0.7" fill="#2d5a3d"/>
-          <!-- Right arm raised -->
-          <line x1="29" y1="20" x2="32" y2="17" stroke="#5a3e2b" stroke-width="2.5" stroke-linecap="round"/>
-          <rect x="30.5" y="15.5" width="4" height="1.5" rx="0.7" fill="#2d5a3d"/>
-          <rect x="30" y="14.5" width="1.5" height="3.5" rx="0.7" fill="#2d5a3d"/>
-          <rect x="33" y="14.5" width="1.5" height="3.5" rx="0.7" fill="#2d5a3d"/>
-          <!-- Sweat drop -->
-          <ellipse cx="26" cy="9" rx="1" ry="1.4" fill="#60a5fa" opacity="0.8"/>
-          <!-- Feet -->
-          <ellipse cx="13" cy="30" rx="3" ry="1.5" fill="#4a3020"/>
-          <ellipse cx="23" cy="30" rx="3" ry="1.5" fill="#4a3020"/>
+        <svg width="38" height="38" viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Körper dunkelgrau -->
+          <ellipse cx="50" cy="72" rx="30" ry="34" fill="#222"/>
+          <!-- Grauer Bauch -->
+          <ellipse cx="50" cy="76" rx="19" ry="24" fill="#aaa"/>
+          <!-- Kopf -->
+          <circle cx="50" cy="38" r="27" fill="#222"/>
+          <!-- Graues Gesicht -->
+          <ellipse cx="50" cy="41" rx="19" ry="21" fill="#b8b8b8"/>
+          <!-- Schweißband auf Stirn -->
+          <path d="M24,24 Q50,12 76,24" stroke="#e63030" stroke-width="7" fill="none" stroke-linecap="round"/>
+          <path d="M24,24 Q50,12 76,24" stroke="#ff9999" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
+          <!-- Schweißtropfen unter Band -->
+          <ellipse cx="72" cy="29" rx="2.5" ry="4" fill="#60a5fa" opacity="0.9"/>
+          <ellipse cx="77" cy="35" rx="1.8" ry="2.8" fill="#60a5fa" opacity="0.6"/>
+          <!-- Augen: großer weißer Augapfel + kleine Pupille -->
+          <circle cx="41" cy="36" r="7" fill="white"/>
+          <circle cx="43" cy="36" r="3.2" fill="#111"/>
+          <circle cx="44" cy="34" r="1.3" fill="white"/>
+          <circle cx="59" cy="36" r="7" fill="white"/>
+          <circle cx="61" cy="36" r="3.2" fill="#111"/>
+          <circle cx="62" cy="34" r="1.3" fill="white"/>
+          <!-- V-Brauen -->
+          <path d="M34,29 Q41,25 47,27" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M53,27 Q59,25 66,29" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <!-- Rote Knopfnase -->
+          <circle cx="50" cy="48" r="6" fill="#e63030"/>
+          <!-- Lächeln -->
+          <path d="M43,56 Q50,62 57,56" stroke="#555" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+          <!-- Linker Arm + Hantel -->
+          <path d="M24,60 Q10,52 8,42" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
+          <circle cx="8" cy="42" r="7" fill="#e8b89a"/>
+          <rect x="-8" y="36" width="32" height="6" rx="3" fill="#2563eb"/>
+          <rect x="-10" y="31" width="7" height="16" rx="3.5" fill="#2563eb"/>
+          <rect x="15" y="31" width="7" height="16" rx="3.5" fill="#2563eb"/>
+          <!-- Rechter Arm + Hantel -->
+          <path d="M76,60 Q90,52 92,42" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
+          <circle cx="92" cy="42" r="7" fill="#e8b89a"/>
+          <rect x="68" y="36" width="32" height="6" rx="3" fill="#2563eb"/>
+          <rect x="66" y="31" width="7" height="16" rx="3.5" fill="#2563eb"/>
+          <rect x="91" y="31" width="7" height="16" rx="3.5" fill="#2563eb"/>
+          <!-- Beine -->
+          <ellipse cx="38" cy="103" rx="10" ry="7" fill="#222"/>
+          <ellipse cx="62" cy="103" rx="10" ry="7" fill="#222"/>
+          <ellipse cx="33" cy="108" rx="7" ry="4" fill="#e8b89a"/>
+          <ellipse cx="43" cy="109" rx="7" ry="4" fill="#e8b89a"/>
+          <ellipse cx="57" cy="109" rx="7" ry="4" fill="#e8b89a"/>
+          <ellipse cx="67" cy="108" rx="7" ry="4" fill="#e8b89a"/>
         </svg>
-        <span>Fit<span style="color:var(--accent2);">Mole</span></span>
+        <span style="font-size:20px;font-weight:600;letter-spacing:-0.5px;color:var(--text);">Fit<span style="color:var(--accent);">Mole</span></span>
       </div>
       <div class="mode-toggle">
         <button class="mode-btn active" id="modeTrack" onclick="switchToTrack()">Tracken</button>
@@ -403,7 +471,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <canvas id="week-chart" role="img" aria-label="Tägliche Kalorienbilanz und Schritte der letzten 7 Tage">Balkendiagramm der Kalorienbilanz pro Tag.</canvas>
       </div>
       <div style="display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:11px;color:var(--text3);flex-wrap:wrap;">
-        <span><span style="display:inline-block;width:10px;height:10px;background:#0F6E56;border-radius:2px;margin-right:4px;"></span>Defizit</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:#2563eb;border-radius:2px;margin-right:4px;"></span>Defizit</span>
         <span><span style="display:inline-block;width:10px;height:10px;background:#993C1D;border-radius:2px;margin-right:4px;"></span>Überschuss</span>
         <span><span style="display:inline-block;width:10px;height:2px;background:#3b82f6;margin-right:4px;vertical-align:middle;"></span>Schritte</span>
       </div>
@@ -429,6 +497,19 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
 
   <!-- SETTINGS PAGE -->
   <div class="page" id="page-settings">
+    <div class="card">
+      <div class="card-label">Erscheinungsbild</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Startbildschirm</div>
+          <div class="settings-sub">Maskottchen beim App-Öffnen</div>
+        </div>
+        <div id="toggle-splash" onclick="toggleSplash()" style="width:44px;height:24px;border-radius:12px;background:var(--bg2);border:1px solid var(--border);position:relative;cursor:pointer;transition:background 0.2s;flex-shrink:0;">
+          <div id="toggle-splash-knob" style="width:20px;height:20px;border-radius:50%;background:white;position:absolute;top:1px;left:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-label">Mein Profil</div>
       <div class="settings-row">
@@ -539,6 +620,14 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
     </div>
 
     <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleCard('errorlog-body');renderErrorLog()">
+        <div class="card-label" style="margin:0;">Fehlerlog <span id="errorlog-badge" style="font-size:10px;background:var(--danger-bg);color:var(--danger);border-radius:6px;padding:1px 6px;margin-left:4px;display:none;"></span></div>
+        <span style="font-size:12px;color:var(--text3);">▾</span>
+      </div>
+      <div id="errorlog-body" style="display:none;margin-top:12px;"></div>
+    </div>
+
+    <div class="card">
       <div class="card-label">Gefahrenzone</div>
       <button class="btn btn-danger btn-full" onclick="resetDay()">Heutigen Tag zurücksetzen</button>
     </div>
@@ -592,7 +681,17 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.40 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.42 — April 2026</div>
+        <div>· Neues Maskottchen: Maulwurf im Stil des „kleinen Maulwurfs" — weiße Augen, rote Nase, Schweißband auf Stirn</div>
+        <div>· Farbschema: Grün → Blau (#2563eb) in der gesamten App</div>
+        <div>· FitMole-Schriftzug zweifarbig: „Fit" dunkel, „Mole" blau</div>
+        <div>· Startbildschirm mit Maskottchen und Versionsnummer (toggle-bar in ⚙ → Erscheinungsbild)</div>
+        <div>· App-Icon (PWA) ebenfalls auf neues Maulwurf-Design aktualisiert</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.41 — April 2026</div>
+        <div>· Fehlerlog in den Einstellungen — zeigt Fehlermeldungen von Gemini, Claude etc. mit Zeitstempel</div>
+        <div>· Badge zeigt Anzahl der Fehler, Log kann geleert werden</div>
+        <div>· Fehlermeldungen enthalten jetzt mehr Details (HTTP-Code, Rohtext etc.)</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.40 — April 2026</div>
         <div>· Gerichte, Portionen und Stück-Einträge landen direkt im Tageslog — kein Zwischenschritt mehr</div>
         <div>· Gramm/ml-Eingaben gehen weiterhin in die Sitzung (für Kombinationen/Gerichte)</div>
         <div>· KI-Ergebnisse zeigen weiterhin den Bestätigungsdialog</div>
@@ -1099,7 +1198,8 @@ let state = {
   deletedDbIds: [],      // [{id, ts}]
   deletedDishNames: [],  // [{name, ts}]
   deletedFavNames: [],   // [{name, ts}]
-  backlogIdeas: []       // [{id, text, ts}] — eigene Ideen
+  backlogIdeas: [],      // [{id, text, ts}] — eigene Ideen
+  errorLog: []           // [{ts, source, message, detail}] — Fehlerprotokoll
 };
 
 const FOOD_DB_DEFAULT = [
@@ -1396,6 +1496,11 @@ async function init() {
   updateAutoFavorites();
   renderFavorites();
   renderVoiceToggle();
+  renderSplashToggle();
+  // Startbildschirm anzeigen wenn aktiviert
+  if(state.settings.splashEnabled !== false) {
+    showSplash();
+  }
   scheduleDayRollover();
   initReminder();
   if(state.mode === 'db') {
@@ -1505,6 +1610,34 @@ function getYesterdayDateStr() {
   const y = new Date();
   y.setDate(y.getDate() - 1);
   return y.toDateString();
+}
+
+// ─── STARTBILDSCHIRM ──────────────────────────────────────────────────────────
+function showSplash() {
+  const splash = document.getElementById('splash-screen');
+  if(!splash) return;
+  splash.style.display = 'flex';
+  setTimeout(() => {
+    splash.style.transition = 'opacity 0.4s ease';
+    splash.style.opacity = '0';
+    setTimeout(() => { splash.style.display = 'none'; splash.style.opacity = '1'; splash.style.transition = ''; }, 400);
+  }, 2000);
+}
+
+function toggleSplash() {
+  state.settings.splashEnabled = state.settings.splashEnabled === false ? true : false;
+  renderSplashToggle();
+  saveStateAndSync();
+  toast(state.settings.splashEnabled !== false ? 'Startbildschirm an' : 'Startbildschirm aus');
+}
+
+function renderSplashToggle() {
+  const on = state.settings.splashEnabled !== false;
+  const el = document.getElementById('toggle-splash');
+  const knob = document.getElementById('toggle-splash-knob');
+  if(!el || !knob) return;
+  el.style.background = on ? '#2563eb' : 'var(--bg2)';
+  knob.style.left = on ? '22px' : '2px';
 }
 
 function initReminder() {
@@ -1914,6 +2047,7 @@ function loadState() {
   if(!state.deletedDishNames) state.deletedDishNames = [];
   if(!state.deletedFavNames) state.deletedFavNames = [];
   if(!state.backlogIdeas) state.backlogIdeas = [];
+  if(!state.errorLog) state.errorLog = [];
 
   // Migration: neue Default-Einträge ergänzen wenn noch nicht vorhanden
   const defaultIds = new Set(FOOD_DB_DEFAULT.map(f => f.id));
@@ -2094,6 +2228,7 @@ function renderSettings() {
   document.getElementById('set-nx-id').value = state.settings.nutritionixAppId || '';
   document.getElementById('set-nx-key').value = state.settings.nutritionixKey || '';
   renderAiToggle();
+  renderSplashToggle();
   // Notification-Button Status
   const notifBtn = document.getElementById('notif-btn');
   if(notifBtn && 'Notification' in window) {
@@ -2111,6 +2246,13 @@ function renderSettings() {
   } else if(notifBtn) {
     notifBtn.textContent = 'Nicht verfügbar';
     notifBtn.disabled = true;
+  }
+  // Fehlerlog-Badge
+  const badge = document.getElementById('errorlog-badge');
+  if(badge) {
+    const count = (state.errorLog||[]).length;
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'inline' : 'none';
   }
 }
 
@@ -2152,7 +2294,7 @@ function setToggle(id, on) {
   const el = document.getElementById('toggle-' + id);
   const knob = document.getElementById('toggle-' + id + '-knob');
   if(!el || !knob) return;
-  el.style.background = on ? '#2d5a3d' : 'var(--bg2)';
+  el.style.background = on ? '#2563eb' : 'var(--bg2)';
   knob.style.left = on ? '22px' : '2px';
 }
 
@@ -3050,6 +3192,54 @@ function confirmPortionInput() {
 }
 
 
+// ─── FEHLERLOG ────────────────────────────────────────────────────────────────
+function logError(source, message, detail) {
+  if(!state.errorLog) state.errorLog = [];
+  state.errorLog.unshift({
+    ts: Date.now(),
+    source,
+    message,
+    detail: detail || ''
+  });
+  // Max 30 Einträge
+  if(state.errorLog.length > 30) state.errorLog.splice(30);
+  saveState(); // kein Sync — Fehlerlog bleibt lokal
+  // Badge aktualisieren
+  const badge = document.getElementById('errorlog-badge');
+  if(badge) { badge.textContent = state.errorLog.length; badge.style.display = 'inline'; }
+  // Fehlerlog-Card aktualisieren falls offen
+  const el = document.getElementById('errorlog-body');
+  if(el && el.style.display !== 'none') renderErrorLog();
+}
+
+function renderErrorLog() {
+  const el = document.getElementById('errorlog-body');
+  if(!el) return;
+  if(!state.errorLog || state.errorLog.length === 0) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:4px 0;">Keine Fehler aufgezeichnet ✓</div>';
+    return;
+  }
+  el.innerHTML = state.errorLog.map(e => {
+    const d = new Date(e.ts);
+    const time = d.toLocaleString('de-DE', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    return `<div style="padding:8px 0;border-bottom:0.5px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+        <span style="font-size:12px;font-weight:500;color:var(--danger);">${e.source}</span>
+        <span style="font-size:11px;color:var(--text3);">${time}</span>
+      </div>
+      <div style="font-size:13px;color:var(--text);margin-bottom:2px;">${e.message}</div>
+      ${e.detail ? `<div style="font-size:11px;color:var(--text3);word-break:break-all;">${e.detail}</div>` : ''}
+    </div>`;
+  }).join('') + `<button class="btn btn-danger" style="margin-top:10px;width:100%;font-size:12px;" onclick="clearErrorLog()">Fehlerlog leeren</button>`;
+}
+
+function clearErrorLog() {
+  state.errorLog = [];
+  saveState();
+  renderErrorLog();
+  toast('Fehlerlog geleert');
+}
+
 async function processWithGemini(text, apiKey, offContext) {
   const offHint = offContext
     ? `\nHinweis: Open Food Facts hat für "${offContext.productName}" bereits ${offContext.kcalPer100} kcal/100g gefunden, aber keine Portionsgröße. Nutze diesen Wert und ergänze die typische Portionsgröße in Gramm um die Gesamtkalorien zu berechnen.`
@@ -3091,16 +3281,34 @@ Antworte NUR mit diesem JSON (kein anderer Text, keine Markdown-Blöcke):
       }
     );
     const data = await resp.json();
-    if(data.error) { toast('Gemini: ' + data.error.message); return; }
+    if(data.error) {
+      logError('Gemini API', data.error.message || 'API-Fehler', `Code: ${data.error.code||''} Status: ${data.error.status||''}`);
+      toast('Gemini: ' + (data.error.message||'Fehler') + ' → siehe ⚙ Fehlerlog');
+      return;
+    }
 
     const raw = data.candidates?.[0]?.content?.parts?.find(p=>p.text)?.text || '';
+    if(!raw) {
+      logError('Gemini API', 'Keine Textantwort erhalten', JSON.stringify(data.candidates?.[0]?.finishReason||''));
+      toast('Gemini: Keine Antwort → siehe ⚙ Fehlerlog');
+      return;
+    }
     const clean = raw.replace(/```json|```/g,'').trim();
-    const parsed = JSON.parse(clean);
-    if(!parsed.items || parsed.items.length === 0) { toast('Gemini: Keine Nährwerte gefunden'); return; }
+    let parsed;
+    try { parsed = JSON.parse(clean); } catch(pe) {
+      logError('Gemini JSON', 'Antwort konnte nicht als JSON gelesen werden', raw.slice(0,200));
+      toast('Gemini: Ungültiges Format → siehe ⚙ Fehlerlog');
+      return;
+    }
+    if(!parsed.items || parsed.items.length === 0) {
+      logError('Gemini', 'Keine Nährwerte in Antwort', clean.slice(0,200));
+      toast('Gemini: Keine Nährwerte gefunden');
+      return;
+    }
     showClaudeSearchResult(parsed, text);
   } catch(e) {
-    toast('Gemini-Suche fehlgeschlagen');
-    console.error(e);
+    logError('Gemini', e.message||'Unbekannter Fehler', e.stack?.slice(0,300)||'');
+    toast('Gemini-Suche fehlgeschlagen → siehe ⚙ Fehlerlog');
   }
 }
 
@@ -3179,8 +3387,8 @@ Regeln:
     showClaudeSearchResult(parsed, text);
 
   } catch(e) {
-    toast('KI-Suche fehlgeschlagen — bitte manuell eingeben');
-    console.error(e);
+    logError('Claude API', e.message||'Unbekannter Fehler', e.stack?.slice(0,300)||'');
+    toast('KI-Suche fehlgeschlagen → siehe ⚙ Fehlerlog');
   }
 }
 
@@ -4136,14 +4344,14 @@ function renderWeekChart() {
     const avg = Math.round(total / withData.length);
     const avgEl = document.getElementById('week-avg');
     const totEl = document.getElementById('week-total');
-    if(avgEl) { avgEl.textContent = (avg>0?'+':'')+avg; avgEl.style.color = avg>0?'#993C1D':'#0F6E56'; }
-    if(totEl) { totEl.textContent = (total>0?'+':'')+Math.round(total); totEl.style.color = total>0?'#993C1D':'#0F6E56'; }
+    if(avgEl) { avgEl.textContent = (avg>0?'+':'')+avg; avgEl.style.color = avg>0?'#993C1D':'#2563eb'; }
+    if(totEl) { totEl.textContent = (total>0?'+':'')+Math.round(total); totEl.style.color = total>0?'#993C1D':'#2563eb'; }
   }
 
   const balances = days.map(d => d.balance);
   const stepsData = days.map(d => d.steps);
   const stepGoal = state.settings.stepsGoal || 10000;
-  const colors = balances.map(v => v === null ? 'transparent' : v <= 0 ? '#0F6E56' : '#993C1D');
+  const colors = balances.map(v => v === null ? 'transparent' : v <= 0 ? '#2563eb' : '#993C1D');
   const displayBalances = balances.map(v => v === null ? 0 : v);
 
   // Destroy old chart if exists
@@ -4386,7 +4594,54 @@ function importData(event) {
 
 // ─── PWA MANIFEST (inline, kein separater Server nötig) ──────────────────────
 (function injectManifest() {
-  const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="100" fill="#2d5a3d"/><ellipse cx="256" cy="310" rx="155" ry="125" fill="#5a3e2b"/><ellipse cx="256" cy="185" rx="115" ry="100" fill="#7a5540"/><ellipse cx="256" cy="240" rx="58" ry="36" fill="#c4876a"/><circle cx="256" cy="228" r="18" fill="#2d1a0e"/><circle cx="200" cy="163" r="20" fill="#1a0e07"/><circle cx="312" cy="163" r="20" fill="#1a0e07"/><circle cx="207" cy="156" r="7" fill="white"/><circle cx="319" cy="156" r="7" fill="white"/><path d="M148 148 Q256 88 364 148" stroke="#e84040" stroke-width="36" fill="none" stroke-linecap="round"/><rect x="80" y="295" width="60" height="22" rx="10" fill="#4a8c5c"/><rect x="68" y="275" width="22" height="50" rx="10" fill="#4a8c5c"/><rect x="108" y="275" width="22" height="50" rx="10" fill="#4a8c5c"/><rect x="372" y="295" width="60" height="22" rx="10" fill="#4a8c5c"/><rect x="360" y="275" width="22" height="50" rx="10" fill="#4a8c5c"/><rect x="400" y="275" width="22" height="50" rx="10" fill="#4a8c5c"/></svg>`;
+  const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="80" fill="#2563eb"/>
+    <!-- Körper -->
+    <ellipse cx="256" cy="340" rx="120" ry="135" fill="#222"/>
+    <ellipse cx="256" cy="355" rx="75" ry="95" fill="#aaa"/>
+    <!-- Kopf -->
+    <circle cx="256" cy="195" r="108" fill="#222"/>
+    <ellipse cx="256" cy="205" rx="74" ry="83" fill="#b8b8b8"/>
+    <!-- Schweißband Stirn -->
+    <path d="M158,142 Q256,100 354,142" stroke="#e63030" stroke-width="28" fill="none" stroke-linecap="round"/>
+    <path d="M158,142 Q256,100 354,142" stroke="#ff9999" stroke-width="11" fill="none" stroke-linecap="round" opacity="0.5"/>
+    <!-- Schweißtropfen -->
+    <ellipse cx="342" cy="158" rx="10" ry="16" fill="#60a5fa" opacity="0.9"/>
+    <ellipse cx="362" cy="182" rx="7" ry="11" fill="#60a5fa" opacity="0.6"/>
+    <!-- Augen: weißer Augapfel + Pupille -->
+    <circle cx="214" cy="188" r="28" fill="white"/>
+    <circle cx="222" cy="188" r="13" fill="#111"/>
+    <circle cx="227" cy="181" r="5" fill="white"/>
+    <circle cx="298" cy="188" r="28" fill="white"/>
+    <circle cx="306" cy="188" r="13" fill="#111"/>
+    <circle cx="311" cy="181" r="5" fill="white"/>
+    <!-- V-Brauen -->
+    <path d="M186,162 Q214,148 238,156" stroke="#333" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M274,156 Q298,148 326,162" stroke="#333" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <!-- Rote Knopfnase -->
+    <circle cx="256" cy="228" r="26" fill="#e63030"/>
+    <!-- Lächeln -->
+    <path d="M224,262 Q256,288 288,262" stroke="#555" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <!-- Linker Arm + Hantel -->
+    <path d="M148,290 Q90,260 78,220" stroke="#222" stroke-width="36" fill="none" stroke-linecap="round"/>
+    <circle cx="78" cy="220" r="28" fill="#e8b89a"/>
+    <rect x="18" y="196" width="124" height="24" rx="12" fill="white" opacity="0.9"/>
+    <rect x="12" y="174" width="28" height="62" rx="14" fill="white" opacity="0.9"/>
+    <rect x="102" y="174" width="28" height="62" rx="14" fill="white" opacity="0.9"/>
+    <!-- Rechter Arm + Hantel -->
+    <path d="M364,290 Q422,260 434,220" stroke="#222" stroke-width="36" fill="none" stroke-linecap="round"/>
+    <circle cx="434" cy="220" r="28" fill="#e8b89a"/>
+    <rect x="370" y="196" width="124" height="24" rx="12" fill="white" opacity="0.9"/>
+    <rect x="366" y="174" width="28" height="62" rx="14" fill="white" opacity="0.9"/>
+    <rect x="458" y="174" width="28" height="62" rx="14" fill="white" opacity="0.9"/>
+    <!-- Beine -->
+    <ellipse cx="202" cy="468" rx="40" ry="28" fill="#222"/>
+    <ellipse cx="310" cy="468" rx="40" ry="28" fill="#222"/>
+    <ellipse cx="178" cy="488" rx="28" ry="16" fill="#e8b89a"/>
+    <ellipse cx="222" cy="492" rx="28" ry="16" fill="#e8b89a"/>
+    <ellipse cx="290" cy="492" rx="28" ry="16" fill="#e8b89a"/>
+    <ellipse cx="334" cy="488" rx="28" ry="16" fill="#e8b89a"/>
+  </svg>`;
   const svgBlob = new Blob([icon], {type:'image/svg+xml'});
   const iconUrl = URL.createObjectURL(svgBlob);
   const manifest = {
@@ -4396,7 +4651,7 @@ function importData(event) {
     start_url: '.',
     display: 'standalone',
     background_color: '#f5f3ef',
-    theme_color: '#2d5a3d',
+    theme_color: '#2563eb',
     orientation: 'portrait',
     icons: [
       { src: iconUrl, sizes: '192x192', type: 'image/svg+xml' },
