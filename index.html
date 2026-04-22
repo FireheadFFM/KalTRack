@@ -231,7 +231,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
     <ellipse cx="67" cy="108" rx="7" ry="4" fill="#e8b89a"/>
   </svg>
   <div style="font-family:'DM Sans',sans-serif;font-size:36px;font-weight:600;letter-spacing:-1px;margin-top:8px;">Fit<span style="color:#2563eb;">Mole</span></div>
-  <div style="font-family:'DM Mono',monospace;font-size:11px;color:#9e9b95;margin-top:6px;" id="splash-version">v1.42</div>
+  <div style="font-family:'DM Mono',monospace;font-size:11px;color:#9e9b95;margin-top:6px;" id="splash-version">v1.43</div>
 </div>
 
 <div class="app">
@@ -1628,6 +1628,15 @@ function showSplash() {
   const splash = document.getElementById('splash-screen');
   if(!splash) return;
   splash.style.display = 'flex';
+  // Versionsnummer dynamisch aus dem Changelog lesen
+  const vEl = document.getElementById('splash-version');
+  if(vEl) {
+    const firstVersion = document.querySelector('#changelog-body div[style*="font-weight:500"]');
+    if(firstVersion) {
+      const match = firstVersion.textContent.match(/v[\d.]+/);
+      if(match) vEl.textContent = match[0];
+    }
+  }
   setTimeout(() => {
     splash.style.transition = 'opacity 0.4s ease';
     splash.style.opacity = '0';
