@@ -689,7 +689,13 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.43 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.45 — April 2026</div>
+        <div>· Datums-Bug behoben: beim Bearbeiten eines Historientags wurde durch UTC-Konvertierung ein Tag zu früh angezeigt</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.44 — April 2026</div>
+        <div>· Tageswechsel-Bug behoben: Schritte werden jetzt korrekt in die Historie übernommen</div>
+        <div>· Tageswechsel-Bug behoben: Vorgestern-Einträge landen nicht mehr im gestrigen Historieneintrag</div>
+        <div>· Cloud-Merge: nach Tageswechsel gewinnt immer die lokale Version des archivierten Tages</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.43 — April 2026</div>
         <div>· Gemini/Claude JSON-Parser robuster: extrahiert JSON auch wenn Gemini Text davor/danach schreibt</div>
         <div>· Schritte-Linie im Wochenchart auf Grau geändert (war blau wie Kalorienbalken)</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.42 — April 2026</div>
@@ -1987,8 +1993,9 @@ async function autoLoadFromCloud() {
       state.steps = cloud.steps; changed = true;
     }
 
-    // Historie: tagesweise mergen — für jeden Tag die Version mit mehr eaten-Einträgen nehmen
+    // Historie: tagesweise mergen
     if(cloud.history && cloud.history.length > 0) {
+      const today = getFitMoleDay();
       const localMap = {};
       (state.history||[]).forEach(d => { localMap[d.date] = d; });
       const cloudMap = {};
@@ -1999,10 +2006,17 @@ async function autoLoadFromCloud() {
         const local = localMap[date];
         const cloudDay = cloudMap[date];
         if(local && cloudDay) {
-          // Beide haben diesen Tag — nimm die Version mit mehr Log-Einträgen
-          const localEntries = (local.log||[]).length;
-          const cloudEntries = (cloudDay.log||[]).length;
-          merged.push(cloudEntries >= localEntries ? cloudDay : local);
+          // Wenn Cloud noch den gestrigen todayLog hat (lastDate = gestern, noch nicht gerollt):
+          // Lokale Version gewinnt weil sie den korrekten Rollover bereits gemacht hat
+          const cloudIsStale = cloud.lastDate && cloud.lastDate !== today && cloud.lastDate === date;
+          if(cloudIsStale) {
+            merged.push(local);
+          } else {
+            // Normale Logik: Version mit mehr Einträgen gewinnt, bei Gleichstand lokal
+            const localEntries = (local.log||[]).length;
+            const cloudEntries = (cloudDay.log||[]).length;
+            merged.push(cloudEntries > localEntries ? cloudDay : local);
+          }
         } else {
           merged.push(local || cloudDay);
         }
@@ -2010,6 +2024,18 @@ async function autoLoadFromCloud() {
       merged.sort((a,b) => new Date(b.date) - new Date(a.date));
       if(merged.length > 90) merged.splice(90);
       state.history = merged; changed = true;
+
+      // Sicherheitsnetz: falls der Rollover-Tag keine Schritte hat aber lokal welche hatte, wiederherstellen
+      const rolledDate = cloud.lastDate;
+      if(rolledDate && rolledDate !== today) {
+        const rolledLocal = localMap[rolledDate];
+        const rolledMerged = state.history.find(d => d.date === rolledDate);
+        if(rolledLocal && rolledMerged && rolledLocal.steps > 0 && !rolledMerged.steps) {
+          rolledMerged.steps = rolledLocal.steps;
+          rolledMerged.burned = rolledLocal.burned;
+          rolledMerged.balance = rolledLocal.eaten - rolledLocal.burned;
+        }
+      }
     }
 
     if(changed) {
@@ -4134,16 +4160,24 @@ function openManualDay(existingDay, dateOverride) {
   manualMeals = existingDay ? (existingDay.log || []).map(l => ({ name: l.name, kcal: l.kcal })) : [];
   manualActs = existingDay ? (existingDay.activityLog || []).map(a => ({ name: a.name, minutes: a.minutes, kcal: a.kcal })) : [];
 
+  // Hilfsfunktion: Date → YYYY-MM-DD in lokaler Zeit (nicht UTC)
+  const toLocalDateString = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
   let dateVal;
   if(existingDay) {
     const d = new Date(existingDay.date);
-    dateVal = d.toISOString().slice(0,10);
+    dateVal = toLocalDateString(d);
   } else if(dateOverride) {
-    dateVal = dateOverride.toISOString().slice(0,10);
+    dateVal = toLocalDateString(dateOverride);
   } else {
     const today = new Date();
     today.setDate(today.getDate() - 1);
-    dateVal = today.toISOString().slice(0,10);
+    dateVal = toLocalDateString(today);
   }
 
   document.getElementById('manual-day-date').value = dateVal;
