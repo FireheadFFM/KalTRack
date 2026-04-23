@@ -689,7 +689,11 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.45 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.46 — April 2026</div>
+        <div>· Historien-Merge: neueste Version gewinnt jetzt per Timestamp (updatedAt)</div>
+        <div>· Bearbeitungen im Browser werden nicht mehr durch ältere App-Daten überschrieben</div>
+        <div>· Jeder Historieneintrag (Rollover + manuell) bekommt einen Bearbeitungs-Timestamp</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.45 — April 2026</div>
         <div>· Datums-Bug behoben: beim Bearbeiten eines Historientags wurde durch UTC-Konvertierung ein Tag zu früh angezeigt</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.44 — April 2026</div>
         <div>· Tageswechsel-Bug behoben: Schritte werden jetzt korrekt in die Historie übernommen</div>
@@ -1813,7 +1817,8 @@ function performDayRollover() {
       balance: eaten - burned,
       steps: state.steps||0,
       log: [...(state.todayLog||[])],
-      activityLog: [...(state.activityLog||[])]
+      activityLog: [...(state.activityLog||[])],
+      updatedAt: Date.now()
     });
     if(state.history.length > 90) state.history.splice(90);
     state.todayLog = []; state.activityLog = []; state.steps = 0; state.sessionItems = [];
@@ -1993,7 +1998,7 @@ async function autoLoadFromCloud() {
       state.steps = cloud.steps; changed = true;
     }
 
-    // Historie: tagesweise mergen
+    // Historie: tagesweise mergen — neueste Version (updatedAt) gewinnt immer
     if(cloud.history && cloud.history.length > 0) {
       const today = getFitMoleDay();
       const localMap = {};
@@ -2006,16 +2011,15 @@ async function autoLoadFromCloud() {
         const local = localMap[date];
         const cloudDay = cloudMap[date];
         if(local && cloudDay) {
-          // Wenn Cloud noch den gestrigen todayLog hat (lastDate = gestern, noch nicht gerollt):
-          // Lokale Version gewinnt weil sie den korrekten Rollover bereits gemacht hat
+          // Wenn Cloud noch den gestrigen todayLog hat (noch nicht gerollt) → lokal gewinnt
           const cloudIsStale = cloud.lastDate && cloud.lastDate !== today && cloud.lastDate === date;
           if(cloudIsStale) {
             merged.push(local);
           } else {
-            // Normale Logik: Version mit mehr Einträgen gewinnt, bei Gleichstand lokal
-            const localEntries = (local.log||[]).length;
-            const cloudEntries = (cloudDay.log||[]).length;
-            merged.push(cloudEntries > localEntries ? cloudDay : local);
+            // Timestamp-Vergleich: neuere Version gewinnt
+            const localTs = local.updatedAt || 0;
+            const cloudTs = cloudDay.updatedAt || 0;
+            merged.push(cloudTs > localTs ? cloudDay : local);
           }
         } else {
           merged.push(local || cloudDay);
@@ -2025,7 +2029,7 @@ async function autoLoadFromCloud() {
       if(merged.length > 90) merged.splice(90);
       state.history = merged; changed = true;
 
-      // Sicherheitsnetz: falls der Rollover-Tag keine Schritte hat aber lokal welche hatte, wiederherstellen
+      // Sicherheitsnetz: falls Rollover-Tag Schritte verloren hat, wiederherstellen
       const rolledDate = cloud.lastDate;
       if(rolledDate && rolledDate !== today) {
         const rolledLocal = localMap[rolledDate];
@@ -2073,7 +2077,8 @@ function loadState() {
           balance: eaten - burned,
           steps: loaded.steps||0,
           log: loaded.todayLog||[],
-          activityLog: loaded.activityLog||[]
+          activityLog: loaded.activityLog||[],
+          updatedAt: Date.now()
         });
         if(loaded.history.length > 90) loaded.history = loaded.history.slice(0,90);
         loaded.todayLog = [];
@@ -4279,7 +4284,8 @@ function confirmManualDay() {
     steps,
     log: manualMeals.map(m => ({ name: m.name, kcal: m.kcal, detail: 'Manuell erfasst' })),
     activityLog: manualActs,
-    manual: true
+    manual: true,
+    updatedAt: Date.now()
   };
 
   // Bestehenden Tag ersetzen oder neu einfügen
