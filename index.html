@@ -689,7 +689,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.46 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.47 — April 2026</div>
+        <div>· Wochenchart: heutiger Tag wird nicht mehr angezeigt — nur abgeschlossene Tage</div>
+        <div>· Wochenchart: Schritte-Skala geht immer bis zum eingestellten Schrittziel</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.46 — April 2026</div>
         <div>· Historien-Merge: neueste Version gewinnt jetzt per Timestamp (updatedAt)</div>
         <div>· Bearbeitungen im Browser werden nicht mehr durch ältere App-Daten überschrieben</div>
         <div>· Jeder Historieneintrag (Rollover + manuell) bekommt einen Bearbeitungs-Timestamp</div>
@@ -4402,11 +4405,8 @@ function renderWeekChart() {
     const dateStr = d.toDateString();
     const label = i === 0 ? 'Heute' : d.toLocaleDateString('de-DE',{weekday:'short'});
     if(i === 0) {
-      const eaten = state.todayLog.reduce((s,item)=>s+item.kcal,0);
-      const stepsKcal = Math.round((state.steps||0)*0.04);
-      const actKcal = (state.activityLog||[]).reduce((s,a)=>s+a.kcal,0);
-      const burned = (state.settings.bmr||2000) + stepsKcal + actKcal;
-      days.push({ label, balance: eaten - burned, steps: state.steps||0 });
+      // Heute nicht anzeigen — nur abgeschlossene Tage
+      days.push({ label: 'Heute', balance: null, steps: null });
     } else {
       const h = state.history.find(x=>x.date===dateStr);
       days.push({ label, balance: h ? h.eaten - h.burned : null, steps: h ? (h.steps||0) : null });
@@ -4509,6 +4509,7 @@ function renderWeekChart() {
             position: 'right',
             grid: { display: false },
             min: 0,
+            max: stepGoal,
             ticks: {
               color: 'rgba(158,155,149,0.8)',
               font: { size:9 },
