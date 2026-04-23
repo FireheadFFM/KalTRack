@@ -232,6 +232,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
   </svg>
   <div style="font-family:'DM Sans',sans-serif;font-size:36px;font-weight:600;letter-spacing:-1px;margin-top:8px;">Fit<span style="color:#2563eb;">Mole</span></div>
   <div style="font-family:'DM Mono',monospace;font-size:11px;color:#9e9b95;margin-top:6px;" id="splash-version">v1.43</div>
+  <div style="font-family:'DM Sans',monospace;font-size:11px;color:#9e9b95;margin-top:8px;" id="splash-sync-status"></div>
 </div>
 
 <div class="app">
@@ -702,7 +703,16 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.49 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.50 — April 2026</div>
+        <div>· Performance: filterDb debounced (150ms) — kein DOM-Rebuild bei jedem Tastendruck</div>
+        <div>· Performance: addToSession speichert nur lokal, Sync erst beim Commit ins Tageslog</div>
+        <div>· Performance: Cloud-Upload ohne Default-DB (~250 Einträge) — deutlich kleinerer Payload</div>
+        <div>· Performance: Wochenchart aktualisiert nur Daten statt destroy+recreate</div>
+        <div>· Stabilität: Supabase-Requests haben jetzt 6s Timeout — App friert nicht mehr ein</div>
+        <div>· Stabilität: History-Logs älter als 30 Tage werden komprimiert (Summenwerte bleiben)</div>
+        <div>· Stabilität: Rollover-Logik in gemeinsamer Funktion archiveDayToHistory</div>
+        <div>· Stabilität: Sync-Status auch auf dem Startbildschirm sichtbar</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.49 — April 2026</div>
         <div>· Code-Review: 5 Bugs behoben</div>
         <div>· Fix: updateEditUnitLabel fehlte — kcal-Hinweis im Bearbeiten-Dialog funktioniert jetzt</div>
         <div>· Fix: doppelte renderDbPage-Definition entfernt</div>
@@ -1849,23 +1859,29 @@ function scheduleDayRollover() {
   }, ms);
 }
 
+// Gemeinsame Rollover-Logik — archiviert todayLog/steps/activityLog in Historie
+function archiveDayToHistory(data, settings) {
+  const stepsKcal = Math.round((data.steps||0) * 0.04);
+  const actKcal = (data.activityLog||[]).reduce((s,i)=>s+i.kcal, 0);
+  const eaten = (data.todayLog||[]).reduce((s,i)=>s+i.kcal, 0);
+  const burned = ((settings&&settings.bmr)||2000) + stepsKcal + actKcal;
+  const goal = (settings&&settings.goal) || (settings&&settings.bmr) || 2000;
+  return {
+    date: data.lastDate,
+    eaten, burned, goal,
+    balance: eaten - burned,
+    steps: data.steps||0,
+    log: Array.isArray(data.todayLog) ? [...data.todayLog] : [],
+    activityLog: Array.isArray(data.activityLog) ? [...data.activityLog] : [],
+    updatedAt: Date.now()
+  };
+}
+
 function performDayRollover() {
   const today = getFitMoleDay();
   if(state.lastDate && state.lastDate !== today) {
     if(!state.history) state.history = [];
-    const stepsKcal = Math.round((state.steps||0) * 0.04);
-    const actKcal = (state.activityLog||[]).reduce((s,i)=>s+i.kcal,0);
-    const eaten = (state.todayLog||[]).reduce((s,i)=>s+i.kcal,0);
-    const burned = (state.settings.bmr||2000) + stepsKcal + actKcal;
-    const goal = state.settings.goal || state.settings.bmr || 2000;
-    state.history.unshift({
-      date: state.lastDate, eaten, burned, goal,
-      balance: eaten - burned,
-      steps: state.steps||0,
-      log: [...(state.todayLog||[])],
-      activityLog: [...(state.activityLog||[])],
-      updatedAt: Date.now()
-    });
+    state.history.unshift(archiveDayToHistory(state, state.settings));
     if(state.history.length > 90) state.history.splice(90);
     state.todayLog = []; state.activityLog = []; state.steps = 0; state.sessionItems = [];
     saveStateAndSync();
@@ -1891,8 +1907,10 @@ async function manualHomeSync() {
 
 async function autoLoadFromCloud() {
   setSyncStatus('Verbinde mit Cloud…', 'var(--text3)');
+  const splashSync = document.getElementById('splash-sync-status');
+  if(splashSync) splashSync.textContent = 'Synchronisiere…';
   try {
-    const resp = await fetch(`${SB_URL}/rest/v1/userdata?id=eq.${SB_ROW_ID}&select=payload`, { headers: SB_HEADERS });
+    const resp = await sbFetch(`${SB_URL}/rest/v1/userdata?id=eq.${SB_ROW_ID}&select=payload`, { headers: SB_HEADERS });
     const rows = await resp.json();
     if(!rows || rows.length === 0 || !rows[0].payload) {
       setSyncStatus('', '');
@@ -1942,11 +1960,11 @@ async function autoLoadFromCloud() {
       if(settingsChanged) changed = true;
     }
 
-    // DB: zusammenführen per ID — beide Seiten behalten ihre Einträge
+    // DB: nur custom-Einträge aus Cloud mergen (Default-Einträge sind lokal bereits vorhanden)
     if(cloud.db && cloud.db.length > 0) {
       const localDeletedIds = new Set((state.deletedDbIds||[]).map(t=>t.id));
       const merged = [...(state.db||[])];
-      cloud.db.forEach(cd => {
+      cloud.db.filter(cd => isCustomEntry(cd)).forEach(cd => {
         if(!localDeletedIds.has(cd.id) && !merged.find(d => d.id === cd.id)) merged.push(cd);
       });
       if(merged.length !== (state.db||[]).length) {
@@ -2101,6 +2119,8 @@ async function autoLoadFromCloud() {
     }
     const now = new Date().toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
     setSyncStatus('✓ Cloud synchronisiert ' + now, 'var(--accent)');
+    const splashSync = document.getElementById('splash-sync-status');
+    if(splashSync) splashSync.textContent = '✓ Synchronisiert';
     setTimeout(() => setSyncStatus('', ''), 4000);
   } catch(e) {
     setSyncStatus('Offline — lokale Daten werden verwendet', 'var(--text3)');
@@ -2115,22 +2135,8 @@ function loadState() {
       const loaded = JSON.parse(s);
       const today = getFitMoleDay();
       if(loaded.lastDate && loaded.lastDate !== today) {
-        // Archive yesterday before resetting
         if(!loaded.history) loaded.history = [];
-        const stepsKcal = Math.round((loaded.steps||0) * 0.04);
-        const actKcal = (loaded.activityLog||[]).reduce((s,i)=>s+i.kcal,0);
-        const eaten = (loaded.todayLog||[]).reduce((s,i)=>s+i.kcal,0);
-        const burned = ((loaded.settings&&loaded.settings.bmr)||2000) + stepsKcal + actKcal;
-        const goal = (loaded.settings&&loaded.settings.goal) || (loaded.settings&&loaded.settings.bmr) || 2000;
-        loaded.history.unshift({
-          date: loaded.lastDate,
-          eaten, burned, goal,
-          balance: eaten - burned,
-          steps: loaded.steps||0,
-          log: loaded.todayLog||[],
-          activityLog: loaded.activityLog||[],
-          updatedAt: Date.now()
-        });
+        loaded.history.unshift(archiveDayToHistory(loaded, loaded.settings));
         if(loaded.history.length > 90) loaded.history = loaded.history.slice(0,90);
         loaded.todayLog = [];
         loaded.activityLog = [];
@@ -2178,6 +2184,15 @@ function loadState() {
 
 function saveState() {
   state.lastDate = getFitMoleDay();
+  // History-Logs älter als 30 Tage komprimieren (nur Summenwerte behalten)
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  (state.history||[]).forEach(day => {
+    if(new Date(day.date).getTime() < cutoff && day.log && day.log.length > 0) {
+      day.log = []; // Einzeleinträge entfernen, eaten/burned/balance bleiben
+      day.activityLog = [];
+      day.compressed = true;
+    }
+  });
   localStorage.setItem('fitmole_state', JSON.stringify(state));
 }
 
@@ -3305,7 +3320,7 @@ function logError(source, message, detail) {
     detail: detail || ''
   });
   // Max 30 Einträge
-  if(state.errorLog.length > 30) state.errorLog.splice(30);
+  if(state.errorLog.length > 20) state.errorLog.splice(20);
   saveState(); // kein Sync — Fehlerlog bleibt lokal
   // Badge aktualisieren
   const badge = document.getElementById('errorlog-badge');
@@ -3638,7 +3653,7 @@ function addToSession(item) {
   showPage('input');
   speak(`${item.name}, ${item.kcal} Kilokalorien`);
   toast(`${item.name}: ${item.kcal} kcal`);
-  saveStateAndSync();
+  saveState(); // nur lokal — sync beim Commit ins Tageslog
 }
 
 function finishSession() {
@@ -3880,7 +3895,12 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 let dbActiveCat = 'Alle';
-function filterDb(q) { dbFilter = q; renderDbPageFull(); }
+let filterDbTimer = null;
+function filterDb(q) {
+  dbFilter = q;
+  clearTimeout(filterDbTimer);
+  filterDbTimer = setTimeout(() => renderDbPageFull(), 150);
+}
 
 let dbCollapsed = {};
 function isCustomEntry(f) {
@@ -4498,8 +4518,17 @@ function renderWeekChart() {
   const colors = balances.map(v => v === null ? 'transparent' : v <= 0 ? '#2563eb' : '#993C1D');
   const displayBalances = balances.map(v => v === null ? 0 : v);
 
-  // Destroy old chart if exists
-  if(weekChartInstance) { weekChartInstance.destroy(); weekChartInstance = null; }
+  // Update chart data if already exists — avoid costly destroy+recreate
+  if(weekChartInstance) {
+    weekChartInstance.data.labels = days.map(d=>d.label);
+    weekChartInstance.data.datasets[0].data = displayBalances;
+    weekChartInstance.data.datasets[0].backgroundColor = colors;
+    weekChartInstance.data.datasets[1].data = stepsData.map(s => s === null ? null : s);
+    weekChartInstance.data.datasets[1].pointBackgroundColor = stepsData.map(s => s !== null && s >= stepGoal ? '#6b6760' : '#9e9b95');
+    weekChartInstance.options.scales.y2.max = stepGoal;
+    weekChartInstance.update('none'); // 'none' = no animation for instant update
+    return;
+  }
 
   // Load Chart.js if not already loaded
   function drawChart() {
@@ -4607,6 +4636,20 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const SB_HEADERS = { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY };
 const SB_ROW_ID = 1;
 
+// Fetch mit Timeout — verhindert dass die App bei Netzwerkproblemen einfriert
+async function sbFetch(url, options = {}, timeoutMs = 6000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timer);
+    return resp;
+  } catch(e) {
+    clearTimeout(timer);
+    throw e;
+  }
+}
+
 function setSyncStatus(msg, color) {
   const el = document.getElementById('sync-status');
   if(el) { el.textContent = msg; el.style.color = color || 'var(--text2)'; }
@@ -4615,19 +4658,24 @@ function setSyncStatus(msg, color) {
 async function syncToCloud() {
   setSyncStatus('Wird hochgeladen…', 'var(--accent)');
   try {
-    const payload = JSON.stringify(state);
+    // Nur custom DB-Einträge hochladen (nicht die ~250 Default-Einträge)
+    const cloudState = {
+      ...state,
+      db: (state.db||[]).filter(f => isCustomEntry(f))
+    };
+    const payload = JSON.stringify(cloudState);
     // Try update first, then insert if not exists
-    const check = await fetch(`${SB_URL}/rest/v1/userdata?id=eq.${SB_ROW_ID}`, { headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' } });
+    const check = await sbFetch(`${SB_URL}/rest/v1/userdata?id=eq.${SB_ROW_ID}`, { headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' } });
     const existing = await check.json();
     let resp;
     if(existing && existing.length > 0) {
-      resp = await fetch(`${SB_URL}/rest/v1/userdata?id=eq.${SB_ROW_ID}`, {
+      resp = await sbFetch(`${SB_URL}/rest/v1/userdata?id=eq.${SB_ROW_ID}`, {
         method: 'PATCH',
         headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
         body: JSON.stringify({ payload })
       });
     } else {
-      resp = await fetch(`${SB_URL}/rest/v1/userdata`, {
+      resp = await sbFetch(`${SB_URL}/rest/v1/userdata`, {
         method: 'POST',
         headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
         body: JSON.stringify({ id: SB_ROW_ID, payload })
@@ -4649,7 +4697,7 @@ async function syncToCloud() {
 async function syncFromCloud() {
   setSyncStatus('Wird heruntergeladen…', 'var(--accent)');
   try {
-    const resp = await fetch(`${SB_URL}/rest/v1/userdata?id=eq.${SB_ROW_ID}&select=payload`, { headers: SB_HEADERS });
+    const resp = await sbFetch(`${SB_URL}/rest/v1/userdata?id=eq.${SB_ROW_ID}&select=payload`, { headers: SB_HEADERS });
     const rows = await resp.json();
     if(!rows || rows.length === 0 || !rows[0].payload) {
       setSyncStatus('Keine Cloud-Daten gefunden', 'var(--warn)');
