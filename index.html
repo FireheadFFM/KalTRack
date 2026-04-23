@@ -702,7 +702,14 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.48 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.49 — April 2026</div>
+        <div>· Code-Review: 5 Bugs behoben</div>
+        <div>· Fix: updateEditUnitLabel fehlte — kcal-Hinweis im Bearbeiten-Dialog funktioniert jetzt</div>
+        <div>· Fix: doppelte renderDbPage-Definition entfernt</div>
+        <div>· Fix: Null-Guards auf todayLog/activityLog in renderHome</div>
+        <div>· Fix: Autocomplete/Fuzzy-Suche debounced (120ms) — flüssigeres Tippen</div>
+        <div>· Fix: Cloud-Sync rendert nur was nötig statt alles gleichzeitig</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.48 — April 2026</div>
         <div>· Schnellerfassung: Name + kcal manuell eingeben, direkt ins Tageslog — keine Suche</div>
         <div>· Enter in Bezeichnung springt zu kcal, Enter in kcal speichert direkt</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.47 — April 2026</div>
@@ -2083,9 +2090,14 @@ async function autoLoadFromCloud() {
 
     if(changed) {
       saveState();
-      renderAll();
+      // Nur aktive Seite neu rendern statt alles
+      renderHome();
+      renderSettings();
       renderActivityGrid();
       renderDbPageFull();
+      renderFavorites();
+      renderBacklogIdeas();
+      if(currentPage === 'history') renderHistory();
     }
     const now = new Date().toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
     setSyncStatus('✓ Cloud synchronisiert ' + now, 'var(--accent)');
@@ -2232,9 +2244,9 @@ function renderAll() {
 }
 
 function renderHome() {
-  const eaten = state.todayLog.reduce((s,i) => s+i.kcal, 0);
+  const eaten = (state.todayLog||[]).reduce((s,i) => s+i.kcal, 0);
   const stepsKcal = Math.round(state.steps * 0.04);
-  const actKcal = state.activityLog.reduce((s,i) => s+i.kcal, 0);
+  const actKcal = (state.activityLog||[]).reduce((s,i) => s+i.kcal, 0);
   const burned = (state.settings.bmr||2000) + stepsKcal + actKcal;
   const goal = state.settings.goal || state.settings.bmr || 2000;
   const balance = eaten - burned;
@@ -2416,12 +2428,6 @@ function renderActivityGrid() {
       <div class="activity-name">${a.icon||'⚡'} ${a.name}</div>
       <div class="activity-kcal">${a.kcalPerHour} kcal/h</div>
     </div>`).join('');
-}
-
-function renderDbPage() {
-  const page = document.getElementById('page-settings');
-  // DB is in input tab when mode=db; handled via page-input showing db card
-  // Actually render a searchable list on page-home when mode=db, but simpler: add a db section to settings
 }
 
 // ─── SPEECH ───────────────────────────────────────────────────────────────────
@@ -2982,16 +2988,19 @@ function autocompleteSearchFurther() {
 
 // Autocomplete für Eingabe-Seite
 let manualAcSuggestions = [];
+let manualAcTimer = null;
 function onManualInput(val) {
-  const q = val.trim();
-  currentAutocompleteQuery = q;
-  if(q.length < 2) { closeAutocomplete('manual-autocomplete'); return; }
-  // Menge aus dem Query extrahieren und nur den Lebensmittelanteil suchen
-  const clean = q.replace(/^\d+\s*(g|gramm|kg|ml|cl|dl|l|stück|stuck)?\s*/i, '').trim();
-  manualAcSuggestions = getAutocompleteSuggestions(clean || q, 6);
-  renderAutocomplete('manual-input', 'manual-autocomplete', manualAcSuggestions, (i) => {
-    selectManualAcItem(i);
-  }, true); // showSearchFurther: immer anzeigen auf Eingabe-Seite
+  clearTimeout(manualAcTimer);
+  manualAcTimer = setTimeout(() => {
+    const q = val.trim();
+    currentAutocompleteQuery = q;
+    if(q.length < 2) { closeAutocomplete('manual-autocomplete'); return; }
+    const clean = q.replace(/^\d+\s*(g|gramm|kg|ml|cl|dl|l|stück|stuck)?\s*/i, '').trim();
+    manualAcSuggestions = getAutocompleteSuggestions(clean || q, 6);
+    renderAutocomplete('manual-input', 'manual-autocomplete', manualAcSuggestions, (i) => {
+      selectManualAcItem(i);
+    }, true);
+  }, 120);
 }
 
 function selectManualAcItem(i) {
@@ -3015,13 +3024,17 @@ function selectManualAcItem(i) {
 
 // Autocomplete für DB-Suche
 let dbAcSuggestions = [];
+let dbAcTimer = null;
 function onDbSearchInput(val) {
-  const q = val.trim();
-  if(q.length < 2) { closeAutocomplete('db-autocomplete'); return; }
-  dbAcSuggestions = getAutocompleteSuggestions(q, 6);
-  renderAutocomplete('db-search', 'db-autocomplete', dbAcSuggestions, (i) => {
-    selectDbAcItem(i);
-  });
+  clearTimeout(dbAcTimer);
+  dbAcTimer = setTimeout(() => {
+    const q = val.trim();
+    if(q.length < 2) { closeAutocomplete('db-autocomplete'); return; }
+    dbAcSuggestions = getAutocompleteSuggestions(q, 6);
+    renderAutocomplete('db-search', 'db-autocomplete', dbAcSuggestions, (i) => {
+      selectDbAcItem(i);
+    });
+  }, 120);
 }
 
 function selectDbAcItem(i) {
@@ -4118,6 +4131,25 @@ function toggleNewCatInput(val) {
   const el = document.getElementById('db-add-newcat');
   el.style.display = val === '__new' ? 'block' : 'none';
   if(val === '__new') el.focus();
+}
+
+function updateEditUnitLabel() {
+  const kcal = parseFloat(document.getElementById('db-edit-kcal').value);
+  const mode = document.getElementById('db-edit-kcal-mode').value;
+  const unit = document.getElementById('db-edit-unit').value;
+  const grams = parseFloat(document.getElementById('db-edit-grams').value);
+  const hint = document.getElementById('db-edit-hint');
+  if(!hint) return;
+  if(!kcal) { hint.textContent = ''; return; }
+  if(mode === 'total' && grams > 0) {
+    hint.textContent = `→ wird gespeichert als ${Math.round((kcal/grams)*100)} kcal/100g`;
+  } else if(mode === 'total' && (unit==='Stück'||unit==='Scheibe'||unit==='Portion') && !grams) {
+    hint.textContent = `→ wird gespeichert als ${kcal} kcal/${unit}`;
+  } else if(mode === 'per100') {
+    hint.textContent = `→ ${kcal} kcal pro 100g/ml`;
+  } else {
+    hint.textContent = '';
+  }
 }
 
 function updateAddHint() {
