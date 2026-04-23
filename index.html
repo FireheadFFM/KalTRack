@@ -231,7 +231,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
     <ellipse cx="67" cy="108" rx="7" ry="4" fill="#e8b89a"/>
   </svg>
   <div style="font-family:'DM Sans',sans-serif;font-size:36px;font-weight:600;letter-spacing:-1px;margin-top:8px;">Fit<span style="color:#2563eb;">Mole</span></div>
-  <div style="font-family:'DM Mono',monospace;font-size:11px;color:#9e9b95;margin-top:6px;" id="splash-version">v1.43</div>
+  <div style="font-family:'DM Mono',monospace;font-size:11px;color:#9e9b95;margin-top:6px;" id="splash-version">v1.51</div>
   <div style="font-family:'DM Sans',monospace;font-size:11px;color:#9e9b95;margin-top:8px;" id="splash-sync-status"></div>
 </div>
 
@@ -703,7 +703,12 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.50 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.51 — April 2026</div>
+        <div>· Fix: Splash-Versionsnummer war noch v1.43 — jetzt korrekt v1.51</div>
+        <div>· Fix: scheduleDayRollover nutzt jetzt rekursives setTimeout statt driftendem setInterval</div>
+        <div>· Fix: alle externen API-Fetches (OFF, Nutritionix, Gemini, Claude) haben jetzt 10s Timeout</div>
+        <div>· Backlog: Service Worker / Offline-Fähigkeit als priorisierter Eintrag hinzugefügt</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.50 — April 2026</div>
         <div>· Performance: filterDb debounced (150ms) — kein DOM-Rebuild bei jedem Tastendruck</div>
         <div>· Performance: addToSession speichert nur lokal, Sync erst beim Commit ins Tageslog</div>
         <div>· Performance: Cloud-Upload ohne Default-DB (~250 Einträge) — deutlich kleinerer Payload</div>
@@ -1853,9 +1858,11 @@ function scheduleDayRollover() {
   next2am.setHours(2, 0, 0, 500);
   if(now.getHours() >= 2) next2am.setDate(next2am.getDate() + 1);
   const ms = next2am - now;
+  // Einmalig um 02:00 Uhr triggern — beim nächsten App-Öffnen übernimmt loadState den Rest
   setTimeout(() => {
     performDayRollover();
-    setInterval(performDayRollover, 24 * 60 * 60 * 1000);
+    // Erneut schedulieren für den übernächsten Tag (falls App die ganze Nacht offen bleibt)
+    scheduleDayRollover();
   }, ms);
 }
 
@@ -2156,6 +2163,12 @@ function loadState() {
   if(!state.deletedFavNames) state.deletedFavNames = [];
   if(!state.backlogIdeas) state.backlogIdeas = [];
   if(!state.errorLog) state.errorLog = [];
+
+  // Service Worker Backlog-Eintrag sicherstellen
+  const swEntry = 'Service Worker: Offline-Fähigkeit & App-Caching (PWA vollständig)';
+  if(!state.backlogIdeas.find(i => i.text === swEntry)) {
+    state.backlogIdeas.unshift({ id: 'bi-sw', text: swEntry, star: true, ts: Date.now() });
+  }
 
   // Migration: neue Default-Einträge ergänzen wenn noch nicht vorhanden
   const defaultIds = new Set(FOOD_DB_DEFAULT.map(f => f.id));
@@ -2619,6 +2632,21 @@ async function processInput(text) {
 }
 
 // ─── OPEN FOOD FACTS ──────────────────────────────────────────────────────────
+
+// Fetch mit Timeout für externe APIs (10s)
+async function apiFetch(url, options = {}, timeoutMs = 10000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timer);
+    return resp;
+  } catch(e) {
+    clearTimeout(timer);
+    throw e;
+  }
+}
+
 async function searchOpenFoodFacts(text) {
   try {
     // Menge aus Text extrahieren
@@ -2646,7 +2674,7 @@ async function searchOpenFoodFacts(text) {
     if(query.length < 2) return null;
 
     const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=5&lc=de&cc=de`;
-    const resp = await fetch(url);
+    const resp = await apiFetch(url);
     const data = await resp.json();
     if(!data.products || data.products.length === 0) return null;
 
@@ -2705,7 +2733,7 @@ async function searchOpenFoodFacts(text) {
 // ─── NUTRITIONIX ──────────────────────────────────────────────────────────────
 async function searchNutritionix(text) {
   try {
-    const resp = await fetch('https://trackapi.nutritionix.com/v2/natural/nutrients', {
+    const resp = await apiFetch('https://trackapi.nutritionix.com/v2/natural/nutrients', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -3386,7 +3414,7 @@ Antworte NUR mit diesem JSON (kein anderer Text, keine Markdown-Blöcke):
 }`;
 
   try {
-    const resp = await fetch(
+    const resp = await apiFetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
@@ -3484,7 +3512,7 @@ Regeln:
 - Artikel erkennen: "einen/eine/ein" = 1 Stück, "zwei" = 2, "halb" = 0.5`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await apiFetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
