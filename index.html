@@ -555,18 +555,21 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
           <div class="stat-label">kcal</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">⚖ Gewicht diese Woche</div>
+          <div class="stat-label">⚖ Gewicht (7 Tage)</div>
           <div class="stat-value" id="week-weight" style="font-size:18px;">—</div>
           <div class="stat-label" id="week-weight-label">kg</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">⚖ Gewicht seit Start</div>
+          <div class="stat-label">⚖ Gewicht gesamt</div>
           <div class="stat-value" id="total-weight" style="font-size:18px;">—</div>
           <div class="stat-label" id="total-weight-label">kg</div>
         </div>
       </div>
-      <div style="font-size:10px;color:var(--text3);margin-top:6px;text-align:center;">Berechnet aus Kaloriendefizit · 7700 kcal ≈ 1 kg · Woche beginnt Mo</div>
     </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 2px 6px;">
+      <div class="section-title" style="margin:0;">Kalenderwochen</div>
+    </div>
+    <div id="history-weeks"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 2px 6px;">
       <div class="section-title" style="margin:0;">Tageseinträge</div>
       <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px;" onclick="openManualDay()">+ Tag nacherfassen</button>
@@ -849,7 +852,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.64 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.65 — April 2026</div>
+        <div>· Kalenderwochen-Übersicht in der Historie: jede abgeschlossene KW mit Bilanz, Ø/Tag, Aufnahme, Schritte und berechnetem Gewichtsverlust</div>
+        <div>· Wochen nach ISO-Standard (Mo–So), neueste zuerst</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.64 — April 2026</div>
         <div>· Wochenübersicht: berechneter Gewichtsverlust für laufende Woche (Mo–So) und seit App-Start</div>
         <div>· Berechnung: kumuliertes Kaloriendefizit ÷ 7700 kcal/kg</div>
         <div>· Woche beginnt immer montags</div>
@@ -5024,8 +5030,111 @@ function confirmManualDay() {
   toast(`${dateObj.toLocaleDateString('de-DE')} gespeichert`);
 }
 
+function getISOWeek(date) {
+  // ISO Wochennummer (Mo=1. Tag) + Jahr
+  const d = new Date(date);
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + 4 - (d.getDay()||7)); // Donnerstag der Woche
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return { week, year: d.getFullYear() };
+}
+
+function getWeekLabel(date) {
+  // "Mo 21.04. – So 27.04."
+  const d = new Date(date);
+  const dow = d.getDay() || 7; // Mo=1
+  const mon = new Date(d); mon.setDate(d.getDate() - dow + 1);
+  const sun = new Date(d); sun.setDate(d.getDate() - dow + 7);
+  const fmt = (x) => x.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'});
+  return `${fmt(mon)}–${fmt(sun)}`;
+}
+
+function renderWeekHistory() {
+  const container = document.getElementById('history-weeks');
+  if(!container) return;
+  if(!state.history || state.history.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  // Gruppiere Historientage nach ISO-Kalenderwoche
+  const weekMap = {};
+  state.history.forEach(day => {
+    const d = new Date(day.date);
+    const { week, year } = getISOWeek(d);
+    const key = `${year}-W${String(week).padStart(2,'0')}`;
+    if(!weekMap[key]) weekMap[key] = { key, week, year, days: [], label: getWeekLabel(d) };
+    weekMap[key].days.push(day);
+  });
+
+  // Nur abgeschlossene Wochen (nicht die laufende)
+  const now = new Date();
+  const { week: currentWeek, year: currentYear } = getISOWeek(now);
+  const currentKey = `${currentYear}-W${String(currentWeek).padStart(2,'0')}`;
+
+  const completedWeeks = Object.values(weekMap)
+    .filter(w => w.key !== currentKey)
+    .sort((a,b) => b.key.localeCompare(a.key)); // neueste zuerst
+
+  if(completedWeeks.length === 0) {
+    container.innerHTML = '<div class="card"><div class="empty-state">Noch keine abgeschlossenen Kalenderwochen</div></div>';
+    return;
+  }
+
+  container.innerHTML = completedWeeks.map(w => {
+    const totalBalance = w.days.reduce((s,d) => s + (d.eaten - d.burned), 0);
+    const avg = Math.round(totalBalance / w.days.length);
+    const kg = totalBalance / 7700;
+    const kgSign = kg > 0 ? '+' : '';
+    const balSign = totalBalance > 0 ? '+' : '';
+    const balColor = totalBalance > 0 ? 'var(--danger)' : 'var(--accent)';
+    const kgColor  = kg > 0 ? 'var(--danger)' : 'var(--accent)';
+    const totalEaten  = w.days.reduce((s,d) => s + d.eaten, 0);
+    const totalSteps  = w.days.reduce((s,d) => s + (d.steps||0), 0);
+    const avgSteps    = Math.round(totalSteps / w.days.length);
+
+    return `
+    <div class="card" style="margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);">KW ${w.week} · ${w.label}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:1px;">${w.days.length} Tag${w.days.length!==1?'e':''} erfasst</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:18px;font-weight:600;font-family:'DM Mono';color:${kgColor};">${kgSign}${kg.toFixed(2)} kg</div>
+          <div style="font-size:10px;color:var(--text3);">berechneter Verlust</div>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Gesamtbilanz</div>
+          <div class="stat-value" style="font-size:16px;color:${balColor};">${balSign}${totalBalance}</div>
+          <div class="stat-label">kcal</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Ø Bilanz / Tag</div>
+          <div class="stat-value" style="font-size:16px;color:${avg>0?'var(--danger)':'var(--accent)'};">${avg>0?'+':''}${avg}</div>
+          <div class="stat-label">kcal</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Aufgenommen</div>
+          <div class="stat-value" style="font-size:16px;">${totalEaten}</div>
+          <div class="stat-label">kcal gesamt</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Ø Schritte / Tag</div>
+          <div class="stat-value" style="font-size:16px;">${avgSteps.toLocaleString('de-DE')}</div>
+          <div class="stat-label">Schritte</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function renderHistory() {
   renderWeekChart();
+  renderWeekHistory();
   const container = document.getElementById('history-days');
   if(!state.history || state.history.length === 0) {
     container.innerHTML = '<div class="card"><div class="empty-state">Noch keine historischen Daten.<br>Ab morgen wird jeder Tag hier archiviert.</div></div>';
@@ -5136,19 +5245,9 @@ function renderWeekChart() {
     if(totEl) { totEl.textContent = (total>0?'+':'')+Math.round(total); totEl.style.color = total>0?'#993C1D':'#2563eb'; }
   }
 
-  // Gewichtsverlust berechnen
-  // Diese Woche (Mo–So, abgeschlossene Tage)
-  const now = new Date();
-  const dow = now.getDay(); // 0=So, 1=Mo...
-  const daysSinceMon = (dow === 0) ? 6 : dow - 1; // Tage seit letztem Montag
-  let weekDeficit = 0;
-  let weekDays = 0;
-  for(let i = daysSinceMon; i >= 1; i--) { // heute (i=0) ausschließen
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    const h = state.history.find(x => x.date === d.toDateString());
-    if(h) { weekDeficit += h.eaten - h.burned; weekDays++; }
-  }
+  // Gewichtsverlust — basierend auf denselben rollierenden 6 Tagen wie der Chart
+  const weekDeficit = withData.reduce((s,d) => s + d.balance, 0);
+  const weekDays = withData.length;
   // Seit App-Start (alle Historie-Einträge)
   const totalDeficit = (state.history||[]).reduce((s, h) => s + (h.eaten - h.burned), 0);
 
@@ -5158,9 +5257,10 @@ function renderWeekChart() {
   const totalLabelEl  = document.getElementById('total-weight-label');
 
   function formatWeight(deficit) {
-    const kg = -(deficit / 7700); // negatives Defizit = Gewichtsverlust
+    // deficit = eaten - burned: negativ = Defizit = Gewichtsverlust (gut)
+    const kg = deficit / 7700;
     const sign = kg > 0 ? '+' : '';
-    return { val: sign + kg.toFixed(2), color: kg < 0 ? '#2563eb' : '#993C1D' };
+    return { val: sign + kg.toFixed(2), color: kg <= 0 ? '#2563eb' : '#993C1D' };
   }
 
   if(weekWeightEl) {
