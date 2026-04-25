@@ -181,10 +181,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
   70%  { opacity:1; transform: scale(1) translateY(-2px); }
   100% { opacity:0; transform: scale(0.8) translateY(0px); }
 }
-/* Animation auf dem SVG-Container (HTML-Element, nicht SVG g) */
-#mole-svg.mole-animate-happy { animation: mole-happy 0.8s ease-in-out 2; transform-origin: bottom center; }
-#mole-svg.mole-animate-sad   { animation: mole-sad 0.9s ease-in-out 2; transform-origin: center center; }
-.mole-stars-animate { animation: mole-stars-pop 1.4s ease-out forwards; }
+/* Splash-Maulwurf Animation */
+#splash-mole.mole-animate-happy { animation: mole-happy 0.8s ease-in-out 2; transform-origin: bottom center; }
+#splash-mole.mole-animate-sad   { animation: mole-sad 0.9s ease-in-out 2; transform-origin: center center; }
+#splash-stars.mole-stars-animate { animation: mole-stars-pop 1.4s ease-out forwards; }
 
 .section-title { font-size: 13px; font-weight: 600; color: var(--text2); margin: 14px 0 6px; padding: 0 2px; }
 
@@ -203,63 +203,68 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
 </head>
 <body>
 <div id="splash-screen" style="display:none;position:fixed;inset:0;background:#f5f3ef;z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:0;">
-  <svg width="240" height="200" viewBox="-20 0 140 115" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <!-- Körper -->
-    <ellipse cx="50" cy="72" rx="30" ry="34" fill="#222"/>
-    <ellipse cx="50" cy="76" rx="19" ry="24" fill="#aaa"/>
-    <!-- Kopf -->
-    <circle cx="50" cy="38" r="27" fill="#222"/>
-    <ellipse cx="50" cy="41" rx="19" ry="21" fill="#b8b8b8"/>
-    <!-- Schweißband -->
-    <path d="M24,24 Q50,12 76,24" stroke="#e63030" stroke-width="7" fill="none" stroke-linecap="round"/>
-    <path d="M24,24 Q50,12 76,24" stroke="#ff9999" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
-    <!-- Schweißtropfen -->
-    <ellipse cx="72" cy="29" rx="2.5" ry="4" fill="#60a5fa" opacity="0.9"/>
-    <ellipse cx="77" cy="35" rx="1.8" ry="2.8" fill="#60a5fa" opacity="0.6"/>
-    <!-- Augen -->
-    <circle cx="41" cy="36" r="7" fill="white"/>
-    <circle cx="43" cy="36" r="3.2" fill="#111"/>
-    <circle cx="44" cy="34" r="1.3" fill="white"/>
-    <circle cx="59" cy="36" r="7" fill="white"/>
-    <circle cx="61" cy="36" r="3.2" fill="#111"/>
-    <circle cx="62" cy="34" r="1.3" fill="white"/>
-    <!-- V-Brauen -->
-    <path d="M34,29 Q41,25 47,27" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <path d="M53,27 Q59,25 66,29" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <!-- Nase -->
-    <circle cx="50" cy="48" r="6" fill="#e63030"/>
-    <!-- Lächeln -->
-    <path d="M43,56 Q50,62 57,56" stroke="#555" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-    <!-- Linker Arm + Hantel -->
-    <path d="M24,60 Q10,52 8,44" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
-    <!-- Stange durch Handmitte (cy=44) -->
-    <rect x="-10" y="41" width="36" height="6" rx="3" fill="#2563eb"/>
-    <!-- Linkes Gewicht -->
-    <rect x="-14" y="34" width="8" height="20" rx="4" fill="#2563eb"/>
-    <!-- Rechtes Gewicht -->
-    <rect x="20" y="34" width="8" height="20" rx="4" fill="#2563eb"/>
-    <!-- Hand -->
-    <circle cx="8" cy="44" r="7" fill="#e8b89a"/>
-    <!-- Rechter Arm + Hantel -->
-    <path d="M76,60 Q90,52 92,44" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
-    <!-- Stange durch Handmitte (cy=44) -->
-    <rect x="74" y="41" width="36" height="6" rx="3" fill="#2563eb"/>
-    <!-- Linkes Gewicht -->
-    <rect x="70" y="34" width="8" height="20" rx="4" fill="#2563eb"/>
-    <!-- Rechtes Gewicht -->
-    <rect x="104" y="34" width="8" height="20" rx="4" fill="#2563eb"/>
-    <!-- Hand -->
-    <circle cx="92" cy="44" r="7" fill="#e8b89a"/>
-    <!-- Beine -->
-    <ellipse cx="38" cy="103" rx="10" ry="7" fill="#222"/>
-    <ellipse cx="62" cy="103" rx="10" ry="7" fill="#222"/>
-    <ellipse cx="33" cy="108" rx="7" ry="4" fill="#e8b89a"/>
-    <ellipse cx="43" cy="109" rx="7" ry="4" fill="#e8b89a"/>
-    <ellipse cx="57" cy="109" rx="7" ry="4" fill="#e8b89a"/>
-    <ellipse cx="67" cy="108" rx="7" ry="4" fill="#e8b89a"/>
-  </svg>
+  <div style="position:relative;">
+    <svg id="splash-mole" width="240" height="200" viewBox="-20 0 140 115" fill="none" xmlns="http://www.w3.org/2000/svg" style="overflow:visible;">
+      <!-- Körper -->
+      <ellipse cx="50" cy="72" rx="30" ry="34" fill="#222"/>
+      <ellipse cx="50" cy="76" rx="19" ry="24" fill="#aaa"/>
+      <!-- Kopf -->
+      <circle cx="50" cy="38" r="27" fill="#222"/>
+      <ellipse cx="50" cy="41" rx="19" ry="21" fill="#b8b8b8"/>
+      <!-- Schweißband -->
+      <path d="M24,24 Q50,12 76,24" stroke="#e63030" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <path d="M24,24 Q50,12 76,24" stroke="#ff9999" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
+      <!-- Schweißtropfen -->
+      <ellipse cx="72" cy="29" rx="2.5" ry="4" fill="#60a5fa" opacity="0.9"/>
+      <ellipse cx="77" cy="35" rx="1.8" ry="2.8" fill="#60a5fa" opacity="0.6"/>
+      <!-- Augen -->
+      <circle cx="41" cy="36" r="7" fill="white"/>
+      <circle cx="43" cy="36" r="3.2" fill="#111"/>
+      <circle cx="44" cy="34" r="1.3" fill="white"/>
+      <circle cx="59" cy="36" r="7" fill="white"/>
+      <circle cx="61" cy="36" r="3.2" fill="#111"/>
+      <circle cx="62" cy="34" r="1.3" fill="white"/>
+      <!-- Brauen (austauschbar) -->
+      <g id="splash-brows">
+        <path d="M34,29 Q41,25 47,27" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path d="M53,27 Q59,25 66,29" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+      </g>
+      <!-- Nase -->
+      <circle cx="50" cy="48" r="6" fill="#e63030"/>
+      <!-- Mund (austauschbar) -->
+      <g id="splash-mouth">
+        <path d="M43,56 Q50,62 57,56" stroke="#555" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      </g>
+      <!-- Arme (austauschbar) -->
+      <g id="splash-arms">
+        <path d="M24,60 Q10,52 8,44" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
+        <rect x="-10" y="41" width="36" height="6" rx="3" fill="#2563eb"/>
+        <rect x="-14" y="34" width="8" height="20" rx="4" fill="#2563eb"/>
+        <rect x="20" y="34" width="8" height="20" rx="4" fill="#2563eb"/>
+        <circle cx="8" cy="44" r="7" fill="#e8b89a"/>
+        <path d="M76,60 Q90,52 92,44" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
+        <rect x="74" y="41" width="36" height="6" rx="3" fill="#2563eb"/>
+        <rect x="70" y="34" width="8" height="20" rx="4" fill="#2563eb"/>
+        <rect x="104" y="34" width="8" height="20" rx="4" fill="#2563eb"/>
+        <circle cx="92" cy="44" r="7" fill="#e8b89a"/>
+      </g>
+      <!-- Beine -->
+      <ellipse cx="38" cy="103" rx="10" ry="7" fill="#222"/>
+      <ellipse cx="62" cy="103" rx="10" ry="7" fill="#222"/>
+      <ellipse cx="33" cy="108" rx="7" ry="4" fill="#e8b89a"/>
+      <ellipse cx="43" cy="109" rx="7" ry="4" fill="#e8b89a"/>
+      <ellipse cx="57" cy="109" rx="7" ry="4" fill="#e8b89a"/>
+      <ellipse cx="67" cy="108" rx="7" ry="4" fill="#e8b89a"/>
+      <!-- Sternchen (nur bei Freude) -->
+      <g id="splash-stars" opacity="0">
+        <text x="98" y="10" font-size="14" fill="#f59e0b">★</text>
+        <text x="78" y="2" font-size="11" fill="#f59e0b">✦</text>
+        <text x="110" y="24" font-size="10" fill="#fbbf24">✦</text>
+      </g>
+    </svg>
+  </div>
   <div style="font-family:'DM Sans',sans-serif;font-size:36px;font-weight:600;letter-spacing:-1px;margin-top:8px;">Fit<span style="color:#2563eb;">Mole</span></div>
-  <div style="font-family:'DM Mono',monospace;font-size:11px;color:#9e9b95;margin-top:6px;" id="splash-version">v1.51</div>
+  <div style="font-family:'DM Mono',monospace;font-size:11px;color:#9e9b95;margin-top:6px;" id="splash-version">v1.56</div>
   <div style="font-family:'DM Sans',monospace;font-size:11px;color:#9e9b95;margin-top:8px;" id="splash-sync-status"></div>
 </div>
 
@@ -748,7 +753,13 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.55 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.57 — April 2026</div>
+        <div>· Animation auf dem Startbildschirm: Maulwurf freut sich oder ist traurig je nach Vortags-Bilanz</div>
+        <div>· Logik korrigiert: freudig wenn aufgenommen ≤ Kalorienziel, traurig wenn überschritten</div>
+        <div>· Startbildschirm bleibt 2.5s sichtbar damit Animation vollständig abläuft</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.56 — April 2026</div>
+        <div>· Fix: Maulwurf-Animation funktioniert jetzt zuverlässig (CSS transform-origin auf SVG-Element, Reflow erzwungen)</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.55 — April 2026</div>
         <div>· Kalorienziel getrennt für Mo–Do und Fr–So einstellbar (⚙ → Mein Profil)</div>
         <div>· Tagesbilanz, Übersicht und Maulwurf-Reaktion berücksichtigen automatisch den Wochentag</div>
         <div>· Migration: bestehendes einheitliches Ziel wird automatisch für beide Zeiträume übernommen</div>
@@ -1793,7 +1804,7 @@ function updateMoleMood() {
   const yesterday = (state.history||[])[0];
   if(!yesterday) return; // Noch kein Vortag — neutrale Pose
 
-  const happy = yesterday.balance <= 0; // Defizit = gut
+  const happy = yesterday.eaten <= yesterday.goal; // Ziel eingehalten = freudig
 
   // Animationsklassen zurücksetzen + Reflow erzwingen
   svg.classList.remove('mole-animate-happy', 'mole-animate-sad');
@@ -1855,11 +1866,63 @@ function showSplash() {
       if(match) vEl.textContent = match[0];
     }
   }
+  // Maulwurf-Stimmung: eaten <= goal → freudig, eaten > goal → traurig
+  const yesterday = (state.history||[])[0];
+  if(yesterday) {
+    const happy = yesterday.eaten <= yesterday.goal;
+    _animateSplashMole(happy);
+  }
+  // Etwas länger anzeigen damit Animation sichtbar ist
   setTimeout(() => {
     splash.style.transition = 'opacity 0.4s ease';
     splash.style.opacity = '0';
     setTimeout(() => { splash.style.display = 'none'; splash.style.opacity = '1'; splash.style.transition = ''; }, 400);
-  }, 2000);
+  }, 2500);
+}
+
+function _animateSplashMole(happy) {
+  const svg   = document.getElementById('splash-mole');
+  const stars = document.getElementById('splash-stars');
+  const mouth = document.getElementById('splash-mouth');
+  const brows = document.getElementById('splash-brows');
+  const arms  = document.getElementById('splash-arms');
+  if(!svg) return;
+  if(happy) {
+    if(mouth) mouth.innerHTML = `<path d="M40,55 Q50,66 60,55" stroke="#333" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
+    if(brows) brows.innerHTML = `
+      <path d="M34,27 Q41,22 47,25" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M53,25 Q59,22 66,27" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+    if(arms) arms.innerHTML = `
+      <path d="M26,58 Q16,40 14,28" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <rect x="2" y="20" width="28" height="6" rx="3" fill="#2563eb"/>
+      <rect x="-2" y="13" width="8" height="18" rx="4" fill="#2563eb"/>
+      <rect x="22" y="13" width="8" height="18" rx="4" fill="#2563eb"/>
+      <circle cx="14" cy="28" r="7" fill="#e8b89a"/>
+      <path d="M74,58 Q84,40 86,28" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <rect x="70" y="20" width="28" height="6" rx="3" fill="#2563eb"/>
+      <rect x="70" y="13" width="8" height="18" rx="4" fill="#2563eb"/>
+      <rect x="92" y="13" width="8" height="18" rx="4" fill="#2563eb"/>
+      <circle cx="86" cy="28" r="7" fill="#e8b89a"/>`;
+    setTimeout(() => {
+      void svg.offsetWidth;
+      svg.classList.add('mole-animate-happy');
+      if(stars) stars.classList.add('mole-stars-animate');
+    }, 300);
+  } else {
+    if(mouth) mouth.innerHTML = `<path d="M41,61 Q50,54 59,61" stroke="#333" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
+    if(brows) brows.innerHTML = `
+      <path d="M34,26 Q41,31 47,28" stroke="#333" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M53,28 Q59,31 66,26" stroke="#333" stroke-width="2.5" fill="none" stroke-linecap="round"/>`;
+    if(arms) arms.innerHTML = `
+      <path d="M26,60 Q30,50 36,40" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <circle cx="36" cy="40" r="8" fill="#e8b89a"/>
+      <path d="M74,60 Q70,50 64,40" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <circle cx="64" cy="40" r="8" fill="#e8b89a"/>`;
+    setTimeout(() => {
+      void svg.offsetWidth;
+      svg.classList.add('mole-animate-sad');
+    }, 300);
+  }
 }
 
 function toggleSplash() {
