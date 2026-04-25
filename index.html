@@ -417,7 +417,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span id="fav-arrow" style="font-size:12px;color:var(--text3);cursor:pointer;" onclick="toggleFavorites()">▾ alle</span>
       </div>
       <!-- Schnellauswahl-Chips: Top 5 direkt sichtbar -->
-      <div id="fav-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;"></div>
+      <div id="fav-chips" style="width:100%;margin-bottom:4px;"></div>
       <!-- Ausgeklappte vollständige Liste -->
       <div id="fav-list" style="display:none;margin-top:10px;">
         <div id="fav-items"></div>
@@ -703,7 +703,15 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.51 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.53 — April 2026</div>
+        <div>· Fix: Reminder-Banner erschien nochmal nach App-Neustart obwohl Schritte bereits eingetragen</div>
+        <div>· Fix: dismissReminder setzt jetzt localStorage-Key — Banner kommt heute nicht mehr wieder</div>
+        <div>· Fix: nach Cloud-Sync wird Banner automatisch ausgeblendet wenn Schritte jetzt vorhanden</div>
+        <div>· Fix: yesterdayHasActivity berücksichtigt jetzt FitMole-Tageslogik (vor 02:00 Uhr)</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.52 — April 2026</div>
+        <div>· Favoriten-Chips: 3-Spalten-Grid statt variabler Breite — zeigt jetzt 6 statt 5 Favoriten</div>
+        <div>· Favoriten-Chips: nutzen jetzt die volle Kartenbreite gleichmäßig aus</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.51 — April 2026</div>
         <div>· Fix: Splash-Versionsnummer war noch v1.43 — jetzt korrekt v1.51</div>
         <div>· Fix: scheduleDayRollover nutzt jetzt rekursives setTimeout statt driftendem setInterval</div>
         <div>· Fix: alle externen API-Fetches (OFF, Nutritionix, Gemini, Claude) haben jetzt 10s Timeout</div>
@@ -1660,8 +1668,15 @@ function todayHasActivity() {
 }
 
 function yesterdayHasActivity() {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
+  // FitMole-Tag: vor 02:00 Uhr gilt der Vortag noch als "heute"
+  const now = new Date();
+  const yesterday = new Date(now);
+  if(now.getHours() < 2) {
+    // Vor 02:00: "gestern" ist vorvorgestern kalendarisch
+    yesterday.setDate(yesterday.getDate() - 2);
+  } else {
+    yesterday.setDate(yesterday.getDate() - 1);
+  }
   const yStr = yesterday.toDateString();
   const yDay = (state.history||[]).find(d => d.date === yStr);
   if(!yDay) return false;
@@ -1806,6 +1821,10 @@ function reminderBannerAction() {
 function dismissReminder() {
   const banner = document.getElementById('reminder-banner');
   if(banner) banner.style.display = 'none';
+  // localStorage-Key setzen damit Banner heute nicht nochmal erscheint
+  const today = getFitMoleDay();
+  localStorage.setItem('fitmole_banner_evening_' + today, '1');
+  localStorage.setItem('fitmole_banner_morning_' + today, '1');
 }
 
 function scheduleEveningPush() {
@@ -2115,6 +2134,8 @@ async function autoLoadFromCloud() {
 
     if(changed) {
       saveState();
+      // Reminder ausblenden wenn nach Sync jetzt Schritte/Aktivitäten vorhanden
+      if(todayHasActivity()) dismissReminder();
       // Nur aktive Seite neu rendern statt alles
       renderHome();
       renderSettings();
@@ -2788,14 +2809,15 @@ function renderFavorites() {
     if(state.favorites.length === 0) {
       chips.innerHTML = '<div style="font-size:12px;color:var(--text3);">Noch keine Favoriten — ☆ in der Datenbank antippen.</div>';
     } else {
-      chips.innerHTML = state.favorites.slice(0,5).map((fav,i) => {
+      chips.innerHTML = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;">` +
+        state.favorites.slice(0,6).map((fav,i) => {
         const kcalHint = getFavKcalHint(fav);
-        const autoBadge = fav.auto ? '<span style="font-size:10px;background:var(--warn-bg);color:var(--warn);border-radius:6px;padding:1px 5px;margin-left:4px;">Auto</span>' : '';
-        return `<div onclick="useFavorite(${i})" style="display:flex;flex-direction:column;align-items:flex-start;padding:7px 11px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);cursor:pointer;min-width:80px;max-width:140px;">
-          <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;"><span style="color:var(--accent2);margin-right:3px;">+</span>${fav.name}${autoBadge}</div>
-          <div style="font-size:11px;color:var(--text3);">${kcalHint}</div>
+        const autoBadge = fav.auto ? '<span style="font-size:10px;background:var(--warn-bg);color:var(--warn);border-radius:6px;padding:1px 4px;margin-left:3px;">Auto</span>' : '';
+        return `<div onclick="useFavorite(${i})" style="display:flex;flex-direction:column;align-items:flex-start;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);cursor:pointer;min-width:0;">
+          <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;"><span style="color:var(--accent2);margin-right:3px;">+</span>${fav.name}${autoBadge}</div>
+          <div style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;">${kcalHint}</div>
         </div>`;
-      }).join('');
+      }).join('') + `</div>`;
     }
   }
 
