@@ -391,7 +391,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <div class="progress-wrap">
         <div class="progress-bar" style="position:relative;overflow:hidden;">
           <div id="progress-fill-goal" style="position:absolute;left:0;top:0;height:100%;background:#2563eb;transition:width 0.4s ease;border-radius:0;"></div>
-          <div id="progress-fill-bonus" style="position:absolute;top:0;height:100%;background:#0d9488;transition:width 0.4s ease,left 0.4s ease;border-radius:0;"></div>
+          <div id="progress-fill-bonus" style="position:absolute;top:0;height:100%;background:#06b6d4;transition:width 0.4s ease,left 0.4s ease;border-radius:0;"></div>
           <div id="progress-fill-over" style="position:absolute;top:0;height:100%;background:var(--danger);transition:width 0.4s ease,left 0.4s ease;border-radius:0;"></div>
         </div>
         <div class="progress-labels">
@@ -2877,10 +2877,11 @@ function renderHome() {
   if(remLabel) remLabel.textContent = activityBonus > 0 ? `kcal (+${activityBonus} Aktivitätsbonus)` : 'kcal';
 
   // Fortschrittsbalken zweifarbig: blau bis Ziel, türkis für Bonus, rot für Überschuss
-  const totalCap = goal + activityBonus; // maximale "erlaubte" Kalorien
-  const goalPct   = totalCap > 0 ? (Math.min(eaten, goal) / totalCap) * 100 : 0;
-  const bonusPct  = totalCap > 0 && activityBonus > 0 ? (Math.min(Math.max(eaten - goal, 0), activityBonus) / totalCap) * 100 : 0;
-  const overPct   = totalCap > 0 && eaten > totalCap ? Math.min(((eaten - totalCap) / totalCap) * 100, 100 - goalPct - bonusPct) : 0;
+  const totalCap = goal + activityBonus;
+  const barMax = Math.max(eaten, totalCap, 1); // Skalierungsbasis: größter Wert
+  const goalPct  = (Math.min(eaten, goal) / barMax) * 100;
+  const bonusPct = activityBonus > 0 ? (Math.min(Math.max(eaten - goal, 0), activityBonus) / barMax) * 100 : 0;
+  const overPct  = eaten > totalCap ? ((eaten - totalCap) / barMax) * 100 : 0;
 
   const fillGoal  = document.getElementById('progress-fill-goal');
   const fillBonus = document.getElementById('progress-fill-bonus');
