@@ -389,8 +389,15 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         </div>
       </div>
       <div class="progress-wrap">
-        <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-        <div class="progress-labels"><span>0</span><span id="prog-max">0</span></div>
+        <div class="progress-bar" style="position:relative;overflow:hidden;">
+          <div id="progress-fill-goal" style="position:absolute;left:0;top:0;height:100%;background:#2563eb;transition:width 0.4s ease;border-radius:0;"></div>
+          <div id="progress-fill-bonus" style="position:absolute;top:0;height:100%;background:#0d9488;transition:width 0.4s ease,left 0.4s ease;border-radius:0;"></div>
+          <div id="progress-fill-over" style="position:absolute;top:0;height:100%;background:var(--danger);transition:width 0.4s ease,left 0.4s ease;border-radius:0;"></div>
+        </div>
+        <div class="progress-labels">
+          <span>0</span>
+          <span id="prog-max">0</span>
+        </div>
       </div>
     </div>
 
@@ -852,7 +859,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.65 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.66 — April 2026</div>
+        <div>· Fortschrittsbalken zweifarbig: blau = Kalorienziel, türkis = Aktivitätsbonus, rot = Überschuss</div>
+        <div>· Label zeigt jetzt „1800 + 222 Bonus" statt Summe</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.65 — April 2026</div>
         <div>· Kalenderwochen-Übersicht in der Historie: jede abgeschlossene KW mit Bilanz, Ø/Tag, Aufnahme, Schritte und berechnetem Gewichtsverlust</div>
         <div>· Wochen nach ISO-Standard (Mo–So), neueste zuerst</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.64 — April 2026</div>
@@ -2866,11 +2876,26 @@ function renderHome() {
   const remLabel = document.getElementById('s-remain-label');
   if(remLabel) remLabel.textContent = activityBonus > 0 ? `kcal (+${activityBonus} Aktivitätsbonus)` : 'kcal';
 
-  const pct = Math.min((eaten/(goal + activityBonus))*100, 100);
-  const fill = document.getElementById('progress-fill');
-  fill.style.width = pct + '%';
-  fill.className = 'progress-fill' + (eaten > goal + activityBonus ? ' over' : '');
-  document.getElementById('prog-max').textContent = (goal + activityBonus) + ' kcal';
+  // Fortschrittsbalken zweifarbig: blau bis Ziel, türkis für Bonus, rot für Überschuss
+  const totalCap = goal + activityBonus; // maximale "erlaubte" Kalorien
+  const goalPct   = totalCap > 0 ? (Math.min(eaten, goal) / totalCap) * 100 : 0;
+  const bonusPct  = totalCap > 0 && activityBonus > 0 ? (Math.min(Math.max(eaten - goal, 0), activityBonus) / totalCap) * 100 : 0;
+  const overPct   = totalCap > 0 && eaten > totalCap ? Math.min(((eaten - totalCap) / totalCap) * 100, 100 - goalPct - bonusPct) : 0;
+
+  const fillGoal  = document.getElementById('progress-fill-goal');
+  const fillBonus = document.getElementById('progress-fill-bonus');
+  const fillOver  = document.getElementById('progress-fill-over');
+  if(fillGoal)  fillGoal.style.width  = goalPct + '%';
+  if(fillBonus) { fillBonus.style.left = goalPct + '%'; fillBonus.style.width = bonusPct + '%'; }
+  if(fillOver)  { fillOver.style.left  = (goalPct + bonusPct) + '%'; fillOver.style.width = overPct + '%'; }
+
+  // Label: "1800 + 222 Bonus" oder "1800 kcal" wenn kein Bonus
+  const progMaxEl = document.getElementById('prog-max');
+  if(progMaxEl) {
+    progMaxEl.textContent = activityBonus > 0
+      ? `${goal} + ${activityBonus} Bonus`
+      : `${goal} kcal`;
+  }
 
   // Log list
   const ll = document.getElementById('log-list');
