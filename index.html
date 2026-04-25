@@ -620,11 +620,12 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
           <!-- Aktivitätslevel -->
           <div style="margin-bottom:10px;">
             <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">Aktivitätslevel</div>
-            <select id="bmr-activity" onchange="calcBmrLive()"
+            <select id="bmr-activity" onchange="onActivityLevelChange()"
               style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;">
+              <option value="">— bitte wählen —</option>
               <option value="1.2">Kaum Bewegung (Schreibtisch)</option>
               <option value="1.375">Leicht aktiv (1–3× Sport/Woche)</option>
-              <option value="1.55" selected>Mäßig aktiv (3–5× Sport/Woche)</option>
+              <option value="1.55">Mäßig aktiv (3–5× Sport/Woche)</option>
               <option value="1.725">Sehr aktiv (6–7× Sport/Woche)</option>
               <option value="1.9">Extrem aktiv (körperl. Arbeit + Sport)</option>
             </select>
@@ -826,7 +827,12 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.60 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.61 — April 2026</div>
+        <div>· Fix: „Verbraucht" zählte Aktivitätskalorien doppelt wenn kein Aktivitätslevel gespeichert war</div>
+        <div>· Fix: Aktivitätslevel-Dropdown sprang immer auf „mäßig aktiv" zurück — wird jetzt gespeichert und wiederhergestellt</div>
+        <div>· Fix: Aktivitätslevel wird sofort gespeichert beim Auswählen — nicht erst nach Berechnung</div>
+        <div>· Fix: Übersicht aktualisiert sich sofort wenn Aktivitätslevel geändert wird</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.60 — April 2026</div>
         <div>· Fix: Aktivitätsbonus-Anzeige „+X Aktivitätsbonus" war nicht sichtbar — HTML-Element fehlte</div>
         <div>· Fix: Manuell nacherfasste Tage nutzen jetzt TDEE-Logik statt altem BMR+Aktivität</div>
         <div>· Fix: Maulwurf-Stimmung im Header konsistent mit Splash (eaten ≤ goal)</div>
@@ -1943,9 +1949,21 @@ function toggleBmrCalc() {
     if(state.settings.bmrHeight)   document.getElementById('bmr-height').value   = state.settings.bmrHeight;
     if(state.settings.bmrWeight)   document.getElementById('bmr-weight').value   = state.settings.bmrWeight;
     if(state.settings.bmrSex)      setBmrSex(state.settings.bmrSex);
-    if(state.settings.bmrActivity) document.getElementById('bmr-activity').value = state.settings.bmrActivity;
+    // Aktivitätslevel immer setzen — gespeicherten Wert oder leer
+    const actSel = document.getElementById('bmr-activity');
+    if(actSel) actSel.value = state.settings.bmrActivity || '';
     calcBmrLive();
   }
+}
+
+function onActivityLevelChange() {
+  const val = parseFloat(document.getElementById('bmr-activity')?.value || '0');
+  if(val) {
+    state.settings.bmrActivity = val;
+    saveStateAndSync(); // sofort speichern — damit burned-Berechnung korrekt ist
+    renderHome();       // Übersicht sofort aktualisieren
+  }
+  calcBmrLive();
 }
 
 function setBmrSex(sex) {
@@ -1961,9 +1979,9 @@ function calcBmrLive() {
   const age      = parseFloat(document.getElementById('bmr-age')?.value);
   const height   = parseFloat(document.getElementById('bmr-height')?.value);
   const weight   = parseFloat(document.getElementById('bmr-weight')?.value);
-  const activity = parseFloat(document.getElementById('bmr-activity')?.value || '1.55');
+  const activity = parseFloat(document.getElementById('bmr-activity')?.value || '0');
   const result   = document.getElementById('bmr-result');
-  if(!age || !height || !weight) { if(result) result.style.display='none'; return; }
+  if(!age || !height || !weight || !activity) { if(result) result.style.display='none'; return; }
   // Mifflin-St Jeor Formel
   const bmr  = bmrSex === 'm'
     ? Math.round(10 * weight + 6.25 * height - 5 * age + 5)
@@ -2832,6 +2850,9 @@ function renderSettings() {
   document.getElementById('set-goal-week').value = state.settings.goalWeek || state.settings.goal || '';
   document.getElementById('set-goal-weekend').value = state.settings.goalWeekend || state.settings.goal || '';
   renderDeficitHints();
+  // BMR-Rechner: gespeicherten Aktivitätslevel vorauswählen (nur wenn Rechner offen)
+  const actSel = document.getElementById('bmr-activity');
+  if(actSel) actSel.value = state.settings.bmrActivity || '';
   document.getElementById('set-steps').value = state.settings.stepsGoal || '';
   document.getElementById('set-apikey').value = state.settings.apiKey || '';
   document.getElementById('set-geminikey').value = state.settings.geminiKey || '';
