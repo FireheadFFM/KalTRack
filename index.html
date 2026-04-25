@@ -584,6 +584,71 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <div><div class="settings-label">Grundumsatz</div><div class="settings-sub">kcal pro Tag</div></div>
         <input type="number" id="set-bmr" placeholder="2000" onchange="saveSettings()" />
       </div>
+      <!-- BMR-Rechner -->
+      <div style="margin-bottom:4px;">
+        <div onclick="toggleBmrCalc()" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:6px 0;">
+          <div style="font-size:12px;color:var(--accent);font-weight:500;">🧮 Grundumsatz berechnen</div>
+          <span id="bmr-calc-arrow" style="font-size:11px;color:var(--text3);">▾</span>
+        </div>
+        <div id="bmr-calc-body" style="display:none;padding:10px 0 4px;border-top:1px solid var(--border);">
+          <!-- Geschlecht -->
+          <div style="display:flex;gap:8px;margin-bottom:10px;">
+            <button id="bmr-btn-m" onclick="setBmrSex('m')" class="btn" style="flex:1;padding:8px;font-size:13px;background:var(--accent);color:white;">♂ Mann</button>
+            <button id="bmr-btn-f" onclick="setBmrSex('f')" class="btn" style="flex:1;padding:8px;font-size:13px;background:var(--bg2);color:var(--text2);">♀ Frau</button>
+          </div>
+          <!-- Alter, Größe, Gewicht -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+            <div>
+              <div style="font-size:11px;color:var(--text3);margin-bottom:3px;">Alter</div>
+              <input type="number" id="bmr-age" placeholder="30" min="10" max="120"
+                style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Mono';background:var(--bg);color:var(--text);outline:none;text-align:center;"
+                oninput="calcBmrLive()" />
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--text3);margin-bottom:3px;">Größe (cm)</div>
+              <input type="number" id="bmr-height" placeholder="175" min="100" max="250"
+                style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Mono';background:var(--bg);color:var(--text);outline:none;text-align:center;"
+                oninput="calcBmrLive()" />
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--text3);margin-bottom:3px;">Gewicht (kg)</div>
+              <input type="number" id="bmr-weight" placeholder="75" min="30" max="300"
+                style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Mono';background:var(--bg);color:var(--text);outline:none;text-align:center;"
+                oninput="calcBmrLive()" />
+            </div>
+          </div>
+          <!-- Aktivitätslevel -->
+          <div style="margin-bottom:10px;">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">Aktivitätslevel</div>
+            <select id="bmr-activity" onchange="calcBmrLive()"
+              style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;">
+              <option value="1.2">Kaum Bewegung (Schreibtisch)</option>
+              <option value="1.375">Leicht aktiv (1–3× Sport/Woche)</option>
+              <option value="1.55" selected>Mäßig aktiv (3–5× Sport/Woche)</option>
+              <option value="1.725">Sehr aktiv (6–7× Sport/Woche)</option>
+              <option value="1.9">Extrem aktiv (körperl. Arbeit + Sport)</option>
+            </select>
+            <div id="bmr-activity-hint" style="font-size:11px;color:var(--text3);margin-top:4px;min-height:14px;"></div>
+          </div>
+          <!-- Ergebnis -->
+          <div id="bmr-result" style="display:none;background:var(--accent-bg);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+              <span style="font-size:12px;color:var(--text2);">Grundumsatz (BMR)</span>
+              <span id="bmr-result-base" style="font-size:16px;font-weight:600;font-family:'DM Mono';color:var(--text);"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:12px;color:var(--text2);">Gesamtumsatz (TDEE)</span>
+              <span id="bmr-result-tdee" style="font-size:16px;font-weight:600;font-family:'DM Mono';color:var(--accent);"></span>
+            </div>
+            <div style="font-size:10px;color:var(--text3);margin-top:6px;">Mifflin-St Jeor Formel</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary" style="flex:1;padding:9px;" onclick="applyBmr('bmr')">BMR übernehmen</button>
+            <button class="btn btn-secondary" style="flex:1;padding:9px;" onclick="applyBmr('tdee')">TDEE übernehmen</button>
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.5;">BMR = reiner Grundumsatz (ohne Aktivität) · TDEE = Gesamtbedarf inkl. Aktivität</div>
+        </div>
+      </div>
       <div class="settings-row">
         <div><div class="settings-label">Kalorienziel Mo–Do</div><div class="settings-sub">kcal pro Tag (Wochentage)</div></div>
         <input type="number" id="set-goal-week" placeholder="1800" onchange="saveSettings()" />
@@ -753,7 +818,12 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.57 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.58 — April 2026</div>
+        <div>· BMR-Rechner in ⚙ → Mein Profil: Alter, Größe, Gewicht, Geschlecht und Aktivitätslevel eingeben</div>
+        <div>· Berechnung per Mifflin-St Jeor Formel — zeigt BMR (Grundumsatz) und TDEE (Gesamtbedarf)</div>
+        <div>· Mit einem Tipp direkt in das Grundumsatz-Feld übernehmen</div>
+        <div>· Eingaben werden gespeichert und beim nächsten Öffnen vorausgefüllt</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.57 — April 2026</div>
         <div>· Animation auf dem Startbildschirm: Maulwurf freut sich oder ist traurig je nach Vortags-Bilanz</div>
         <div>· Logik korrigiert: freudig wenn aufgenommen ≤ Kalorienziel, traurig wenn überschritten</div>
         <div>· Startbildschirm bleibt 2.5s sichtbar damit Animation vollständig abläuft</div>
@@ -1775,6 +1845,79 @@ function quickAdd() {
 }
 
 // Kalorienziel für ein bestimmtes Datum (Mo–Do vs. Fr–So)
+// ─── BMR RECHNER ──────────────────────────────────────────────────────────────
+let bmrSex = 'm';
+
+function toggleBmrCalc() {
+  const body = document.getElementById('bmr-calc-body');
+  const arrow = document.getElementById('bmr-calc-arrow');
+  if(!body) return;
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  if(arrow) arrow.textContent = open ? '▴' : '▾';
+  if(open) {
+    if(state.settings.bmrAge)      document.getElementById('bmr-age').value      = state.settings.bmrAge;
+    if(state.settings.bmrHeight)   document.getElementById('bmr-height').value   = state.settings.bmrHeight;
+    if(state.settings.bmrWeight)   document.getElementById('bmr-weight').value   = state.settings.bmrWeight;
+    if(state.settings.bmrSex)      setBmrSex(state.settings.bmrSex);
+    if(state.settings.bmrActivity) document.getElementById('bmr-activity').value = state.settings.bmrActivity;
+    calcBmrLive();
+  }
+}
+
+function setBmrSex(sex) {
+  bmrSex = sex;
+  const btnM = document.getElementById('bmr-btn-m');
+  const btnF = document.getElementById('bmr-btn-f');
+  if(btnM) { btnM.style.background = sex==='m' ? 'var(--accent)' : 'var(--bg2)'; btnM.style.color = sex==='m' ? 'white' : 'var(--text2)'; }
+  if(btnF) { btnF.style.background = sex==='f' ? 'var(--accent)' : 'var(--bg2)'; btnF.style.color = sex==='f' ? 'white' : 'var(--text2)'; }
+  calcBmrLive();
+}
+
+function calcBmrLive() {
+  const age      = parseFloat(document.getElementById('bmr-age')?.value);
+  const height   = parseFloat(document.getElementById('bmr-height')?.value);
+  const weight   = parseFloat(document.getElementById('bmr-weight')?.value);
+  const activity = parseFloat(document.getElementById('bmr-activity')?.value || '1.55');
+  const result   = document.getElementById('bmr-result');
+  if(!age || !height || !weight) { if(result) result.style.display='none'; return; }
+  // Mifflin-St Jeor Formel
+  const bmr  = bmrSex === 'm'
+    ? Math.round(10 * weight + 6.25 * height - 5 * age + 5)
+    : Math.round(10 * weight + 6.25 * height - 5 * age - 161);
+  const tdee = Math.round(bmr * activity);
+  if(document.getElementById('bmr-result-base')) document.getElementById('bmr-result-base').textContent = bmr + ' kcal';
+  if(document.getElementById('bmr-result-tdee')) document.getElementById('bmr-result-tdee').textContent = tdee + ' kcal';
+  if(result) result.style.display = 'block';
+  // Aktivitäts-Hint: zusätzlicher Verbrauch durch Aktivität
+  const hint = document.getElementById('bmr-activity-hint');
+  if(hint) {
+    const extra = tdee - bmr;
+    hint.textContent = `+ ${extra} kcal/Tag durch Aktivität (${bmr} BMR + ${extra} Aktivität = ${tdee} TDEE)`;
+  }
+  // Eingaben für nächsten Aufruf speichern
+  state.settings.bmrAge = age;
+  state.settings.bmrHeight = height;
+  state.settings.bmrWeight = weight;
+  state.settings.bmrSex = bmrSex;
+  state.settings.bmrActivity = activity;
+}
+
+function applyBmr(type) {
+  const base = parseInt(document.getElementById('bmr-result-base')?.textContent);
+  const tdee = parseInt(document.getElementById('bmr-result-tdee')?.textContent);
+  if(!base) { toast('Bitte zuerst alle Felder ausfüllen'); return; }
+  const val = type === 'tdee' ? tdee : base;
+  document.getElementById('set-bmr').value = val;
+  saveSettings();
+  toast(`Grundumsatz auf ${val} kcal gesetzt ✓`);
+  // Rechner zuklappen
+  const body = document.getElementById('bmr-calc-body');
+  if(body) body.style.display = 'none';
+  const arrow = document.getElementById('bmr-calc-arrow');
+  if(arrow) arrow.textContent = '▾';
+}
+
 function getGoalForDate(dateStr) {
   const d = dateStr ? new Date(dateStr) : new Date();
   const dow = d.getDay(); // 0=So, 1=Mo, ..., 5=Fr, 6=Sa
