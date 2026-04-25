@@ -385,7 +385,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <div class="stat-card">
           <div class="stat-label">Noch verfügbar</div>
           <div class="stat-value green" id="s-remain">0</div>
-          <div class="stat-label">kcal</div>
+          <div class="stat-label" id="s-remain-label">kcal</div>
         </div>
       </div>
       <div class="progress-wrap">
@@ -826,7 +826,14 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.59 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.60 — April 2026</div>
+        <div>· Fix: Aktivitätsbonus-Anzeige „+X Aktivitätsbonus" war nicht sichtbar — HTML-Element fehlte</div>
+        <div>· Fix: Manuell nacherfasste Tage nutzen jetzt TDEE-Logik statt altem BMR+Aktivität</div>
+        <div>· Fix: Maulwurf-Stimmung im Header konsistent mit Splash (eaten ≤ goal)</div>
+        <div>· Fix: getGoalForDate robuster gegen Datums-Parsing-Probleme</div>
+        <div>· Fix: Doppelzählung bei Aktivitätskalorien behoben — „Verbraucht" basiert auf TDEE als Basis</div>
+        <div>· Nur der Mehrverbrauch über das eingestellte Aktivitätslevel hinaus wird zusätzlich angerechnet</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.59 — April 2026</div>
         <div>· Kalorienziel und Defizit-Ziel sind jetzt verkoppelt: eines eingeben, das andere wird berechnet</div>
         <div>· Defizit-Hinweis zeigt direkt kg/Monat und kg/Woche an (basierend auf 7700 kcal/kg)</div>
         <div>· „Noch verfügbar" berücksichtigt Aktivitätsbonus: Mehrverbrauch über geplantes Aktivitätslevel hinaus wird gutgeschrieben</div>
@@ -1996,14 +2003,19 @@ function applyBmr(type) {
 }
 
 function getGoalForDate(dateStr) {
-  const d = dateStr ? new Date(dateStr) : new Date();
-  const dow = d.getDay(); // 0=So, 1=Mo, ..., 5=Fr, 6=Sa
-  const isWeekend = (dow === 0 || dow === 5 || dow === 6);
-  const bmr = state.settings.bmr || 2000;
-  if(isWeekend) {
-    return state.settings.goalWeekend || state.settings.goalWeek || state.settings.goal || bmr;
+  // dateStr ist entweder null (heute) oder ein toDateString()-Format wie "Thu Apr 24 2026"
+  let dow;
+  if(!dateStr) {
+    dow = new Date().getDay();
   } else {
-    return state.settings.goalWeek || state.settings.goal || bmr;
+    // toDateString()-Format direkt parsen — kein UTC-Problem da kein ISO-Format
+    dow = new Date(dateStr).getDay();
+  }
+  const isWeekend = (dow === 0 || dow === 5 || dow === 6); // So=0, Fr=5, Sa=6
+  if(isWeekend) {
+    return state.settings.goalWeekend || state.settings.goalWeek || state.settings.goal || (state.settings.bmr||2000);
+  } else {
+    return state.settings.goalWeek || state.settings.goal || (state.settings.bmr||2000);
   }
 }
 
@@ -2025,7 +2037,6 @@ function updateMoleMood() {
   if(!yesterday) return; // Noch kein Vortag — neutrale Pose
 
   const happy = yesterday.eaten <= yesterday.goal; // Ziel eingehalten = freudig
-
   // Animationsklassen zurücksetzen + Reflow erzwingen
   svg.classList.remove('mole-animate-happy', 'mole-animate-sad');
   if(stars) { stars.classList.remove('mole-stars-animate'); stars.style.opacity = '0'; }
@@ -2305,7 +2316,14 @@ function archiveDayToHistory(data, settings) {
   const stepsKcal = Math.round((data.steps||0) * 0.04);
   const actKcal = (data.activityLog||[]).reduce((s,i)=>s+i.kcal, 0);
   const eaten = (data.todayLog||[]).reduce((s,i)=>s+i.kcal, 0);
-  const burned = ((settings&&settings.bmr)||2000) + stepsKcal + actKcal;
+  const bmr = (settings&&settings.bmr) || 2000;
+  const actFactor = parseFloat((settings&&settings.bmrActivity) || 0);
+  const hasTdee = !!actFactor;
+  const tdee = hasTdee ? Math.round(bmr * actFactor) : bmr;
+  const plannedActivity = hasTdee ? (tdee - bmr) : 0;
+  const realActivity = stepsKcal + actKcal;
+  const activityBonus = hasTdee ? Math.max(0, realActivity - plannedActivity) : 0;
+  const burned = hasTdee ? tdee + activityBonus : bmr + realActivity;
   const goal = getGoalForDate(data.lastDate);
   return {
     date: data.lastDate,
@@ -2724,17 +2742,16 @@ function renderHome() {
   const stepsKcal = Math.round((state.steps||0) * 0.04);
   const actKcal = (state.activityLog||[]).reduce((s,i) => s+i.kcal, 0);
   const bmr = state.settings.bmr || 2000;
-  const burned = bmr + stepsKcal + actKcal;
-  const goal = getTodayGoal();
-
-  // Geplante Aktivität aus BMR-Rechner ableiten (TDEE - BMR)
-  // Falls Aktivitätslevel gespeichert: geplante Aktivität = BMR * (Faktor - 1)
-  const actFactor = parseFloat(state.settings.bmrActivity || 1.55);
-  const plannedActivityKcal = Math.round(bmr * (actFactor - 1));
+  const actFactor = parseFloat(state.settings.bmrActivity || 0);
+  const hasTdee = !!actFactor;
+  const tdee = hasTdee ? Math.round(bmr * actFactor) : bmr;
+  const plannedActivityKcal = hasTdee ? (tdee - bmr) : 0;
   const realActivityKcal = stepsKcal + actKcal;
-  // Bonus nur wenn mehr bewegt als geplant
-  const activityBonus = Math.max(0, realActivityKcal - plannedActivityKcal);
+  // Bonus nur wenn Aktivitätslevel konfiguriert — sonst kein Bonus
+  const activityBonus = hasTdee ? Math.max(0, realActivityKcal - plannedActivityKcal) : 0;
+  const burned = hasTdee ? tdee + activityBonus : bmr + realActivityKcal;
 
+  const goal = getTodayGoal();
   const balance = eaten - burned;
   const remain = goal - eaten + activityBonus;
 
@@ -4865,7 +4882,14 @@ function confirmManualDay() {
   const dateStr = dateObj.toDateString();
   const stepsKcal = Math.round(steps * 0.04);
   const actKcal = manualActs.reduce((s,a)=>s+a.kcal, 0);
-  const burned = (state.settings.bmr||2000) + stepsKcal + actKcal;
+  const bmr = state.settings.bmr || 2000;
+  const actFactor = parseFloat(state.settings.bmrActivity || 0);
+  const hasTdee = !!actFactor;
+  const tdee = hasTdee ? Math.round(bmr * actFactor) : bmr;
+  const plannedActivity = hasTdee ? (tdee - bmr) : 0;
+  const realActivity = stepsKcal + actKcal;
+  const activityBonus = hasTdee ? Math.max(0, realActivity - plannedActivity) : 0;
+  const burned = hasTdee ? tdee + activityBonus : bmr + realActivity;
 
   const entry = {
     date: dateStr,
