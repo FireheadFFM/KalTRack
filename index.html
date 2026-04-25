@@ -650,12 +650,20 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         </div>
       </div>
       <div class="settings-row">
-        <div><div class="settings-label">Kalorienziel Mo–Do</div><div class="settings-sub">kcal pro Tag (Wochentage)</div></div>
-        <input type="number" id="set-goal-week" placeholder="1800" onchange="saveSettings()" />
+        <div><div class="settings-label">Kalorienziel Mo–Do</div><div class="settings-sub">kcal/Tag · oder Defizit eingeben</div></div>
+        <input type="number" id="set-goal-week" placeholder="1800" oninput="onGoalInput('week','goal')" onchange="saveSettings()" />
+      </div>
+      <div class="settings-row" style="padding-top:0;">
+        <div><div class="settings-label" style="color:var(--text3);font-size:12px;">↳ Defizit Mo–Do</div><div class="settings-sub" id="deficit-hint-week" style="color:var(--accent);"></div></div>
+        <input type="number" id="set-deficit-week" placeholder="300" oninput="onGoalInput('week','deficit')" onchange="saveSettings()" style="width:90px;color:var(--accent);" />
       </div>
       <div class="settings-row">
-        <div><div class="settings-label">Kalorienziel Fr–So</div><div class="settings-sub">kcal pro Tag (Wochenende)</div></div>
-        <input type="number" id="set-goal-weekend" placeholder="2000" onchange="saveSettings()" />
+        <div><div class="settings-label">Kalorienziel Fr–So</div><div class="settings-sub">kcal/Tag · oder Defizit eingeben</div></div>
+        <input type="number" id="set-goal-weekend" placeholder="2000" oninput="onGoalInput('weekend','goal')" onchange="saveSettings()" />
+      </div>
+      <div class="settings-row" style="padding-top:0;">
+        <div><div class="settings-label" style="color:var(--text3);font-size:12px;">↳ Defizit Fr–So</div><div class="settings-sub" id="deficit-hint-weekend" style="color:var(--accent);"></div></div>
+        <input type="number" id="set-deficit-weekend" placeholder="200" oninput="onGoalInput('weekend','deficit')" onchange="saveSettings()" style="width:90px;color:var(--accent);" />
       </div>
       <div class="settings-row">
         <div><div class="settings-label">Tägliches Schrittziel</div><div class="settings-sub">Schritte</div></div>
@@ -818,7 +826,12 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.58 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.59 — April 2026</div>
+        <div>· Kalorienziel und Defizit-Ziel sind jetzt verkoppelt: eines eingeben, das andere wird berechnet</div>
+        <div>· Defizit-Hinweis zeigt direkt kg/Monat und kg/Woche an (basierend auf 7700 kcal/kg)</div>
+        <div>· „Noch verfügbar" berücksichtigt Aktivitätsbonus: Mehrverbrauch über geplantes Aktivitätslevel hinaus wird gutgeschrieben</div>
+        <div>· TDEE (BMR × Aktivitätslevel) als Basis für alle Berechnungen wenn vorhanden</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.58 — April 2026</div>
         <div>· BMR-Rechner in ⚙ → Mein Profil: Alter, Größe, Gewicht, Geschlecht und Aktivitätslevel eingeben</div>
         <div>· Berechnung per Mifflin-St Jeor Formel — zeigt BMR (Grundumsatz) und TDEE (Gesamtbedarf)</div>
         <div>· Mit einem Tipp direkt in das Grundumsatz-Feld übernehmen</div>
@@ -1845,7 +1858,70 @@ function quickAdd() {
 }
 
 // Kalorienziel für ein bestimmtes Datum (Mo–Do vs. Fr–So)
-// ─── BMR RECHNER ──────────────────────────────────────────────────────────────
+// ─── VERKOPPELTE ZIEL / DEFIZIT FELDER ───────────────────────────────────────
+function getTdee() {
+  const bmr = state.settings.bmr || 0;
+  const factor = parseFloat(state.settings.bmrActivity || 0);
+  if(!bmr || !factor) return 0;
+  return Math.round(bmr * factor);
+}
+
+function onGoalInput(period, changed) {
+  const tdee = getTdee();
+  const goalEl   = document.getElementById(`set-goal-${period}`);
+  const defEl    = document.getElementById(`set-deficit-${period}`);
+  const hintEl   = document.getElementById(`deficit-hint-${period}`);
+  if(!goalEl || !defEl) return;
+
+  if(changed === 'goal') {
+    const goal = parseInt(goalEl.value);
+    if(goal && tdee) {
+      const deficit = tdee - goal;
+      defEl.value = deficit > 0 ? deficit : '';
+      updateDeficitHint(hintEl, deficit, tdee);
+    } else if(goal && !tdee) {
+      defEl.value = '';
+      if(hintEl) hintEl.textContent = 'BMR + Aktivitätslevel für Defizit-Berechnung nötig';
+    }
+  } else { // changed === 'deficit'
+    const deficit = parseInt(defEl.value);
+    if(deficit && tdee) {
+      const goal = tdee - deficit;
+      goalEl.value = goal > 0 ? goal : '';
+      updateDeficitHint(hintEl, deficit, tdee);
+    } else if(deficit && !tdee) {
+      goalEl.value = '';
+      if(hintEl) hintEl.textContent = 'BMR + Aktivitätslevel für Ziel-Berechnung nötig';
+    }
+  }
+}
+
+function updateDeficitHint(el, deficit, tdee) {
+  if(!el) return;
+  if(!deficit || deficit <= 0) { el.textContent = 'Kein Defizit — Erhaltungsziel'; return; }
+  // 1 kg Körperfett ≈ 7700 kcal
+  const kgPerMonth = ((deficit * 30) / 7700).toFixed(1);
+  const kgPerWeek  = ((deficit * 7)  / 7700).toFixed(2);
+  el.textContent = `−${deficit} kcal/Tag · ≈ ${kgPerMonth} kg/Monat · ${kgPerWeek} kg/Woche`;
+}
+
+function renderDeficitHints() {
+  const tdee = getTdee();
+  ['week','weekend'].forEach(period => {
+    const goalEl = document.getElementById(`set-goal-${period}`);
+    const defEl  = document.getElementById(`set-deficit-${period}`);
+    const hintEl = document.getElementById(`deficit-hint-${period}`);
+    if(!goalEl || !defEl || !hintEl) return;
+    const goal = parseInt(goalEl.value);
+    if(goal && tdee) {
+      const deficit = tdee - goal;
+      defEl.value = deficit > 0 ? deficit : '';
+      updateDeficitHint(hintEl, deficit, tdee);
+    }
+  });
+}
+
+
 let bmrSex = 'm';
 
 function toggleBmrCalc() {
@@ -1910,6 +1986,7 @@ function applyBmr(type) {
   const val = type === 'tdee' ? tdee : base;
   document.getElementById('set-bmr').value = val;
   saveSettings();
+  renderDeficitHints();
   toast(`Grundumsatz auf ${val} kcal gesetzt ✓`);
   // Rechner zuklappen
   const body = document.getElementById('bmr-calc-body');
@@ -2644,12 +2721,22 @@ function renderAll() {
 
 function renderHome() {
   const eaten = (state.todayLog||[]).reduce((s,i) => s+i.kcal, 0);
-  const stepsKcal = Math.round(state.steps * 0.04);
+  const stepsKcal = Math.round((state.steps||0) * 0.04);
   const actKcal = (state.activityLog||[]).reduce((s,i) => s+i.kcal, 0);
-  const burned = (state.settings.bmr||2000) + stepsKcal + actKcal;
+  const bmr = state.settings.bmr || 2000;
+  const burned = bmr + stepsKcal + actKcal;
   const goal = getTodayGoal();
+
+  // Geplante Aktivität aus BMR-Rechner ableiten (TDEE - BMR)
+  // Falls Aktivitätslevel gespeichert: geplante Aktivität = BMR * (Faktor - 1)
+  const actFactor = parseFloat(state.settings.bmrActivity || 1.55);
+  const plannedActivityKcal = Math.round(bmr * (actFactor - 1));
+  const realActivityKcal = stepsKcal + actKcal;
+  // Bonus nur wenn mehr bewegt als geplant
+  const activityBonus = Math.max(0, realActivityKcal - plannedActivityKcal);
+
   const balance = eaten - burned;
-  const remain = goal - eaten;
+  const remain = goal - eaten + activityBonus;
 
   document.getElementById('s-eaten').textContent = eaten;
   document.getElementById('s-burned').textContent = burned;
@@ -2660,12 +2747,15 @@ function renderHome() {
   const remEl = document.getElementById('s-remain');
   remEl.textContent = remain;
   remEl.className = 'stat-value ' + (remain < 0 ? 'red' : 'green');
+  // Bonus-Hinweis anzeigen wenn relevant
+  const remLabel = document.getElementById('s-remain-label');
+  if(remLabel) remLabel.textContent = activityBonus > 0 ? `kcal (+${activityBonus} Aktivitätsbonus)` : 'kcal';
 
-  const pct = Math.min((eaten/goal)*100, 100);
+  const pct = Math.min((eaten/(goal + activityBonus))*100, 100);
   const fill = document.getElementById('progress-fill');
   fill.style.width = pct + '%';
-  fill.className = 'progress-fill' + (eaten > goal ? ' over' : '');
-  document.getElementById('prog-max').textContent = goal + ' kcal';
+  fill.className = 'progress-fill' + (eaten > goal + activityBonus ? ' over' : '');
+  document.getElementById('prog-max').textContent = (goal + activityBonus) + ' kcal';
 
   // Log list
   const ll = document.getElementById('log-list');
@@ -2724,6 +2814,7 @@ function renderSettings() {
   document.getElementById('set-bmr').value = state.settings.bmr || '';
   document.getElementById('set-goal-week').value = state.settings.goalWeek || state.settings.goal || '';
   document.getElementById('set-goal-weekend').value = state.settings.goalWeekend || state.settings.goal || '';
+  renderDeficitHints();
   document.getElementById('set-steps').value = state.settings.stepsGoal || '';
   document.getElementById('set-apikey').value = state.settings.apiKey || '';
   document.getElementById('set-geminikey').value = state.settings.geminiKey || '';
@@ -2760,8 +2851,14 @@ function renderSettings() {
 
 function saveSettings() {
   state.settings.bmr = parseInt(document.getElementById('set-bmr').value) || 2000;
-  state.settings.goalWeek = parseInt(document.getElementById('set-goal-week').value) || 1800;
-  state.settings.goalWeekend = parseInt(document.getElementById('set-goal-weekend').value) || state.settings.goalWeek;
+  // Kalorienziel: direkt oder aus Defizit berechnen
+  const tdee = getTdee();
+  const goalWeekRaw = parseInt(document.getElementById('set-goal-week').value);
+  const defWeekRaw  = parseInt(document.getElementById('set-deficit-week').value);
+  state.settings.goalWeek = goalWeekRaw || (tdee && defWeekRaw ? tdee - defWeekRaw : 1800);
+  const goalWeRaw  = parseInt(document.getElementById('set-goal-weekend').value);
+  const defWeRaw   = parseInt(document.getElementById('set-deficit-weekend').value);
+  state.settings.goalWeekend = goalWeRaw || (tdee && defWeRaw ? tdee - defWeRaw : state.settings.goalWeek);
   state.settings.stepsGoal = parseInt(document.getElementById('set-steps').value) || 10000;
   state.settings.apiKey = document.getElementById('set-apikey').value.trim();
   state.settings.geminiKey = document.getElementById('set-geminikey').value.trim();
