@@ -554,7 +554,18 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
           <div class="stat-value" id="week-total" style="font-size:18px;">—</div>
           <div class="stat-label">kcal</div>
         </div>
+        <div class="stat-card">
+          <div class="stat-label">⚖ Gewicht diese Woche</div>
+          <div class="stat-value" id="week-weight" style="font-size:18px;">—</div>
+          <div class="stat-label" id="week-weight-label">kg</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">⚖ Gewicht seit Start</div>
+          <div class="stat-value" id="total-weight" style="font-size:18px;">—</div>
+          <div class="stat-label" id="total-weight-label">kg</div>
+        </div>
       </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:6px;text-align:center;">Berechnet aus Kaloriendefizit · 7700 kcal ≈ 1 kg · Woche beginnt Mo</div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 2px 6px;">
       <div class="section-title" style="margin:0;">Tageseinträge</div>
@@ -581,8 +592,8 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
     <div class="card">
       <div class="card-label">Mein Profil</div>
       <div class="settings-row">
-        <div><div class="settings-label">Grundumsatz</div><div class="settings-sub">kcal pro Tag</div></div>
-        <input type="number" id="set-bmr" placeholder="2000" onchange="saveSettings()" />
+        <div><div class="settings-label">Grundumsatz (BMR)</div><div class="settings-sub">reiner Ruheumsatz, ohne Aktivität</div></div>
+        <input type="number" id="set-bmr" placeholder="1700" onchange="saveSettings(); updateSettingsActivityHint();" />
       </div>
       <div class="settings-row">
         <div><div class="settings-label">Aktivitätslevel</div><div class="settings-sub" id="set-activity-hint" style="color:var(--accent);"></div></div>
@@ -656,10 +667,9 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
             <div style="font-size:10px;color:var(--text3);margin-top:6px;">Mifflin-St Jeor Formel</div>
           </div>
           <div style="display:flex;gap:8px;">
-            <button class="btn btn-primary" style="flex:1;padding:9px;" onclick="applyBmr('bmr')">BMR übernehmen</button>
-            <button class="btn btn-secondary" style="flex:1;padding:9px;" onclick="applyBmr('tdee')">TDEE übernehmen</button>
+            <button class="btn btn-primary" style="flex:1;padding:9px;" onclick="applyBmr('bmr')">BMR + Aktivitätslevel übernehmen</button>
           </div>
-          <div style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.5;">BMR = reiner Grundumsatz (ohne Aktivität) · TDEE = Gesamtbedarf inkl. Aktivität</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.5;">Der reine BMR (ohne Aktivität) wird als Grundumsatz eingetragen. Das Aktivitätslevel wird separat gespeichert. TDEE = BMR × Faktor.</div>
         </div>
       </div>
       <div class="settings-row">
@@ -839,7 +849,16 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.62 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.64 — April 2026</div>
+        <div>· Wochenübersicht: berechneter Gewichtsverlust für laufende Woche (Mo–So) und seit App-Start</div>
+        <div>· Berechnung: kumuliertes Kaloriendefizit ÷ 7700 kcal/kg</div>
+        <div>· Woche beginnt immer montags</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.63 — April 2026</div>
+        <div>· Fix: TDEE wurde doppelt berechnet — BMR×Faktor+Schritte statt korrekt TDEE+Bonus</div>
+        <div>· Grundumsatz-Feld nimmt jetzt immer nur den reinen BMR (ohne Aktivität)</div>
+        <div>· BMR-Rechner übergibt BMR + Aktivitätslevel zusammen — kein TDEE-Button mehr</div>
+        <div>· Aktivitätslevel-Hint zeigt klar: BMR + Aktivität = TDEE</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.62 — April 2026</div>
         <div>· Fix: Aktivitätslevel ist jetzt eigenständige Einstellung direkt in „Mein Profil" — nicht mehr nur im aufklappbaren Rechner</div>
         <div>· TDEE-Hinweis zeigt sofort den berechneten Gesamtumsatz wenn BMR + Level gesetzt</div>
         <div>· „Verbraucht" und „Noch verfügbar" nutzen jetzt korrekt TDEE als Basis</div>
@@ -1989,10 +2008,13 @@ function updateSettingsActivityHint() {
   if(!hint) return;
   const bmr = parseInt(document.getElementById('set-bmr')?.value) || state.settings.bmr || 0;
   const val = parseFloat(document.getElementById('set-activity-level')?.value || '0');
-  if(!bmr || !val) { hint.textContent = 'TDEE wird berechnet wenn BMR + Level gesetzt'; return; }
+  if(!bmr || !val) {
+    hint.textContent = bmr ? 'Aktivitätslevel wählen um TDEE zu berechnen' : '';
+    return;
+  }
   const tdee = Math.round(bmr * val);
   const extra = tdee - bmr;
-  hint.textContent = `TDEE: ${tdee} kcal/Tag (+${extra} Aktivität)`;
+  hint.textContent = `TDEE: ${bmr} + ${extra} = ${tdee} kcal/Tag`;
 }
 
 
@@ -2050,13 +2072,21 @@ function calcBmrLive() {
 
 function applyBmr(type) {
   const base = parseInt(document.getElementById('bmr-result-base')?.textContent);
-  const tdee = parseInt(document.getElementById('bmr-result-tdee')?.textContent);
   if(!base) { toast('Bitte zuerst alle Felder ausfüllen'); return; }
-  const val = type === 'tdee' ? tdee : base;
-  document.getElementById('set-bmr').value = val;
+  // Immer BMR (reiner Grundumsatz) eintragen
+  document.getElementById('set-bmr').value = base;
+  // Aktivitätslevel aus Rechner auch ins Profil-Dropdown übernehmen
+  const calcActivity = document.getElementById('bmr-activity')?.value;
+  if(calcActivity) {
+    const setActSel = document.getElementById('set-activity-level');
+    if(setActSel) setActSel.value = calcActivity;
+    state.settings.bmrActivity = parseFloat(calcActivity);
+  }
   saveSettings();
+  updateSettingsActivityHint();
   renderDeficitHints();
-  toast(`Grundumsatz auf ${val} kcal gesetzt ✓`);
+  renderHome();
+  toast(`BMR ${base} kcal + Aktivitätslevel übernommen ✓`);
   // Rechner zuklappen
   const body = document.getElementById('bmr-calc-body');
   if(body) body.style.display = 'none';
@@ -5104,6 +5134,56 @@ function renderWeekChart() {
     const totEl = document.getElementById('week-total');
     if(avgEl) { avgEl.textContent = (avg>0?'+':'')+avg; avgEl.style.color = avg>0?'#993C1D':'#2563eb'; }
     if(totEl) { totEl.textContent = (total>0?'+':'')+Math.round(total); totEl.style.color = total>0?'#993C1D':'#2563eb'; }
+  }
+
+  // Gewichtsverlust berechnen
+  // Diese Woche (Mo–So, abgeschlossene Tage)
+  const now = new Date();
+  const dow = now.getDay(); // 0=So, 1=Mo...
+  const daysSinceMon = (dow === 0) ? 6 : dow - 1; // Tage seit letztem Montag
+  let weekDeficit = 0;
+  let weekDays = 0;
+  for(let i = daysSinceMon; i >= 1; i--) { // heute (i=0) ausschließen
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const h = state.history.find(x => x.date === d.toDateString());
+    if(h) { weekDeficit += h.eaten - h.burned; weekDays++; }
+  }
+  // Seit App-Start (alle Historie-Einträge)
+  const totalDeficit = (state.history||[]).reduce((s, h) => s + (h.eaten - h.burned), 0);
+
+  const weekWeightEl  = document.getElementById('week-weight');
+  const weekLabelEl   = document.getElementById('week-weight-label');
+  const totalWeightEl = document.getElementById('total-weight');
+  const totalLabelEl  = document.getElementById('total-weight-label');
+
+  function formatWeight(deficit) {
+    const kg = -(deficit / 7700); // negatives Defizit = Gewichtsverlust
+    const sign = kg > 0 ? '+' : '';
+    return { val: sign + kg.toFixed(2), color: kg < 0 ? '#2563eb' : '#993C1D' };
+  }
+
+  if(weekWeightEl) {
+    if(weekDays === 0) {
+      weekWeightEl.textContent = '—';
+      if(weekLabelEl) weekLabelEl.textContent = 'noch keine Daten';
+    } else {
+      const w = formatWeight(weekDeficit);
+      weekWeightEl.textContent = w.val;
+      weekWeightEl.style.color = w.color;
+      if(weekLabelEl) weekLabelEl.textContent = `kg (${weekDays} Tag${weekDays!==1?'e':''})`;
+    }
+  }
+  if(totalWeightEl) {
+    if((state.history||[]).length === 0) {
+      totalWeightEl.textContent = '—';
+      if(totalLabelEl) totalLabelEl.textContent = 'noch keine Daten';
+    } else {
+      const w = formatWeight(totalDeficit);
+      totalWeightEl.textContent = w.val;
+      totalWeightEl.style.color = w.color;
+      if(totalLabelEl) totalLabelEl.textContent = `kg (${state.history.length} Tag${state.history.length!==1?'e':''})`;
+    }
   }
 
   const balances = days.map(d => d.balance);
