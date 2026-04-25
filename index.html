@@ -157,7 +157,34 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: white; padding: 10px 18px; border-radius: 20px; font-size: 13px; z-index: 300; opacity: 0; transition: all 0.3s ease; pointer-events: none; white-space: nowrap; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* SECTION TITLE */
+/* MAULWURF ANIMATIONEN */
+@keyframes mole-happy {
+  0%   { transform: translateY(0) rotate(0deg); }
+  20%  { transform: translateY(-10px) rotate(-3deg); }
+  40%  { transform: translateY(0) rotate(3deg); }
+  60%  { transform: translateY(-7px) rotate(-2deg); }
+  80%  { transform: translateY(0) rotate(1deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+@keyframes mole-sad {
+  0%   { transform: rotate(0deg); }
+  15%  { transform: rotate(-6deg); }
+  30%  { transform: rotate(6deg); }
+  45%  { transform: rotate(-5deg); }
+  60%  { transform: rotate(5deg); }
+  75%  { transform: rotate(-3deg); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes mole-stars-pop {
+  0%   { opacity:0; transform: scale(0.5) translateY(0); }
+  40%  { opacity:1; transform: scale(1.2) translateY(-4px); }
+  70%  { opacity:1; transform: scale(1) translateY(-2px); }
+  100% { opacity:0; transform: scale(0.8) translateY(0); }
+}
+.mole-animate-happy { animation: mole-happy 0.8s ease-in-out 2; transform-origin: 50% 90%; }
+.mole-animate-sad   { animation: mole-sad 0.9s ease-in-out 2; transform-origin: center center; }
+.mole-stars-animate { animation: mole-stars-pop 1.2s ease-out forwards; }
+
 .section-title { font-size: 13px; font-weight: 600; color: var(--text2); margin: 14px 0 6px; padding: 0 2px; }
 
 /* AUTOCOMPLETE */
@@ -248,55 +275,68 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
   <div class="header">
     <div class="header-top">
       <div class="app-name" onclick="switchToTrack()" style="cursor:pointer;display:flex;align-items:center;gap:8px;">
-        <svg width="38" height="38" viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Körper dunkelgrau -->
-          <ellipse cx="50" cy="72" rx="30" ry="34" fill="#222"/>
-          <!-- Grauer Bauch -->
-          <ellipse cx="50" cy="76" rx="19" ry="24" fill="#aaa"/>
-          <!-- Kopf -->
-          <circle cx="50" cy="38" r="27" fill="#222"/>
-          <!-- Graues Gesicht -->
-          <ellipse cx="50" cy="41" rx="19" ry="21" fill="#b8b8b8"/>
-          <!-- Schweißband auf Stirn -->
-          <path d="M24,24 Q50,12 76,24" stroke="#e63030" stroke-width="7" fill="none" stroke-linecap="round"/>
-          <path d="M24,24 Q50,12 76,24" stroke="#ff9999" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
-          <!-- Schweißtropfen unter Band -->
-          <ellipse cx="72" cy="29" rx="2.5" ry="4" fill="#60a5fa" opacity="0.9"/>
-          <ellipse cx="77" cy="35" rx="1.8" ry="2.8" fill="#60a5fa" opacity="0.6"/>
-          <!-- Augen: großer weißer Augapfel + kleine Pupille -->
-          <circle cx="41" cy="36" r="7" fill="white"/>
-          <circle cx="43" cy="36" r="3.2" fill="#111"/>
-          <circle cx="44" cy="34" r="1.3" fill="white"/>
-          <circle cx="59" cy="36" r="7" fill="white"/>
-          <circle cx="61" cy="36" r="3.2" fill="#111"/>
-          <circle cx="62" cy="34" r="1.3" fill="white"/>
-          <!-- V-Brauen -->
-          <path d="M34,29 Q41,25 47,27" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
-          <path d="M53,27 Q59,25 66,29" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
-          <!-- Rote Knopfnase -->
-          <circle cx="50" cy="48" r="6" fill="#e63030"/>
-          <!-- Lächeln -->
-          <path d="M43,56 Q50,62 57,56" stroke="#555" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-          <!-- Linker Arm + Hantel -->
-          <path d="M24,60 Q10,52 8,44" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
-          <rect x="-10" y="41" width="36" height="6" rx="3" fill="#2563eb"/>
-          <rect x="-14" y="34" width="8" height="20" rx="4" fill="#2563eb"/>
-          <rect x="20" y="34" width="8" height="20" rx="4" fill="#2563eb"/>
-          <circle cx="8" cy="44" r="7" fill="#e8b89a"/>
-          <!-- Rechter Arm + Hantel -->
-          <path d="M76,60 Q90,52 92,44" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
-          <rect x="74" y="41" width="36" height="6" rx="3" fill="#2563eb"/>
-          <rect x="70" y="34" width="8" height="20" rx="4" fill="#2563eb"/>
-          <rect x="104" y="34" width="8" height="20" rx="4" fill="#2563eb"/>
-          <circle cx="92" cy="44" r="7" fill="#e8b89a"/>
-          <!-- Beine -->
-          <ellipse cx="38" cy="103" rx="10" ry="7" fill="#222"/>
-          <ellipse cx="62" cy="103" rx="10" ry="7" fill="#222"/>
-          <ellipse cx="33" cy="108" rx="7" ry="4" fill="#e8b89a"/>
-          <ellipse cx="43" cy="109" rx="7" ry="4" fill="#e8b89a"/>
-          <ellipse cx="57" cy="109" rx="7" ry="4" fill="#e8b89a"/>
-          <ellipse cx="67" cy="108" rx="7" ry="4" fill="#e8b89a"/>
-        </svg>
+        <div id="mole-container" style="position:relative;width:38px;height:38px;flex-shrink:0;">
+          <svg id="mole-svg" width="38" height="38" viewBox="-2 0 104 115" fill="none" xmlns="http://www.w3.org/2000/svg" style="overflow:visible;">
+            <g id="mole-body">
+              <!-- Körper -->
+              <ellipse cx="50" cy="72" rx="30" ry="34" fill="#222"/>
+              <ellipse cx="50" cy="76" rx="19" ry="24" fill="#aaa"/>
+              <!-- Kopf -->
+              <circle cx="50" cy="38" r="27" fill="#222"/>
+              <ellipse cx="50" cy="41" rx="19" ry="21" fill="#b8b8b8"/>
+              <!-- Schweißband -->
+              <path d="M24,24 Q50,12 76,24" stroke="#e63030" stroke-width="7" fill="none" stroke-linecap="round"/>
+              <path d="M24,24 Q50,12 76,24" stroke="#ff9999" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
+              <!-- Schweißtropfen -->
+              <ellipse cx="72" cy="29" rx="2.5" ry="4" fill="#60a5fa" opacity="0.9"/>
+              <ellipse cx="77" cy="35" rx="1.8" ry="2.8" fill="#60a5fa" opacity="0.6"/>
+              <!-- Augen -->
+              <circle cx="41" cy="36" r="7" fill="white"/>
+              <circle id="mole-pupil-l" cx="43" cy="36" r="3.2" fill="#111"/>
+              <circle cx="44" cy="34" r="1.3" fill="white"/>
+              <circle cx="59" cy="36" r="7" fill="white"/>
+              <circle id="mole-pupil-r" cx="61" cy="36" r="3.2" fill="#111"/>
+              <circle cx="62" cy="34" r="1.3" fill="white"/>
+              <!-- Brauen (austauschbar per ID) -->
+              <g id="mole-brows">
+                <path d="M34,29 Q41,25 47,27" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+                <path d="M53,27 Q59,25 66,29" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+              </g>
+              <!-- Nase -->
+              <circle cx="50" cy="48" r="6" fill="#e63030"/>
+              <!-- Mund (austauschbar per ID) -->
+              <g id="mole-mouth">
+                <path d="M43,56 Q50,62 57,56" stroke="#555" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+              </g>
+              <!-- Arme (austauschbar per ID) -->
+              <g id="mole-arms">
+                <path d="M24,60 Q10,52 8,44" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
+                <rect x="-10" y="41" width="36" height="6" rx="3" fill="#2563eb"/>
+                <rect x="-14" y="34" width="8" height="20" rx="4" fill="#2563eb"/>
+                <rect x="20" y="34" width="8" height="20" rx="4" fill="#2563eb"/>
+                <circle cx="8" cy="44" r="7" fill="#e8b89a"/>
+                <path d="M76,60 Q90,52 92,44" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
+                <rect x="74" y="41" width="36" height="6" rx="3" fill="#2563eb"/>
+                <rect x="70" y="34" width="8" height="20" rx="4" fill="#2563eb"/>
+                <rect x="104" y="34" width="8" height="20" rx="4" fill="#2563eb"/>
+                <circle cx="92" cy="44" r="7" fill="#e8b89a"/>
+              </g>
+              <!-- Beine -->
+              <ellipse cx="38" cy="103" rx="10" ry="7" fill="#222"/>
+              <ellipse cx="62" cy="103" rx="10" ry="7" fill="#222"/>
+              <ellipse cx="33" cy="108" rx="7" ry="4" fill="#e8b89a"/>
+              <ellipse cx="43" cy="109" rx="7" ry="4" fill="#e8b89a"/>
+              <ellipse cx="57" cy="109" rx="7" ry="4" fill="#e8b89a"/>
+              <ellipse cx="67" cy="108" rx="7" ry="4" fill="#e8b89a"/>
+            </g>
+            <!-- Sternchen (nur bei Freude sichtbar) -->
+            <g id="mole-stars" opacity="0">
+              <text x="78" y="8" font-size="10" fill="#f59e0b">★</text>
+              <text x="60" y="2" font-size="8" fill="#f59e0b">✦</text>
+              <text x="88" y="18" font-size="7" fill="#fbbf24">✦</text>
+            </g>
+          </svg>
+        </div>
         <span style="font-size:20px;font-weight:600;letter-spacing:-0.5px;color:var(--text);">Fit<span style="color:var(--accent);">Mole</span></span>
       </div>
       <div class="mode-toggle">
@@ -539,8 +579,12 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <input type="number" id="set-bmr" placeholder="2000" onchange="saveSettings()" />
       </div>
       <div class="settings-row">
-        <div><div class="settings-label">Ziel-Kalorien</div><div class="settings-sub">inkl. Aktivität (optional)</div></div>
-        <input type="number" id="set-goal" placeholder="1800" onchange="saveSettings()" />
+        <div><div class="settings-label">Kalorienziel Mo–Do</div><div class="settings-sub">kcal pro Tag (Wochentage)</div></div>
+        <input type="number" id="set-goal-week" placeholder="1800" onchange="saveSettings()" />
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">Kalorienziel Fr–So</div><div class="settings-sub">kcal pro Tag (Wochenende)</div></div>
+        <input type="number" id="set-goal-weekend" placeholder="2000" onchange="saveSettings()" />
       </div>
       <div class="settings-row">
         <div><div class="settings-label">Tägliches Schrittziel</div><div class="settings-sub">Schritte</div></div>
@@ -703,7 +747,15 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.53 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.55 — April 2026</div>
+        <div>· Kalorienziel getrennt für Mo–Do und Fr–So einstellbar (⚙ → Mein Profil)</div>
+        <div>· Tagesbilanz, Übersicht und Maulwurf-Reaktion berücksichtigen automatisch den Wochentag</div>
+        <div>· Migration: bestehendes einheitliches Ziel wird automatisch für beide Zeiträume übernommen</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.54 — April 2026</div>
+        <div>· Animierter Maulwurf: freut sich (hüpft, Arme hoch, Sternchen) wenn Vortag im Defizit war</div>
+        <div>· Animierter Maulwurf: traurig (Kopfschütteln, Hände vors Gesicht) bei Kalorienüberschuss</div>
+        <div>· Animation startet beim Öffnen der Übersichtsseite, basierend auf Vortags-Bilanz</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.53 — April 2026</div>
         <div>· Fix: Reminder-Banner erschien nochmal nach App-Neustart obwohl Schritte bereits eingetragen</div>
         <div>· Fix: dismissReminder setzt jetzt localStorage-Key — Banner kommt heute nicht mehr wieder</div>
         <div>· Fix: nach Cloud-Sync wird Banner automatisch ausgeblendet wenn Schritte jetzt vorhanden</div>
@@ -1558,6 +1610,7 @@ let dbFilter = '';
 async function init() {
   loadState();
   renderAll();
+  updateMoleMood();
   document.getElementById('today-date').textContent = new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
   document.getElementById('manual-input').addEventListener('keydown', e => { if(e.key==='Enter') { closeAutocomplete('manual-autocomplete'); processManual(); } });
   initSpeech();
@@ -1709,7 +1762,94 @@ function quickAdd() {
   saveStateAndSync();
 }
 
-// ─── STARTBILDSCHIRM ──────────────────────────────────────────────────────────
+// Kalorienziel für ein bestimmtes Datum (Mo–Do vs. Fr–So)
+function getGoalForDate(dateStr) {
+  const d = dateStr ? new Date(dateStr) : new Date();
+  const dow = d.getDay(); // 0=So, 1=Mo, ..., 5=Fr, 6=Sa
+  const isWeekend = (dow === 0 || dow === 5 || dow === 6);
+  const bmr = state.settings.bmr || 2000;
+  if(isWeekend) {
+    return state.settings.goalWeekend || state.settings.goalWeek || state.settings.goal || bmr;
+  } else {
+    return state.settings.goalWeek || state.settings.goal || bmr;
+  }
+}
+
+function getTodayGoal() {
+  return getGoalForDate(null);
+}
+
+
+function updateMoleMood() {
+  const body = document.getElementById('mole-body');
+  const stars = document.getElementById('mole-stars');
+  const mouth = document.getElementById('mole-mouth');
+  const brows = document.getElementById('mole-brows');
+  const arms  = document.getElementById('mole-arms');
+  if(!body) return;
+
+  // Vortag aus Historie lesen
+  const yesterday = (state.history||[])[0];
+  if(!yesterday) return; // Noch kein Vortag — neutrale Pose
+
+  const happy = yesterday.balance <= 0; // Defizit = gut
+
+  // Klassen zurücksetzen (für Wiederholung)
+  body.classList.remove('mole-animate-happy','mole-animate-sad');
+  if(stars) { stars.classList.remove('mole-stars-animate'); stars.style.opacity = '0'; }
+
+  // Gesichtsausdruck setzen
+  if(happy) {
+    // Breites Lächeln
+    if(mouth) mouth.innerHTML = `<path d="M40,55 Q50,65 60,55" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+    // Freudig hochgezogene Brauen
+    if(brows) brows.innerHTML = `
+      <path d="M34,27 Q41,22 47,25" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M53,25 Q59,22 66,27" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+    // Arme hoch (Jubel)
+    if(arms) arms.innerHTML = `
+      <path d="M26,58 Q16,40 14,28" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <rect x="2" y="20" width="28" height="6" rx="3" fill="#2563eb"/>
+      <rect x="-2" y="13" width="8" height="18" rx="4" fill="#2563eb"/>
+      <rect x="22" y="13" width="8" height="18" rx="4" fill="#2563eb"/>
+      <circle cx="14" cy="28" r="7" fill="#e8b89a"/>
+      <path d="M74,58 Q84,40 86,28" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <rect x="70" y="20" width="28" height="6" rx="3" fill="#2563eb"/>
+      <rect x="70" y="13" width="8" height="18" rx="4" fill="#2563eb"/>
+      <rect x="92" y="13" width="8" height="18" rx="4" fill="#2563eb"/>
+      <circle cx="86" cy="28" r="7" fill="#e8b89a"/>`;
+    // Animation starten mit kleinem Delay
+    setTimeout(() => {
+      body.classList.add('mole-animate-happy');
+      if(stars) { stars.classList.add('mole-stars-animate'); }
+      body.addEventListener('animationend', () => {
+        body.classList.remove('mole-animate-happy');
+      }, { once: true });
+    }, 400);
+  } else {
+    // Trauriger Mund
+    if(mouth) mouth.innerHTML = `<path d="M41,60 Q50,54 59,60" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+    // V-Brauen (traurig/besorgt — nach innen gezogen)
+    if(brows) brows.innerHTML = `
+      <path d="M34,26 Q41,30 47,28" stroke="#333" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M53,28 Q59,30 66,26" stroke="#333" stroke-width="2.5" fill="none" stroke-linecap="round"/>`;
+    // Hände vors Gesicht
+    if(arms) arms.innerHTML = `
+      <path d="M26,60 Q30,50 36,40" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <circle cx="36" cy="40" r="8" fill="#e8b89a"/>
+      <path d="M74,60 Q70,50 64,40" stroke="#222" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <circle cx="64" cy="40" r="8" fill="#e8b89a"/>`;
+    // Kopfschütteln
+    setTimeout(() => {
+      body.classList.add('mole-animate-sad');
+      body.addEventListener('animationend', () => {
+        body.classList.remove('mole-animate-sad');
+      }, { once: true });
+    }, 400);
+  }
+}
+
+
 function showSplash() {
   const splash = document.getElementById('splash-screen');
   if(!splash) return;
@@ -1891,7 +2031,7 @@ function archiveDayToHistory(data, settings) {
   const actKcal = (data.activityLog||[]).reduce((s,i)=>s+i.kcal, 0);
   const eaten = (data.todayLog||[]).reduce((s,i)=>s+i.kcal, 0);
   const burned = ((settings&&settings.bmr)||2000) + stepsKcal + actKcal;
-  const goal = (settings&&settings.goal) || (settings&&settings.bmr) || 2000;
+  const goal = getGoalForDate(data.lastDate);
   return {
     date: data.lastDate,
     eaten, burned, goal,
@@ -2185,10 +2325,22 @@ function loadState() {
   if(!state.backlogIdeas) state.backlogIdeas = [];
   if(!state.errorLog) state.errorLog = [];
 
+  // Migration: altes einheitliches goal → goalWeek/goalWeekend
+  if(!state.settings.goalWeek && state.settings.goal) {
+    state.settings.goalWeek = state.settings.goal;
+    state.settings.goalWeekend = state.settings.goal;
+  }
+
   // Service Worker Backlog-Eintrag sicherstellen
   const swEntry = 'Service Worker: Offline-Fähigkeit & App-Caching (PWA vollständig)';
   if(!state.backlogIdeas.find(i => i.text === swEntry)) {
     state.backlogIdeas.unshift({ id: 'bi-sw', text: swEntry, star: true, ts: Date.now() });
+  }
+
+  // Animierter Maulwurf Backlog-Eintrag
+  const moleEntry = 'Animierter Maulwurf auf der Startseite: hüpft & freut sich bei Kaloriendefizit vom Vortag, schüttelt traurig den Kopf & hält Hände vors Gesicht bei Überschuss';
+  if(!state.backlogIdeas.find(i => i.id === 'bi-mole-anim')) {
+    state.backlogIdeas.unshift({ id: 'bi-mole-anim', text: moleEntry, star: true, ts: Date.now() });
   }
 
   // Migration: neue Default-Einträge ergänzen wenn noch nicht vorhanden
@@ -2238,7 +2390,7 @@ function showPage(p) {
   document.getElementById('page-'+p).classList.add('active');
   const idx = ['home','input','activity','history','settings'].indexOf(p);
   if(idx >= 0) document.querySelectorAll('.nav-btn')[idx].classList.add('active');
-  if(p === 'home') renderHome();
+  if(p === 'home') { renderHome(); updateMoleMood(); }
   if(p === 'settings') { renderSettings(); renderBacklogIdeas(); }
   if(p === 'input') { renderModeHint(); renderVoiceToggle(); }
   if(p === 'history') renderHistory();
@@ -2297,7 +2449,7 @@ function renderHome() {
   const stepsKcal = Math.round(state.steps * 0.04);
   const actKcal = (state.activityLog||[]).reduce((s,i) => s+i.kcal, 0);
   const burned = (state.settings.bmr||2000) + stepsKcal + actKcal;
-  const goal = state.settings.goal || state.settings.bmr || 2000;
+  const goal = getTodayGoal();
   const balance = eaten - burned;
   const remain = goal - eaten;
 
@@ -2372,7 +2524,8 @@ function renderHome() {
 
 function renderSettings() {
   document.getElementById('set-bmr').value = state.settings.bmr || '';
-  document.getElementById('set-goal').value = state.settings.goal || '';
+  document.getElementById('set-goal-week').value = state.settings.goalWeek || state.settings.goal || '';
+  document.getElementById('set-goal-weekend').value = state.settings.goalWeekend || state.settings.goal || '';
   document.getElementById('set-steps').value = state.settings.stepsGoal || '';
   document.getElementById('set-apikey').value = state.settings.apiKey || '';
   document.getElementById('set-geminikey').value = state.settings.geminiKey || '';
@@ -2409,7 +2562,8 @@ function renderSettings() {
 
 function saveSettings() {
   state.settings.bmr = parseInt(document.getElementById('set-bmr').value) || 2000;
-  state.settings.goal = parseInt(document.getElementById('set-goal').value) || 1800;
+  state.settings.goalWeek = parseInt(document.getElementById('set-goal-week').value) || 1800;
+  state.settings.goalWeekend = parseInt(document.getElementById('set-goal-weekend').value) || state.settings.goalWeek;
   state.settings.stepsGoal = parseInt(document.getElementById('set-steps').value) || 10000;
   state.settings.apiKey = document.getElementById('set-apikey').value.trim();
   state.settings.geminiKey = document.getElementById('set-geminikey').value.trim();
@@ -4328,7 +4482,7 @@ function openManualDay(existingDay, dateOverride) {
 
   document.getElementById('manual-day-date').value = dateVal;
   document.getElementById('manual-day-date').disabled = !!existingDay; // Datum sperren beim Bearbeiten
-  document.getElementById('manual-day-goal').value = existingDay ? existingDay.goal : (state.settings.goal || state.settings.bmr || 1800);
+  document.getElementById('manual-day-goal').value = existingDay ? existingDay.goal : getGoalForDate(existingDay?.date || null);
   document.getElementById('manual-day-eaten').value = existingDay ? existingDay.eaten : '';
   document.getElementById('manual-day-steps').value = existingDay ? (existingDay.steps || '') : '';
   document.getElementById('manual-meal-name').value = '';
