@@ -584,6 +584,18 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <div><div class="settings-label">Grundumsatz</div><div class="settings-sub">kcal pro Tag</div></div>
         <input type="number" id="set-bmr" placeholder="2000" onchange="saveSettings()" />
       </div>
+      <div class="settings-row">
+        <div><div class="settings-label">Aktivitätslevel</div><div class="settings-sub" id="set-activity-hint" style="color:var(--accent);"></div></div>
+        <select id="set-activity-level" onchange="onSettingsActivityChange()"
+          style="width:130px;padding:7px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;">
+          <option value="">— wählen —</option>
+          <option value="1.2">Schreibtisch</option>
+          <option value="1.375">Leicht aktiv</option>
+          <option value="1.55">Mäßig aktiv</option>
+          <option value="1.725">Sehr aktiv</option>
+          <option value="1.9">Extrem aktiv</option>
+        </select>
+      </div>
       <!-- BMR-Rechner -->
       <div style="margin-bottom:4px;">
         <div onclick="toggleBmrCalc()" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:6px 0;">
@@ -827,7 +839,11 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.61 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.62 — April 2026</div>
+        <div>· Fix: Aktivitätslevel ist jetzt eigenständige Einstellung direkt in „Mein Profil" — nicht mehr nur im aufklappbaren Rechner</div>
+        <div>· TDEE-Hinweis zeigt sofort den berechneten Gesamtumsatz wenn BMR + Level gesetzt</div>
+        <div>· „Verbraucht" und „Noch verfügbar" nutzen jetzt korrekt TDEE als Basis</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.61 — April 2026</div>
         <div>· Fix: „Verbraucht" zählte Aktivitätskalorien doppelt wenn kein Aktivitätslevel gespeichert war</div>
         <div>· Fix: Aktivitätslevel-Dropdown sprang immer auf „mäßig aktiv" zurück — wird jetzt gespeichert und wiederhergestellt</div>
         <div>· Fix: Aktivitätslevel wird sofort gespeichert beim Auswählen — nicht erst nach Berechnung</div>
@@ -1956,12 +1972,40 @@ function toggleBmrCalc() {
   }
 }
 
+function onSettingsActivityChange() {
+  const val = parseFloat(document.getElementById('set-activity-level')?.value || '0');
+  state.settings.bmrActivity = val || null;
+  // Auch bmr-activity im Rechner synchronisieren
+  const actSel = document.getElementById('bmr-activity');
+  if(actSel) actSel.value = val || '';
+  updateSettingsActivityHint();
+  saveStateAndSync();
+  renderHome(); // Übersicht sofort aktualisieren
+  renderDeficitHints();
+}
+
+function updateSettingsActivityHint() {
+  const hint = document.getElementById('set-activity-hint');
+  if(!hint) return;
+  const bmr = parseInt(document.getElementById('set-bmr')?.value) || state.settings.bmr || 0;
+  const val = parseFloat(document.getElementById('set-activity-level')?.value || '0');
+  if(!bmr || !val) { hint.textContent = 'TDEE wird berechnet wenn BMR + Level gesetzt'; return; }
+  const tdee = Math.round(bmr * val);
+  const extra = tdee - bmr;
+  hint.textContent = `TDEE: ${tdee} kcal/Tag (+${extra} Aktivität)`;
+}
+
+
 function onActivityLevelChange() {
   const val = parseFloat(document.getElementById('bmr-activity')?.value || '0');
   if(val) {
     state.settings.bmrActivity = val;
-    saveStateAndSync(); // sofort speichern — damit burned-Berechnung korrekt ist
-    renderHome();       // Übersicht sofort aktualisieren
+    // Auch Profil-Dropdown synchronisieren
+    const setActSel = document.getElementById('set-activity-level');
+    if(setActSel) setActSel.value = val;
+    updateSettingsActivityHint();
+    saveStateAndSync();
+    renderHome();
   }
   calcBmrLive();
 }
@@ -2847,6 +2891,10 @@ function renderHome() {
 
 function renderSettings() {
   document.getElementById('set-bmr').value = state.settings.bmr || '';
+  // Aktivitätslevel-Dropdown in Mein Profil
+  const setActSel = document.getElementById('set-activity-level');
+  if(setActSel) setActSel.value = state.settings.bmrActivity || '';
+  updateSettingsActivityHint();
   document.getElementById('set-goal-week').value = state.settings.goalWeek || state.settings.goal || '';
   document.getElementById('set-goal-weekend').value = state.settings.goalWeekend || state.settings.goal || '';
   renderDeficitHints();
@@ -2889,6 +2937,8 @@ function renderSettings() {
 
 function saveSettings() {
   state.settings.bmr = parseInt(document.getElementById('set-bmr').value) || 2000;
+  const actLvl = parseFloat(document.getElementById('set-activity-level')?.value || '0');
+  if(actLvl) state.settings.bmrActivity = actLvl;
   // Kalorienziel: direkt oder aus Defizit berechnen
   const tdee = getTdee();
   const goalWeekRaw = parseInt(document.getElementById('set-goal-week').value);
