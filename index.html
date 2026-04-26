@@ -181,7 +181,13 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
   70%  { opacity:1; transform: scale(1) translateY(-2px); }
   100% { opacity:0; transform: scale(0.8) translateY(0px); }
 }
-/* Splash-Maulwurf Animation */
+@keyframes mole-tear {
+  0%   { opacity:0; transform: translateY(0px); }
+  20%  { opacity:0.9; }
+  80%  { opacity:0.7; transform: translateY(12px); }
+  100% { opacity:0; transform: translateY(16px); }
+}
+.mole-tear-animate { animation: mole-tear 1.2s ease-in infinite; }
 #splash-mole.mole-animate-happy { animation: mole-happy 0.8s ease-in-out 2; transform-origin: bottom center; }
 #splash-mole.mole-animate-sad   { animation: mole-sad 0.9s ease-in-out 2; transform-origin: center center; }
 #splash-stars.mole-stars-animate { animation: mole-stars-pop 1.4s ease-out forwards; }
@@ -215,8 +221,12 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <path d="M24,24 Q50,12 76,24" stroke="#e63030" stroke-width="7" fill="none" stroke-linecap="round"/>
       <path d="M24,24 Q50,12 76,24" stroke="#ff9999" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
       <!-- Schweißtropfen -->
-      <ellipse cx="72" cy="29" rx="2.5" ry="4" fill="#60a5fa" opacity="0.9"/>
-      <ellipse cx="77" cy="35" rx="1.8" ry="2.8" fill="#60a5fa" opacity="0.6"/>
+      <g id="splash-sweat">
+        <ellipse cx="72" cy="29" rx="2.5" ry="4" fill="#60a5fa" opacity="0.9"/>
+        <ellipse cx="77" cy="35" rx="1.8" ry="2.8" fill="#60a5fa" opacity="0.6"/>
+      </g>
+      <!-- Tränen (nur bei Trauer) -->
+      <g id="splash-tears" opacity="0"></g>
       <!-- Augen -->
       <circle cx="41" cy="36" r="7" fill="white"/>
       <circle cx="43" cy="36" r="3.2" fill="#111"/>
@@ -294,8 +304,12 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
               <path d="M24,24 Q50,12 76,24" stroke="#e63030" stroke-width="7" fill="none" stroke-linecap="round"/>
               <path d="M24,24 Q50,12 76,24" stroke="#ff9999" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
               <!-- Schweißtropfen -->
-              <ellipse cx="72" cy="29" rx="2.5" ry="4" fill="#60a5fa" opacity="0.9"/>
-              <ellipse cx="77" cy="35" rx="1.8" ry="2.8" fill="#60a5fa" opacity="0.6"/>
+              <g id="mole-sweat">
+                <ellipse cx="72" cy="29" rx="2.5" ry="4" fill="#60a5fa" opacity="0.9"/>
+                <ellipse cx="77" cy="35" rx="1.8" ry="2.8" fill="#60a5fa" opacity="0.6"/>
+              </g>
+              <!-- Tränen (nur bei Trauer) -->
+              <g id="mole-tears" opacity="0"></g>
               <!-- Augen -->
               <circle cx="41" cy="36" r="7" fill="white"/>
               <circle id="mole-pupil-l" cx="43" cy="36" r="3.2" fill="#111"/>
@@ -859,7 +873,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.69 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.70 — April 2026</div>
+        <div>· Trauriger Maulwurf: Schweißperlen verschwinden, stattdessen fließen Tränen aus den Augen</div>
+        <div>· Tränen-Animation: zwei blaue Tropfen perlen abwechselnd herab (Splash + Header)</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.69 — April 2026</div>
         <div>· Fix: DB-Suchfeld wird nach „+ Neu" und nach Auswahl aus Vorschlagsliste geleert</div>
         <div>· Fix: Schritte-Skala im Wochenchart passt sich dynamisch an — bei >10k Schritten erweitert sie sich</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.68 — April 2026</div>
@@ -2155,28 +2172,28 @@ function updateMoleMood() {
   const mouth = document.getElementById('mole-mouth');
   const brows = document.getElementById('mole-brows');
   const arms  = document.getElementById('mole-arms');
+  const sweat = document.getElementById('mole-sweat');
+  const tears = document.getElementById('mole-tears');
   if(!svg) return;
 
-  // Vortag aus Historie lesen
   const yesterday = (state.history||[])[0];
-  if(!yesterday) return; // Noch kein Vortag — neutrale Pose
+  if(!yesterday) return;
 
-  // Bonus des Vortags berechnen
   const bmr = state.settings.bmr || 2000;
   const actFactor = parseFloat(state.settings.bmrActivity || 0);
   const hasTdee = !!actFactor;
   const plannedAct = hasTdee ? Math.round(bmr * (actFactor - 1)) : 0;
   const realAct = Math.round((yesterday.steps||0)*0.04) + (yesterday.activityLog||[]).reduce((s,a)=>s+a.kcal,0);
   const bonus = hasTdee ? Math.max(0, realAct - plannedAct) : 0;
-  // Freudig wenn aufgenommen ≤ Ziel + Bonus
   const happy = yesterday.eaten <= (yesterday.goal + bonus);
-  // Animationsklassen zurücksetzen + Reflow erzwingen
+
   svg.classList.remove('mole-animate-happy', 'mole-animate-sad');
   if(stars) { stars.classList.remove('mole-stars-animate'); stars.style.opacity = '0'; }
-  void svg.offsetWidth; // Reflow — zwingt Browser die Klasse wirklich neu zu setzen
+  void svg.offsetWidth;
 
-  // Gesichtsausdruck setzen
   if(happy) {
+    if(sweat) sweat.style.opacity = '1';
+    if(tears) { tears.innerHTML = ''; tears.style.opacity = '0'; }
     if(mouth) mouth.innerHTML = `<path d="M40,55 Q50,66 60,55" stroke="#333" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
     if(brows) brows.innerHTML = `
       <path d="M34,27 Q41,22 47,25" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
@@ -2199,6 +2216,13 @@ function updateMoleMood() {
       svg.addEventListener('animationend', () => svg.classList.remove('mole-animate-happy'), { once: true });
     }, 500);
   } else {
+    if(sweat) sweat.style.opacity = '0';
+    if(tears) {
+      tears.style.opacity = '1';
+      tears.innerHTML = `
+        <ellipse cx="38" cy="50" rx="1.8" ry="2.8" fill="#60a5fa" class="mole-tear-animate" style="animation-delay:0s"/>
+        <ellipse cx="62" cy="50" rx="1.8" ry="2.8" fill="#60a5fa" class="mole-tear-animate" style="animation-delay:0.5s"/>`;
+    }
     if(mouth) mouth.innerHTML = `<path d="M41,61 Q50,54 59,61" stroke="#333" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
     if(brows) brows.innerHTML = `
       <path d="M34,26 Q41,31 47,28" stroke="#333" stroke-width="2.5" fill="none" stroke-linecap="round"/>
@@ -2256,8 +2280,12 @@ function _animateSplashMole(happy) {
   const mouth = document.getElementById('splash-mouth');
   const brows = document.getElementById('splash-brows');
   const arms  = document.getElementById('splash-arms');
+  const sweat = document.getElementById('splash-sweat');
+  const tears = document.getElementById('splash-tears');
   if(!svg) return;
   if(happy) {
+    if(sweat) sweat.style.opacity = '1';
+    if(tears) { tears.innerHTML = ''; tears.style.opacity = '0'; }
     if(mouth) mouth.innerHTML = `<path d="M40,55 Q50,66 60,55" stroke="#333" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
     if(brows) brows.innerHTML = `
       <path d="M34,27 Q41,22 47,25" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
@@ -2279,6 +2307,13 @@ function _animateSplashMole(happy) {
       if(stars) stars.classList.add('mole-stars-animate');
     }, 300);
   } else {
+    if(sweat) sweat.style.opacity = '0';
+    if(tears) {
+      tears.style.opacity = '1';
+      tears.innerHTML = `
+        <ellipse cx="38" cy="50" rx="2.2" ry="3.5" fill="#60a5fa" class="mole-tear-animate" style="animation-delay:0s"/>
+        <ellipse cx="62" cy="50" rx="2.2" ry="3.5" fill="#60a5fa" class="mole-tear-animate" style="animation-delay:0.5s"/>`;
+    }
     if(mouth) mouth.innerHTML = `<path d="M41,61 Q50,54 59,61" stroke="#333" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
     if(brows) brows.innerHTML = `
       <path d="M34,26 Q41,31 47,28" stroke="#333" stroke-width="2.5" fill="none" stroke-linecap="round"/>
