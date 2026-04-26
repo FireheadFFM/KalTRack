@@ -859,7 +859,13 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.67 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.69 — April 2026</div>
+        <div>· Fix: DB-Suchfeld wird nach „+ Neu" und nach Auswahl aus Vorschlagsliste geleert</div>
+        <div>· Fix: Schritte-Skala im Wochenchart passt sich dynamisch an — bei >10k Schritten erweitert sie sich</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.68 — April 2026</div>
+        <div>· Spracheingabe erkennt jetzt Pluralformen: „2 Spiegeleier", „3 Tomaten", „Brötchen" etc.</div>
+        <div>· Plural-Normalisierung mit gängigen deutschen Endungen (er/en/e/n/s/eier/üsse/äpfel)</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.67 — April 2026</div>
         <div>· Fix: Historienkarten nutzen jetzt dreifarbigen Balken (blau/türkis/rot) mit Aktivitätsbonus</div>
         <div>· Fix: Maulwurf-Reaktion (Splash + Header) berücksichtigt Aktivitätsbonus beim Vortagsvergleich</div>
         <div>· Fix: TDEE-Hint in Einstellungen synchronisiert sich mit dem BMR-Rechner wenn dieser offen ist</div>
@@ -3730,8 +3736,9 @@ function selectDbAcItem(i) {
   const s = dbAcSuggestions[i];
   if(!s) return;
   closeAutocomplete('db-autocomplete');
-  document.getElementById('db-search').value = s.name;
-  filterDb(s.name);
+  document.getElementById('db-search').value = '';
+  dbFilter = '';
+  filterDb('');
 }
 
 function closeAutocomplete(id) {
@@ -3902,11 +3909,44 @@ function tryLocalParser(text) {
 
   let matchedFood = null;
   let matchLen = 0;
-  for(const f of state.db) {
-    const fn = f.name.toLowerCase();
-    const escaped = fn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp('(?<![a-zäöüß])' + escaped + '(?![a-zäöüß])', 'i');
-    if(re.test(t) && fn.length > matchLen) { matchedFood = f; matchLen = fn.length; }
+
+  // Hilfsfunktion: Lebensmittel in Text suchen, optional mit Plural-Normalisierung
+  function findFoodInText(searchText) {
+    let best = null, bestLen = 0;
+    for(const f of state.db) {
+      const fn = f.name.toLowerCase();
+      const escaped = fn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp('(?<![a-zäöüß])' + escaped + '(?![a-zäöüß])', 'i');
+      if(re.test(searchText) && fn.length > bestLen) { best = f; bestLen = fn.length; }
+    }
+    return best;
+  }
+
+  matchedFood = findFoodInText(t);
+
+  // Falls nicht gefunden: Plural-Endungen im Eingabetext normalisieren und nochmal suchen
+  if(!matchedFood) {
+    // Gängige deutsche Plural → Singular Transformationen auf den Suchtext anwenden
+    const pluralRules = [
+      [/([a-zäöüß]+)eier\b/gi, '$1ei'],      // Spiegeleier → Spiegelei
+      [/([a-zäöüß]+)ier\b/gi, '$1i'],         // Kiwier (selten) → Kiwi
+      [/([a-zäöüß]+)en\b/gi, '$1e'],          // Tomaten → Tomate, Karotten → Karotte
+      [/([a-zäöüß]+)e\b/gi, '$1'],             // Äpfele → Äpfel (Grenzfall)
+      [/([a-zäöüß]+)n\b/gi, '$1'],             // Birnen → Birne
+      [/([a-zäöüß]+)s\b/gi, '$1'],             // Croissants → Croissant
+      [/([a-zäöüß]+)er\b/gi, '$1'],            // Brötcher → selten
+      [/([a-zäöüß]+)sse\b/gi, '$1ss'],         // Nüsse → Nuss
+      [/([a-zäöüß]+)üsse\b/gi, '$1uss'],       // Nüsse → Nuss
+      [/([a-zäöüß]+)äpfel\b/gi, '$1apfel'],    // Äpfel → Apfel
+      [/([a-zäöüß]+)öchen\b/gi, '$1och'],      // selten
+    ];
+    for(const [pattern, replacement] of pluralRules) {
+      const normalized = t.replace(pattern, replacement);
+      if(normalized !== t) {
+        const found = findFoodInText(normalized);
+        if(found) { matchedFood = found; break; }
+      }
+    }
   }
 
   if(matchedFood && amountMatch) {
@@ -4804,6 +4844,9 @@ function toggleCard(id) {
 function renderDbList() { renderDbPageFull(); }
 
 function openDbAdd(prefillName) {
+  // Suchfeld leeren
+  const searchEl = document.getElementById('db-search');
+  if(searchEl) { searchEl.value = ''; dbFilter = ''; }
   document.getElementById('db-add-name').value = prefillName || '';
   document.getElementById('db-add-kcal').value = '';
   document.getElementById('db-add-kcal-mode').value = 'per100';
@@ -5357,6 +5400,8 @@ function renderWeekChart() {
   const balances = days.map(d => d.balance);
   const stepsData = days.map(d => d.steps);
   const stepGoal = state.settings.stepsGoal || 10000;
+  const maxSteps = Math.max(stepGoal, ...stepsData.filter(s => s !== null));
+  const y2Max = Math.ceil(maxSteps / 1000) * 1000; // auf nächste 1000 aufrunden
   const colors = balances.map(v => v === null ? 'transparent' : v <= 0 ? '#2563eb' : '#993C1D');
   const displayBalances = balances.map(v => v === null ? 0 : v);
 
@@ -5367,7 +5412,7 @@ function renderWeekChart() {
     weekChartInstance.data.datasets[0].backgroundColor = colors;
     weekChartInstance.data.datasets[1].data = stepsData.map(s => s === null ? null : s);
     weekChartInstance.data.datasets[1].pointBackgroundColor = stepsData.map(s => s !== null && s >= stepGoal ? '#6b6760' : '#9e9b95');
-    weekChartInstance.options.scales.y2.max = stepGoal;
+    weekChartInstance.options.scales.y2.max = y2Max;
     weekChartInstance.update('none'); // 'none' = no animation for instant update
     return;
   }
@@ -5448,7 +5493,7 @@ function renderWeekChart() {
             position: 'right',
             grid: { display: false },
             min: 0,
-            max: stepGoal,
+            max: y2Max,
             ticks: {
               color: 'rgba(158,155,149,0.8)',
               font: { size:9 },
