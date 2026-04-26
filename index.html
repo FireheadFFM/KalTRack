@@ -859,7 +859,11 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.66 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.67 — April 2026</div>
+        <div>· Fix: Historienkarten nutzen jetzt dreifarbigen Balken (blau/türkis/rot) mit Aktivitätsbonus</div>
+        <div>· Fix: Maulwurf-Reaktion (Splash + Header) berücksichtigt Aktivitätsbonus beim Vortagsvergleich</div>
+        <div>· Fix: TDEE-Hint in Einstellungen synchronisiert sich mit dem BMR-Rechner wenn dieser offen ist</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.66 — April 2026</div>
         <div>· Fortschrittsbalken zweifarbig: blau = Kalorienziel, türkis = Aktivitätsbonus, rot = Überschuss</div>
         <div>· Label zeigt jetzt „1800 + 222 Bonus" statt Summe</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.65 — April 2026</div>
@@ -2022,7 +2026,12 @@ function onSettingsActivityChange() {
 function updateSettingsActivityHint() {
   const hint = document.getElementById('set-activity-hint');
   if(!hint) return;
-  const bmr = parseInt(document.getElementById('set-bmr')?.value) || state.settings.bmr || 0;
+  // Wenn Rechner offen und ein Ergebnis vorliegt, diesen BMR nutzen — sonst gespeicherten
+  const calcBase = document.getElementById('bmr-result-base');
+  const calcBmrVal = calcBase ? parseInt(calcBase.textContent) : 0;
+  const calcOpen = document.getElementById('bmr-calc-body')?.style.display !== 'none';
+  const bmr = (calcOpen && calcBmrVal) ? calcBmrVal
+            : (parseInt(document.getElementById('set-bmr')?.value) || state.settings.bmr || 0);
   const val = parseFloat(document.getElementById('set-activity-level')?.value || '0');
   if(!bmr || !val) {
     hint.textContent = bmr ? 'Aktivitätslevel wählen um TDEE zu berechnen' : '';
@@ -2084,6 +2093,8 @@ function calcBmrLive() {
   state.settings.bmrWeight = weight;
   state.settings.bmrSex = bmrSex;
   state.settings.bmrActivity = activity;
+  // Hint oben synchron halten
+  updateSettingsActivityHint();
 }
 
 function applyBmr(type) {
@@ -2144,7 +2155,15 @@ function updateMoleMood() {
   const yesterday = (state.history||[])[0];
   if(!yesterday) return; // Noch kein Vortag — neutrale Pose
 
-  const happy = yesterday.eaten <= yesterday.goal; // Ziel eingehalten = freudig
+  // Bonus des Vortags berechnen
+  const bmr = state.settings.bmr || 2000;
+  const actFactor = parseFloat(state.settings.bmrActivity || 0);
+  const hasTdee = !!actFactor;
+  const plannedAct = hasTdee ? Math.round(bmr * (actFactor - 1)) : 0;
+  const realAct = Math.round((yesterday.steps||0)*0.04) + (yesterday.activityLog||[]).reduce((s,a)=>s+a.kcal,0);
+  const bonus = hasTdee ? Math.max(0, realAct - plannedAct) : 0;
+  // Freudig wenn aufgenommen ≤ Ziel + Bonus
+  const happy = yesterday.eaten <= (yesterday.goal + bonus);
   // Animationsklassen zurücksetzen + Reflow erzwingen
   svg.classList.remove('mole-animate-happy', 'mole-animate-sad');
   if(stars) { stars.classList.remove('mole-stars-animate'); stars.style.opacity = '0'; }
@@ -2208,7 +2227,13 @@ function showSplash() {
   // Maulwurf-Stimmung: eaten <= goal → freudig, eaten > goal → traurig
   const yesterday = (state.history||[])[0];
   if(yesterday) {
-    const happy = yesterday.eaten <= yesterday.goal;
+    const bmr = state.settings.bmr || 2000;
+    const actFactor = parseFloat(state.settings.bmrActivity || 0);
+    const hasTdee = !!actFactor;
+    const plannedAct = hasTdee ? Math.round(bmr * (actFactor - 1)) : 0;
+    const realAct = Math.round((yesterday.steps||0)*0.04) + (yesterday.activityLog||[]).reduce((s,a)=>s+a.kcal,0);
+    const bonus = hasTdee ? Math.max(0, realAct - plannedAct) : 0;
+    const happy = yesterday.eaten <= (yesterday.goal + bonus);
     _animateSplashMole(happy);
   }
   // Etwas länger anzeigen damit Animation sichtbar ist
@@ -5172,7 +5197,20 @@ function renderHistory() {
     const balance = day.eaten - day.burned;
     const balSign = balance > 0 ? '+' : '';
     const balColor = balance > 0 ? 'var(--danger)' : 'var(--accent)';
-    const pct = Math.min(Math.round((day.eaten / day.goal) * 100), 999);
+    // Aktivitätsbonus für diesen Tag berechnen
+    const bmr = state.settings.bmr || 2000;
+    const actFactor = parseFloat(state.settings.bmrActivity || 0);
+    const hasTdee = !!actFactor;
+    const plannedAct = hasTdee ? Math.round(bmr * (actFactor - 1)) : 0;
+    const realAct = Math.round((day.steps||0)*0.04) + actKcal;
+    const dayBonus = hasTdee ? Math.max(0, realAct - plannedAct) : 0;
+    const totalCap = day.goal + dayBonus;
+    const barMax = Math.max(day.eaten, totalCap, 1);
+    const gPct = (Math.min(day.eaten, day.goal) / barMax * 100).toFixed(1);
+    const bPct = dayBonus > 0 ? (Math.min(Math.max(day.eaten - day.goal, 0), dayBonus) / barMax * 100).toFixed(1) : 0;
+    const oPct = day.eaten > totalCap ? ((day.eaten - totalCap) / barMax * 100).toFixed(1) : 0;
+    const bonusLabel = dayBonus > 0 ? ` + ${dayBonus} Bonus` : '';
+    const pct = Math.min(Math.round((day.eaten / totalCap) * 100), 999);
     const actLog = day.activityLog || [];
     const actKcal = actLog.reduce((s,a) => s+a.kcal, 0);
 
@@ -5206,8 +5244,12 @@ function renderHistory() {
           <div class="stat-card"><div class="stat-label">Aktivität</div><div class="stat-value" style="font-size:18px;color:var(--accent);">−${Math.round((day.steps||0)*0.04) + actKcal}</div><div class="stat-label">kcal</div></div>
           <div class="stat-card" style="grid-column:span 2;"><div class="stat-label">Bilanz</div><div class="stat-value" style="font-size:18px;color:${balColor};">${balSign}${balance}</div><div class="stat-label">kcal (ohne Grundumsatz)</div></div>
         </div>
-        <div class="progress-bar"><div class="progress-fill${day.eaten>day.goal?' over':''}" style="width:${Math.min((day.eaten/day.goal)*100,100)}%;"></div></div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:3px;margin-bottom:2px;"><span>${pct}% des Ziels</span><span>Verbrannt: ${day.burned} kcal</span></div>
+        <div class="progress-bar" style="position:relative;overflow:hidden;">
+          <div style="position:absolute;left:0;top:0;height:100%;width:${gPct}%;background:#2563eb;"></div>
+          <div style="position:absolute;left:${gPct}%;top:0;height:100%;width:${bPct}%;background:#06b6d4;"></div>
+          <div style="position:absolute;left:calc(${gPct}% + ${bPct}%);top:0;height:100%;width:${oPct}%;background:var(--danger);"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:3px;margin-bottom:2px;"><span>${pct}% des Ziels${bonusLabel}</span><span>Verbrannt: ${day.burned} kcal</span></div>
         ${activitiesHtml}
         ${day.log && day.log.length > 0 ? `
         <div style="margin-top:8px;">
