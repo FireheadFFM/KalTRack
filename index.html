@@ -5197,6 +5197,8 @@ function renderHistory() {
     const balance = day.eaten - day.burned;
     const balSign = balance > 0 ? '+' : '';
     const balColor = balance > 0 ? 'var(--danger)' : 'var(--accent)';
+    const actLog = day.activityLog || [];
+    const actKcal = actLog.reduce((s,a) => s+a.kcal, 0);
     // Aktivitätsbonus für diesen Tag berechnen
     const bmr = state.settings.bmr || 2000;
     const actFactor = parseFloat(state.settings.bmrActivity || 0);
@@ -5211,8 +5213,6 @@ function renderHistory() {
     const oPct = day.eaten > totalCap ? ((day.eaten - totalCap) / barMax * 100).toFixed(1) : 0;
     const bonusLabel = dayBonus > 0 ? ` + ${dayBonus} Bonus` : '';
     const pct = Math.min(Math.round((day.eaten / totalCap) * 100), 999);
-    const actLog = day.activityLog || [];
-    const actKcal = actLog.reduce((s,a) => s+a.kcal, 0);
 
     const activitiesHtml = actLog.length > 0 ? `
       <div style="margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border);">
