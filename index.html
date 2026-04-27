@@ -698,19 +698,19 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       </div>
       <div class="settings-row">
         <div><div class="settings-label">Kalorienziel Mo–Do</div><div class="settings-sub">kcal/Tag · oder Defizit eingeben</div></div>
-        <input type="number" id="set-goal-week" placeholder="1800" oninput="onGoalInput('week','goal')" onchange="saveSettings()" />
+        <input type="number" id="set-goal-week" placeholder="1800" oninput="onGoalInput('week','goal')" onchange="saveSettings()" onblur="saveSettings()" />
       </div>
       <div class="settings-row" style="padding-top:0;">
         <div><div class="settings-label" style="color:var(--text3);font-size:12px;">↳ Defizit Mo–Do</div><div class="settings-sub" id="deficit-hint-week" style="color:var(--accent);"></div></div>
-        <input type="number" id="set-deficit-week" placeholder="300" oninput="onGoalInput('week','deficit')" onchange="saveSettings()" style="width:90px;color:var(--accent);" />
+        <input type="number" id="set-deficit-week" placeholder="300" oninput="onGoalInput('week','deficit')" onchange="saveSettings()" onblur="saveSettings()" style="width:90px;color:var(--accent);" />
       </div>
       <div class="settings-row">
         <div><div class="settings-label">Kalorienziel Fr–So</div><div class="settings-sub">kcal/Tag · oder Defizit eingeben</div></div>
-        <input type="number" id="set-goal-weekend" placeholder="2000" oninput="onGoalInput('weekend','goal')" onchange="saveSettings()" />
+        <input type="number" id="set-goal-weekend" placeholder="2000" oninput="onGoalInput('weekend','goal')" onchange="saveSettings()" onblur="saveSettings()" />
       </div>
       <div class="settings-row" style="padding-top:0;">
         <div><div class="settings-label" style="color:var(--text3);font-size:12px;">↳ Defizit Fr–So</div><div class="settings-sub" id="deficit-hint-weekend" style="color:var(--accent);"></div></div>
-        <input type="number" id="set-deficit-weekend" placeholder="200" oninput="onGoalInput('weekend','deficit')" onchange="saveSettings()" style="width:90px;color:var(--accent);" />
+        <input type="number" id="set-deficit-weekend" placeholder="200" oninput="onGoalInput('weekend','deficit')" onchange="saveSettings()" onblur="saveSettings()" style="width:90px;color:var(--accent);" />
       </div>
       <div class="settings-row">
         <div><div class="settings-label">Tägliches Schrittziel</div><div class="settings-sub">Schritte</div></div>
@@ -873,7 +873,15 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.70 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.72 — April 2026</div>
+        <div>· Fix: Kalorienziel wird jetzt sofort gespeichert beim Eintippen (nicht erst bei Fokus-Verlust)</div>
+        <div>· Fix: Übersicht aktualisiert sich live beim Ändern des Kalorienziels</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.71 — April 2026</div>
+        <div>· Fix: Kalorienziel wurde nicht korrekt aus dem Defizit berechnet wenn ein altes Ziel gespeichert war</div>
+        <div>· Fix: Einstellungen zeigen jetzt immer das korrekte Defizit basierend auf gespeichertem Ziel + TDEE</div>
+        <div>· Historienkarte: Ziel-Label zeigt jetzt „Ziel: 1278 +222 kcal" wenn Aktivitätsbonus vorhanden</div>
+        <div>· Bilanz-Label korrigiert: „Aufgenommen − Verbraucht" statt irreführend „ohne Grundumsatz"</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.70 — April 2026</div>
         <div>· Trauriger Maulwurf: Schweißperlen verschwinden, stattdessen fließen Tränen aus den Augen</div>
         <div>· Tränen-Animation: zwei blaue Tropfen perlen abwechselnd herab (Splash + Header)</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.69 — April 2026</div>
@@ -1974,17 +1982,25 @@ function onGoalInput(period, changed) {
       defEl.value = '';
       if(hintEl) hintEl.textContent = 'BMR + Aktivitätslevel für Defizit-Berechnung nötig';
     }
-  } else { // changed === 'deficit'
+    // Direkt speichern
+    if(period === 'week') state.settings.goalWeek = parseInt(goalEl.value) || state.settings.goalWeek;
+    else state.settings.goalWeekend = parseInt(goalEl.value) || state.settings.goalWeekend;
+  } else {
     const deficit = parseInt(defEl.value);
     if(deficit && tdee) {
       const goal = tdee - deficit;
       goalEl.value = goal > 0 ? goal : '';
       updateDeficitHint(hintEl, deficit, tdee);
+      // Direkt speichern
+      if(period === 'week') state.settings.goalWeek = goal;
+      else state.settings.goalWeekend = goal;
     } else if(deficit && !tdee) {
       goalEl.value = '';
       if(hintEl) hintEl.textContent = 'BMR + Aktivitätslevel für Ziel-Berechnung nötig';
     }
   }
+  saveState();
+  renderHome();
 }
 
 function updateDeficitHint(el, deficit, tdee) {
@@ -2002,12 +2018,20 @@ function renderDeficitHints() {
     const goalEl = document.getElementById(`set-goal-${period}`);
     const defEl  = document.getElementById(`set-deficit-${period}`);
     const hintEl = document.getElementById(`deficit-hint-${period}`);
-    if(!goalEl || !defEl || !hintEl) return;
-    const goal = parseInt(goalEl.value);
-    if(goal && tdee) {
-      const deficit = tdee - goal;
-      defEl.value = deficit > 0 ? deficit : '';
-      updateDeficitHint(hintEl, deficit, tdee);
+    if(!goalEl || !defEl) return;
+    const savedGoal = period === 'week'
+      ? (state.settings.goalWeek || state.settings.goal)
+      : (state.settings.goalWeekend || state.settings.goalWeek || state.settings.goal);
+    if(savedGoal) goalEl.value = savedGoal;
+    if(tdee && savedGoal) {
+      const deficit = tdee - savedGoal;
+      if(deficit > 0) {
+        defEl.value = deficit;
+        updateDeficitHint(hintEl, deficit, tdee);
+      } else {
+        defEl.value = '';
+        updateDeficitHint(hintEl, 0, tdee);
+      }
     }
   });
 }
@@ -3067,14 +3091,24 @@ function saveSettings() {
   state.settings.bmr = parseInt(document.getElementById('set-bmr').value) || 2000;
   const actLvl = parseFloat(document.getElementById('set-activity-level')?.value || '0');
   if(actLvl) state.settings.bmrActivity = actLvl;
-  // Kalorienziel: direkt oder aus Defizit berechnen
+  // Kalorienziel: wenn Defizit gesetzt → daraus berechnen, sonst direkten Wert nehmen
   const tdee = getTdee();
-  const goalWeekRaw = parseInt(document.getElementById('set-goal-week').value);
-  const defWeekRaw  = parseInt(document.getElementById('set-deficit-week').value);
-  state.settings.goalWeek = goalWeekRaw || (tdee && defWeekRaw ? tdee - defWeekRaw : 1800);
-  const goalWeRaw  = parseInt(document.getElementById('set-goal-weekend').value);
-  const defWeRaw   = parseInt(document.getElementById('set-deficit-weekend').value);
-  state.settings.goalWeekend = goalWeRaw || (tdee && defWeRaw ? tdee - defWeRaw : state.settings.goalWeek);
+  const goalWeekRaw = parseInt(document.getElementById('set-goal-week')?.value);
+  const defWeekRaw  = parseInt(document.getElementById('set-deficit-week')?.value);
+  if(defWeekRaw > 0 && tdee) {
+    state.settings.goalWeek = tdee - defWeekRaw;
+  } else if(goalWeekRaw > 0) {
+    state.settings.goalWeek = goalWeekRaw;
+  }
+  const goalWeRaw  = parseInt(document.getElementById('set-goal-weekend')?.value);
+  const defWeRaw   = parseInt(document.getElementById('set-deficit-weekend')?.value);
+  if(defWeRaw > 0 && tdee) {
+    state.settings.goalWeekend = tdee - defWeRaw;
+  } else if(goalWeRaw > 0) {
+    state.settings.goalWeekend = goalWeRaw;
+  } else {
+    state.settings.goalWeekend = state.settings.goalWeek;
+  }
   state.settings.stepsGoal = parseInt(document.getElementById('set-steps').value) || 10000;
   state.settings.apiKey = document.getElementById('set-apikey').value.trim();
   state.settings.geminiKey = document.getElementById('set-geminikey').value.trim();
@@ -5312,7 +5346,7 @@ function renderHistory() {
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
           <div style="font-size:14px;font-weight:500;color:var(--text);">${dateStr}${day.manual ? '<span style="font-size:10px;background:var(--warn-bg);color:var(--warn);border-radius:6px;padding:1px 6px;margin-left:6px;">manuell</span>' : ''}</div>
           <div style="display:flex;align-items:center;gap:8px;">
-            <div style="font-size:11px;color:var(--text3);">Ziel: ${day.goal} kcal</div>
+            <div style="font-size:11px;color:var(--text3);">Ziel: ${day.goal}${dayBonus > 0 ? ' +'+dayBonus : ''} kcal</div>
             <button style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--accent);padding:0;" onclick="editHistoryDay('${day.date}')" title="Tag bearbeiten">✎</button>
             <button style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--text3);padding:0;" onclick="deleteHistoryDay('${day.date}')" title="Tag löschen">×</button>
           </div>
@@ -5320,7 +5354,7 @@ function renderHistory() {
         <div class="stats-grid" style="margin-bottom:8px;">
           <div class="stat-card"><div class="stat-label">Aufgenommen</div><div class="stat-value" style="font-size:18px;">${day.eaten}</div><div class="stat-label">kcal</div></div>
           <div class="stat-card"><div class="stat-label">Aktivität</div><div class="stat-value" style="font-size:18px;color:var(--accent);">−${Math.round((day.steps||0)*0.04) + actKcal}</div><div class="stat-label">kcal</div></div>
-          <div class="stat-card" style="grid-column:span 2;"><div class="stat-label">Bilanz</div><div class="stat-value" style="font-size:18px;color:${balColor};">${balSign}${balance}</div><div class="stat-label">kcal (ohne Grundumsatz)</div></div>
+          <div class="stat-card" style="grid-column:span 2;"><div class="stat-label">Bilanz</div><div class="stat-value" style="font-size:18px;color:${balColor};">${balSign}${balance}</div><div class="stat-label">kcal (Aufgenommen − Verbraucht)</div></div>
         </div>
         <div class="progress-bar" style="position:relative;overflow:hidden;">
           <div style="position:absolute;left:0;top:0;height:100%;width:${gPct}%;background:#2563eb;"></div>
