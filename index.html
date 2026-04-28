@@ -873,7 +873,11 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.72 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.73 — April 2026</div>
+        <div>· Historienkarten kompakter: alle Infos in einer Zeile, ca. halb so hoch wie vorher</div>
+        <div>· Aktivitäten und Mahlzeiten weiterhin per „Details ▾" aufklappbar</div>
+        <div>· Favoriten-Kachel: zeigt jetzt bis zu 9 Favoriten (3×3) statt 6</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.72 — April 2026</div>
         <div>· Fix: Kalorienziel wird jetzt sofort gespeichert beim Eintippen (nicht erst bei Fokus-Verlust)</div>
         <div>· Fix: Übersicht aktualisiert sich live beim Ändern des Kalorienziels</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.71 — April 2026</div>
@@ -3509,7 +3513,7 @@ function renderFavorites() {
       chips.innerHTML = '<div style="font-size:12px;color:var(--text3);">Noch keine Favoriten — ☆ in der Datenbank antippen.</div>';
     } else {
       chips.innerHTML = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;">` +
-        state.favorites.slice(0,6).map((fav,i) => {
+        state.favorites.slice(0,9).map((fav,i) => {
         const kcalHint = getFavKcalHint(fav);
         const autoBadge = fav.auto ? '<span style="font-size:10px;background:var(--warn-bg);color:var(--warn);border-radius:6px;padding:1px 4px;margin-left:3px;">Auto</span>' : '';
         return `<div onclick="useFavorite(${i})" style="display:flex;flex-direction:column;align-items:flex-start;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);cursor:pointer;min-width:0;">
@@ -5326,48 +5330,41 @@ function renderHistory() {
     const bonusLabel = dayBonus > 0 ? ` + ${dayBonus} Bonus` : '';
     const pct = Math.min(Math.round((day.eaten / totalCap) * 100), 999);
 
-    const activitiesHtml = actLog.length > 0 ? `
-      <div style="margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border);">
-        ${actLog.map(a => {
-          const icon = state.activities.find(x=>x.name===a.name)?.icon || '⚡';
-          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12px;color:var(--text2);">
-            <span>${icon} ${a.name} · ${a.minutes} Min</span>
-            <span style="color:var(--accent);font-weight:500;">−${a.kcal} kcal</span>
-          </div>`;
-        }).join('')}
-        ${day.steps ? `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);padding:3px 0;"><span>🚶 ${day.steps.toLocaleString('de-DE')} Schritte</span><span style="color:var(--accent);font-weight:500;">−${Math.round(day.steps*0.04)} kcal</span></div>` : ''}
-      </div>` : (day.steps ? `
-      <div style="margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border);">
-        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);"><span>🚶 ${day.steps.toLocaleString('de-DE')} Schritte</span><span style="color:var(--accent);font-weight:500;">−${Math.round(day.steps*0.04)} kcal</span></div>
-      </div>` : '');
-
     return `
-      <div class="card" style="margin-bottom:8px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <div style="font-size:14px;font-weight:500;color:var(--text);">${dateStr}${day.manual ? '<span style="font-size:10px;background:var(--warn-bg);color:var(--warn);border-radius:6px;padding:1px 6px;margin-left:6px;">manuell</span>' : ''}</div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div style="font-size:11px;color:var(--text3);">Ziel: ${day.goal}${dayBonus > 0 ? ' +'+dayBonus : ''} kcal</div>
-            <button style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--accent);padding:0;" onclick="editHistoryDay('${day.date}')" title="Tag bearbeiten">✎</button>
-            <button style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--text3);padding:0;" onclick="deleteHistoryDay('${day.date}')" title="Tag löschen">×</button>
+      <div class="card" style="margin-bottom:6px;padding:10px 12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-size:13px;font-weight:500;color:var(--text);">${dateStr}${day.manual ? '<span style="font-size:10px;background:var(--warn-bg);color:var(--warn);border-radius:6px;padding:1px 5px;margin-left:5px;">manuell</span>' : ''}</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:13px;font-weight:600;font-family:'DM Mono';color:${balColor};">${balSign}${balance} kcal</span>
+            <button style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--accent);padding:0;" onclick="editHistoryDay('${day.date}')" title="Bearbeiten">✎</button>
+            <button style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text3);padding:0;" onclick="deleteHistoryDay('${day.date}')" title="Löschen">×</button>
           </div>
         </div>
-        <div class="stats-grid" style="margin-bottom:8px;">
-          <div class="stat-card"><div class="stat-label">Aufgenommen</div><div class="stat-value" style="font-size:18px;">${day.eaten}</div><div class="stat-label">kcal</div></div>
-          <div class="stat-card"><div class="stat-label">Aktivität</div><div class="stat-value" style="font-size:18px;color:var(--accent);">−${Math.round((day.steps||0)*0.04) + actKcal}</div><div class="stat-label">kcal</div></div>
-          <div class="stat-card" style="grid-column:span 2;"><div class="stat-label">Bilanz</div><div class="stat-value" style="font-size:18px;color:${balColor};">${balSign}${balance}</div><div class="stat-label">kcal (Aufgenommen − Verbraucht)</div></div>
+        <div style="display:flex;gap:8px;margin-bottom:6px;font-size:11px;color:var(--text3);">
+          <span>🍽 <b style="color:var(--text);">${day.eaten}</b> kcal</span>
+          <span>·</span>
+          <span>🔥 <b style="color:var(--text);">${day.burned}</b> kcal</span>
+          <span>·</span>
+          <span>🎯 Ziel ${day.goal}${dayBonus > 0 ? '+'+dayBonus : ''} kcal</span>
+          ${day.steps ? `<span>· 🚶 ${day.steps.toLocaleString('de-DE')}</span>` : ''}
         </div>
-        <div class="progress-bar" style="position:relative;overflow:hidden;">
+        <div class="progress-bar" style="position:relative;overflow:hidden;height:5px;">
           <div style="position:absolute;left:0;top:0;height:100%;width:${gPct}%;background:#2563eb;"></div>
           <div style="position:absolute;left:${gPct}%;top:0;height:100%;width:${bPct}%;background:#06b6d4;"></div>
           <div style="position:absolute;left:calc(${gPct}% + ${bPct}%);top:0;height:100%;width:${oPct}%;background:var(--danger);"></div>
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:3px;margin-bottom:2px;"><span>${pct}% des Ziels${bonusLabel}</span><span>Verbrannt: ${day.burned} kcal</span></div>
-        ${activitiesHtml}
-        ${day.log && day.log.length > 0 ? `
-        <div style="margin-top:8px;">
-          <div style="font-size:11px;font-weight:500;color:var(--text3);cursor:pointer;padding-top:8px;border-top:0.5px solid var(--border);" onclick="toggleDayLog(${i})" id="daylog-toggle-${i}">Mahlzeiten anzeigen ▾</div>
-          <div id="daylog-${i}" style="display:none;margin-top:6px;">
-            ${day.log.map(item=>`<div class="log-item"><div class="log-left"><div class="log-name" style="font-size:13px;">${item.name}</div><div class="log-detail">${item.detail||''}</div></div><div class="log-kcal" style="font-size:13px;">${item.kcal} kcal</div></div>`).join('')}
+        ${(actLog.length > 0 || day.log?.length > 0) ? `
+        <div style="margin-top:5px;">
+          <span style="font-size:11px;color:var(--text3);cursor:pointer;" onclick="toggleDayLog(${i})" id="daylog-toggle-${i}">Details ▾</span>
+          <div id="daylog-${i}" style="display:none;margin-top:6px;border-top:0.5px solid var(--border);padding-top:6px;">
+            ${actLog.map(a => {
+              const icon = state.activities.find(x=>x.name===a.name)?.icon || '⚡';
+              return `<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);padding:2px 0;">
+                <span>${icon} ${a.name} · ${a.minutes} Min</span>
+                <span style="color:var(--accent);">−${a.kcal} kcal</span>
+              </div>`;
+            }).join('')}
+            ${(day.log||[]).map(item => `<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);padding:2px 0;"><span>${item.name}</span><span>${item.kcal} kcal</span></div>`).join('')}
           </div>
         </div>` : ''}
       </div>`;
