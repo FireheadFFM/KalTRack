@@ -5262,39 +5262,21 @@ function renderWeekHistory() {
     const avgSteps    = Math.round(totalSteps / w.days.length);
 
     return `
-    <div class="card" style="margin-bottom:8px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--text);">KW ${w.week} · ${w.label}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:1px;">${w.days.length} Tag${w.days.length!==1?'e':''} erfasst</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-size:18px;font-weight:600;font-family:'DM Mono';color:${kgColor};">${kgSign}${kg.toFixed(2)} kg</div>
-          <div style="font-size:10px;color:var(--text3);">berechneter Verlust</div>
-        </div>
+    <div class="card" style="margin-bottom:6px;padding:10px 12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);">KW ${w.week} · ${w.label}</div>
+        <span style="font-size:13px;font-weight:600;font-family:'DM Mono';color:${kgColor};">${kgSign}${kg.toFixed(2)} kg</span>
       </div>
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">Gesamtbilanz</div>
-          <div class="stat-value" style="font-size:16px;color:${balColor};">${balSign}${totalBalance}</div>
-          <div class="stat-label">kcal</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Ø Bilanz / Tag</div>
-          <div class="stat-value" style="font-size:16px;color:${avg>0?'var(--danger)':'var(--accent)'};">${avg>0?'+':''}${avg}</div>
-          <div class="stat-label">kcal</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Aufgenommen</div>
-          <div class="stat-value" style="font-size:16px;">${totalEaten}</div>
-          <div class="stat-label">kcal gesamt</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Ø Schritte / Tag</div>
-          <div class="stat-value" style="font-size:16px;">${avgSteps.toLocaleString('de-DE')}</div>
-          <div class="stat-label">Schritte</div>
-        </div>
+      <div style="display:flex;gap:8px;font-size:11px;color:var(--text3);">
+        <span>Bilanz <b style="color:${balColor};">${balSign}${totalBalance}</b> kcal</span>
+        <span>·</span>
+        <span>Ø <b style="color:${avg>0?'var(--danger)':'var(--accent)'};">${avg>0?'+':''}${avg}</b>/Tag</span>
+        <span>·</span>
+        <span>🍽 <b style="color:var(--text);">${totalEaten}</b> kcal</span>
+        <span>·</span>
+        <span>🚶 Ø <b style="color:var(--text);">${avgSteps.toLocaleString('de-DE')}</b></span>
       </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px;">${w.days.length} Tag${w.days.length!==1?'e':''} erfasst</div>
     </div>`;
   }).join('');
 }
