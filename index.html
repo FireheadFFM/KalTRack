@@ -873,7 +873,11 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.74 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.75 — April 2026</div>
+        <div>· Fix: Kalorienziel wird jetzt tagesgenau im State gecacht (todayGoal) und beim Archivieren verwendet</div>
+        <div>· Spätere Zieländerungen wirken sich nicht mehr rückwirkend auf bereits archivierte Tage aus</div>
+        <div>· Mo–Do / Fr–So Ziel wird korrekt dem richtigen Wochentag zugeordnet</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.74 — April 2026</div>
         <div>· Fix: Reminder erschien obwohl Schritte erfasst wurden — getYesterdayDateStr nutzt jetzt FitMole-Tageslogik (02:00 Uhr Grenze)</div>
         <div>· Fix: yesterdayHasActivity und getYesterdayDateStr nutzen jetzt denselben Datums-String — kein Datums-Mismatch mehr</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.73 — April 2026</div>
@@ -1812,6 +1816,7 @@ async function init() {
   loadState();
   renderAll();
   updateMoleMood();
+  cacheTodayGoal();
   document.getElementById('today-date').textContent = new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
   document.getElementById('manual-input').addEventListener('keydown', e => { if(e.key==='Enter') { closeAutocomplete('manual-autocomplete'); processManual(); } });
   initSpeech();
@@ -2193,6 +2198,11 @@ function getTodayGoal() {
   return getGoalForDate(null);
 }
 
+function cacheTodayGoal() {
+  // Tages-Ziel im State speichern damit es beim Archivieren korrekt ist
+  state.todayGoal = getTodayGoal();
+}
+
 
 function updateMoleMood() {
   const svg   = document.getElementById('mole-svg');
@@ -2526,7 +2536,8 @@ function archiveDayToHistory(data, settings) {
   const realActivity = stepsKcal + actKcal;
   const activityBonus = hasTdee ? Math.max(0, realActivity - plannedActivity) : 0;
   const burned = hasTdee ? tdee + activityBonus : bmr + realActivity;
-  const goal = getGoalForDate(data.lastDate);
+  // Ziel: gecachten Tageswert nutzen falls vorhanden, sonst aus Datum berechnen
+  const goal = data.todayGoal || getGoalForDate(data.lastDate);
   return {
     date: data.lastDate,
     eaten, burned, goal,
@@ -2545,6 +2556,7 @@ function performDayRollover() {
     state.history.unshift(archiveDayToHistory(state, state.settings));
     if(state.history.length > 90) state.history.splice(90);
     state.todayLog = []; state.activityLog = []; state.steps = 0; state.sessionItems = [];
+    cacheTodayGoal();
     saveStateAndSync();
     renderAll();
     document.getElementById('today-date').textContent = new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
@@ -3119,6 +3131,7 @@ function saveSettings() {
   state.settings.nutritionixAppId = document.getElementById('set-nx-id').value.trim();
   state.settings.nutritionixKey = document.getElementById('set-nx-key').value.trim();
   saveStateAndSync();
+  cacheTodayGoal();
   toast('Einstellungen gespeichert');
 }
 
