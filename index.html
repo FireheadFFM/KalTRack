@@ -412,6 +412,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
           <span>0</span>
           <span id="prog-max">0</span>
         </div>
+        <div style="text-align:right;margin-top:2px;">
+          <span id="exception-day-hint" style="font-size:11px;color:var(--text3);"></span>
+          <button id="exception-day-btn" onclick="toggleExceptionDay()" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;padding:0 0 0 6px;"></button>
+        </div>
       </div>
     </div>
 
@@ -873,7 +877,11 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.76 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.77 — Mai 2026</div>
+        <div>· Ausnahmetag: kleiner 🎂-Button unter dem Fortschrittsbalken — einmalig ein anderes Ziel für heute setzen</div>
+        <div>· Ausnahmetag wird beim Tageswechsel automatisch zurückgesetzt</div>
+        <div>· Fix: manuell nacherfasste Tage lesen das eingegebene Kalorienziel — getGoalForDate als Vorschlag</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.76 — April 2026</div>
         <div>· Fix: manuell nacherfasste Tage nutzen jetzt Wochentag-korrektes Kalorienziel (getGoalForDate)</div>
         <div>· Fix: altes goal-Feld (state.settings.goal) nicht mehr als Fallback in confirmManualDay</div>
         <div>· Fix: fehlende goal-Werte in archivierten Einträgen werden beim Cloud-Merge nachberechnet</div>
@@ -2198,8 +2206,45 @@ function getGoalForDate(dateStr) {
   }
 }
 
+// ─── AUSNAHMETAG ──────────────────────────────────────────────────────────────
+function toggleExceptionDay() {
+  if(state.exceptionDayGoal) {
+    // Ausnahmetag aufheben
+    delete state.exceptionDayGoal;
+    saveStateAndSync();
+    renderHome();
+    toast('Ausnahmetag aufgehoben');
+  } else {
+    // Ausnahmetag setzen
+    const normal = getTodayGoal();
+    const input = prompt(`Kalorienziel für heute (Ausnahmetag):\nNormales Ziel: ${normal} kcal`, normal);
+    if(!input) return;
+    const val = parseInt(input);
+    if(!val || val <= 0) { toast('Ungültiger Wert'); return; }
+    state.exceptionDayGoal = val;
+    saveStateAndSync();
+    renderHome();
+    toast(`Ausnahmetag: ${val} kcal Ziel`);
+  }
+}
+
 function getTodayGoal() {
+  // Ausnahmetag hat Vorrang
+  if(state.exceptionDayGoal) return state.exceptionDayGoal;
   return getGoalForDate(null);
+}
+
+function renderExceptionDayBtn() {
+  const hint = document.getElementById('exception-day-hint');
+  const btn  = document.getElementById('exception-day-btn');
+  if(!hint || !btn) return;
+  if(state.exceptionDayGoal) {
+    hint.textContent = `🎂 Ausnahmetag: ${state.exceptionDayGoal} kcal`;
+    btn.textContent = '× aufheben';
+  } else {
+    hint.textContent = '';
+    btn.textContent = '🎂 Ausnahmetag';
+  }
 }
 
 function cacheTodayGoal() {
@@ -2560,6 +2605,7 @@ function performDayRollover() {
     state.history.unshift(archiveDayToHistory(state, state.settings));
     if(state.history.length > 90) state.history.splice(90);
     state.todayLog = []; state.activityLog = []; state.steps = 0; state.sessionItems = [];
+    delete state.exceptionDayGoal;
     cacheTodayGoal();
     saveStateAndSync();
     renderAll();
@@ -2825,6 +2871,7 @@ function loadState() {
         loaded.activityLog = [];
         loaded.steps = 0;
         loaded.sessionItems = [];
+        delete loaded.exceptionDayGoal;
       }
       state = {...state, ...loaded};
     }
@@ -3012,7 +3059,7 @@ function renderHome() {
       : `${goal} kcal`;
   }
 
-  // Log list
+  renderExceptionDayBtn();
   const ll = document.getElementById('log-list');
   if(state.todayLog.length === 0) { ll.innerHTML = '<div class="empty-state">Noch keine Einträge heute</div>'; }
   else {
@@ -5185,8 +5232,9 @@ function confirmManualDay() {
   const realActivity = stepsKcal + actKcal;
   const activityBonus = hasTdee ? Math.max(0, realActivity - plannedActivity) : 0;
   const burned = hasTdee ? tdee + activityBonus : bmr + realActivity;
-  // Ziel korrekt für den jeweiligen Wochentag des erfassten Datums
-  const goal = getGoalForDate(dateStr);
+  // Ziel: eingegebener Wert hat Vorrang, Fallback ist wochentag-korrektes Ziel
+  const enteredGoal = parseInt(document.getElementById('manual-day-goal').value);
+  const goal = enteredGoal || getGoalForDate(dateStr);
 
   const entry = {
     date: dateStr,
