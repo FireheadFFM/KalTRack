@@ -873,7 +873,11 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.75 — April 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.76 — April 2026</div>
+        <div>· Fix: manuell nacherfasste Tage nutzen jetzt Wochentag-korrektes Kalorienziel (getGoalForDate)</div>
+        <div>· Fix: altes goal-Feld (state.settings.goal) nicht mehr als Fallback in confirmManualDay</div>
+        <div>· Fix: fehlende goal-Werte in archivierten Einträgen werden beim Cloud-Merge nachberechnet</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.75 — April 2026</div>
         <div>· Fix: Kalorienziel wird jetzt tagesgenau im State gecacht (todayGoal) und beim Archivieren verwendet</div>
         <div>· Spätere Zieländerungen wirken sich nicht mehr rückwirkend auf bereits archivierte Tage aus</div>
         <div>· Mo–Do / Fr–So Ziel wird korrekt dem richtigen Wochentag zugeordnet</div>
@@ -2775,6 +2779,10 @@ async function autoLoadFromCloud() {
           rolledMerged.steps = rolledLocal.steps;
           rolledMerged.burned = rolledLocal.burned;
           rolledMerged.balance = rolledLocal.eaten - rolledLocal.burned;
+        }
+        // Sicherheitsnetz: goal neu berechnen falls fehlend oder Null
+        if(rolledMerged && (!rolledMerged.goal || rolledMerged.goal === 0)) {
+          rolledMerged.goal = getGoalForDate(rolledDate);
         }
       }
     }
@@ -5160,13 +5168,13 @@ function removeManualAct(i) { manualActs.splice(i,1); renderManualActs(); }
 function confirmManualDay() {
   const dateVal = document.getElementById('manual-day-date').value;
   const eaten = parseInt(document.getElementById('manual-day-eaten').value);
-  const goal = parseInt(document.getElementById('manual-day-goal').value) || state.settings.goal || 1800;
   const steps = parseInt(document.getElementById('manual-day-steps').value) || 0;
   if(!dateVal) { toast('Datum angeben'); return; }
   if(!eaten) { toast('Aufgenommene Kalorien angeben'); return; }
 
   const dateObj = new Date(dateVal);
   const dateStr = dateObj.toDateString();
+
   const stepsKcal = Math.round(steps * 0.04);
   const actKcal = manualActs.reduce((s,a)=>s+a.kcal, 0);
   const bmr = state.settings.bmr || 2000;
@@ -5177,6 +5185,8 @@ function confirmManualDay() {
   const realActivity = stepsKcal + actKcal;
   const activityBonus = hasTdee ? Math.max(0, realActivity - plannedActivity) : 0;
   const burned = hasTdee ? tdee + activityBonus : bmr + realActivity;
+  // Ziel korrekt für den jeweiligen Wochentag des erfassten Datums
+  const goal = getGoalForDate(dateStr);
 
   const entry = {
     date: dateStr,
