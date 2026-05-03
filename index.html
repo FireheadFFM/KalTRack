@@ -877,7 +877,11 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.77 — Mai 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.78 — Mai 2026</div>
+        <div>· Fix: Einträge von gestern rutschten in heutigen Tag — cloudIsToday prüft jetzt strikt ob lastDate == heute</div>
+        <div>· Fix: History-Merge berücksichtigt jetzt Anzahl der Mahlzeiten und Schritte — vollständigerer Eintrag gewinnt</div>
+        <div>· Fix: Browser konnte unvollständigen Rollover-Stand mit altem Timestamp über den korrekten Handy-Stand schreiben</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.77 — Mai 2026</div>
         <div>· Ausnahmetag: kleiner 🎂-Button unter dem Fortschrittsbalken — einmalig ein anderes Ziel für heute setzen</div>
         <div>· Ausnahmetag wird beim Tageswechsel automatisch zurückgesetzt</div>
         <div>· Fix: manuell nacherfasste Tage lesen das eingegebene Kalorienziel — getGoalForDate als Vorschlag</div>
@@ -2753,9 +2757,9 @@ async function autoLoadFromCloud() {
     }
 
     // Tageslog: per ID mergen — aber NUR wenn Cloud-Daten vom heutigen FitMole-Tag sind
-    // Wenn cloud.lastDate von gestern ist, wurden die Einträge bereits in die Historie überführt
+    // Wenn cloud.lastDate fehlt oder von einem anderen Tag ist → NICHT mergen
     const today = getFitMoleDay();
-    const cloudIsToday = !cloud.lastDate || cloud.lastDate === today;
+    const cloudIsToday = cloud.lastDate === today;
 
     if(cloudIsToday && cloud.todayLog && cloud.todayLog.length > 0) {
       // Einträge ohne ID bekommen eine neue (Selbstheilung für alte Einträge)
@@ -2803,10 +2807,22 @@ async function autoLoadFromCloud() {
           if(cloudIsStale) {
             merged.push(local);
           } else {
-            // Timestamp-Vergleich: neuere Version gewinnt
             const localTs = local.updatedAt || 0;
             const cloudTs = cloudDay.updatedAt || 0;
-            merged.push(cloudTs > localTs ? cloudDay : local);
+            const localLogs = (local.log||[]).length;
+            const cloudLogs = (cloudDay.log||[]).length;
+            const localSteps = local.steps || 0;
+            const cloudSteps = cloudDay.steps || 0;
+            // Rollover-Schutz: wenn lokaler Eintrag deutlich mehr Mahlzeiten oder Schritte hat
+            // → lokal gewinnt (Browser hat unvollständigen Stand archiviert)
+            if(localLogs > cloudLogs + 2 || (localSteps > cloudSteps * 2 && localSteps > 1000)) {
+              merged.push(local);
+            } else if(cloudLogs > localLogs + 2 || (cloudSteps > localSteps * 2 && cloudSteps > 1000)) {
+              merged.push(cloudDay);
+            } else {
+              // Sonst: neuerer Timestamp gewinnt
+              merged.push(cloudTs > localTs ? cloudDay : local);
+            }
           }
         } else {
           merged.push(local || cloudDay);
