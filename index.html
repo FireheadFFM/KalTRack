@@ -3013,6 +3013,9 @@ async function autoLoadFromCloud() {
     }
     const cloud = JSON.parse(rows[0].payload);
     let changed = false;
+    // DEBUG: weightLog vor Merge
+    console.log('[SYNC] cloud.weightLog:', JSON.stringify(cloud.weightLog));
+    console.log('[SYNC] local weightLog vor Merge:', JSON.stringify(state.weightLog));
 
     // ── Tombstones anwenden: Cloud-Löschungen lokal durchsetzen ──
     // DB-Einträge löschen
@@ -3243,11 +3246,12 @@ async function autoLoadFromCloud() {
     }
 
     if(changed) {
+      console.log('[SYNC] changed=true, weightLog vor saveState:', JSON.stringify(state.weightLog));
       saveState();
-      // Reminder ausblenden wenn nach Sync jetzt Schritte/Aktivitäten vorhanden
+      console.log('[SYNC] nach saveState, localStorage weightLog:', JSON.parse(localStorage.getItem('fitmole_state')||'{}').weightLog);
       if(todayHasActivity()) dismissReminder();
-      // Nur aktive Seite neu rendern statt alles
       renderHome();
+      renderWeightSummary();
       renderSettings();
       renderActivityGrid();
       renderDbPageFull();
