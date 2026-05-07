@@ -923,7 +923,12 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.83 — Mai 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.84 — Mai 2026</div>
+        <div>· Gerichte: Protein wird automatisch aus Zutaten summiert und gespeichert</div>
+        <div>· Gerichte: bearbeitbar in der Datenbank (✎) — Name, kcal und Eiweiß anpassbar</div>
+        <div>· Gerichte: Löschen auch über den Bearbeiten-Dialog möglich</div>
+        <div>· Gerichte: Eiweißgehalt in Datenbank und Favoriten-Chips angezeigt</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.83 — Mai 2026</div>
         <div>· BMR, TDEE und Protein-Ziel werden automatisch neu berechnet wenn sich das getrackte Gewicht um ≥2kg verändert</div>
         <div>· Kein separates Körpergewicht-Feld mehr — Gewicht-Tracking ist die einzige Quelle</div>
         <div>· Protein-Ziel-Hint zeigt ob Wert aus Gewicht-Tracking oder BMR-Rechner kommt</div>
@@ -1409,6 +1414,29 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
     <div class="dialog-btns">
       <button class="btn btn-secondary" onclick="closeDialog('dialog-ai-result')">Abbrechen</button>
       <button class="btn btn-primary" onclick="confirmClaudeResult()">Hinzufügen</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="dialog-dish-edit" onclick="closeDialog('dialog-dish-edit')">
+  <div class="dialog" onclick="event.stopPropagation()">
+    <h3>Gericht bearbeiten</h3>
+    <input type="text" id="dish-edit-name" placeholder="Name" />
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <div style="flex:1;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:3px;">kcal gesamt</div>
+        <input type="number" id="dish-edit-kcal" placeholder="kcal" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" />
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:3px;">Eiweiß gesamt (g)</div>
+        <input type="number" id="dish-edit-protein" placeholder="opt." step="0.1" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" />
+      </div>
+    </div>
+    <div id="dish-edit-items" style="font-size:12px;color:var(--text3);margin-bottom:10px;"></div>
+    <div class="dialog-btns">
+      <button class="btn btn-danger" onclick="confirmDishDelete()">Löschen</button>
+      <button class="btn btn-secondary" onclick="closeDialog('dialog-dish-edit')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="confirmDishEdit()">Speichern</button>
     </div>
   </div>
 </div>
@@ -2326,10 +2354,13 @@ function confirmWeight() {
   if(existing2 >= 0) state.weightLog[existing2] = entry;
   else state.weightLog.push(entry);
   state.weightLog.sort((a,b) => a.date.localeCompare(b.date));
-  saveState(); // Sofort lokal speichern
-  syncToCloud(); // Sofort hochladen — kein Debounce bei Gewicht
-  closeDialog('dialog-weight');
+  // Zuerst alles berechnen und State aktualisieren
   checkWeightDrivenRecalc(false);
+  // Dann einmalig sofort speichern + hochladen (kein Debounce)
+  saveState();
+  clearTimeout(syncTimer);
+  syncToCloud();
+  closeDialog('dialog-weight');
   renderWeightSummary();
   toast(`${weight} kg gespeichert`);
 }
@@ -2421,15 +2452,16 @@ function checkWeightDrivenRecalc(silent) {
   if(!currentWeight) return;
   const baseWeight = state.settings.bmrWeight;
   if(!baseWeight) {
-    // Noch kein Basis-Gewicht — einfach setzen ohne Neuberechnung
     state.settings.bmrWeight = currentWeight;
     recalcFromWeight(currentWeight, false);
+    if(silent) saveStateAndSync(); // beim Start: debounced sync
     return;
   }
   const diff = Math.abs(currentWeight - baseWeight);
   if(diff >= 2) {
     const dir = currentWeight < baseWeight ? '↓' : '↑';
     recalcFromWeight(currentWeight, true);
+    if(silent) saveStateAndSync(); // beim Start: debounced sync
     if(!silent) toast(`Gewicht ${dir} ${diff.toFixed(1)}kg — BMR & Protein neu berechnet`);
   }
 }
@@ -2463,7 +2495,7 @@ function recalcFromWeight(weight, updateBmr) {
   const newProtein = calcProteinGoal();
   if(newProtein) state.settings.proteinGoal = newProtein;
   cacheTodayGoal();
-  saveStateAndSync();
+  // Kein saveStateAndSync() hier — Aufrufer ist verantwortlich
   renderHome();
   renderSettings();
 }
@@ -4055,7 +4087,7 @@ function renderFavorites() {
 function getFavKcalHint(fav) {
   if(fav.type === 'dish') {
     const dish = state.dishes.find(d=>d.name===fav.name);
-    return dish ? dish.kcal + ' kcal · Gericht' : 'Gericht';
+    return dish ? dish.kcal + ' kcal' + (dish.protein ? ' · ' + dish.protein + 'g E' : '') + ' · Gericht' : 'Gericht';
   }
   if(fav.defaultAmount) {
     const food = state.db.find(f=>f.name===fav.name);
@@ -4987,7 +5019,7 @@ function handleParsedInput(parsed, originalText) {
 
   } else if(parsed.type === 'dish') {
     const dish = state.dishes.find(d=>d.name===parsed.name);
-    if(dish) { addToLog({ name: dish.name, kcal: dish.kcal, detail: 'Gespeichertes Gericht' }, true); }
+    if(dish) { addToLog({ name: dish.name, kcal: dish.kcal, protein: dish.protein || null, detail: 'Gespeichertes Gericht' }, true); }
     else { toast('Gericht nicht gefunden'); }
 
   } else if(parsed.type === 'unknown_with_kcal') {
@@ -5072,7 +5104,8 @@ function finishDishYes() {
   const name = document.getElementById('dialog-dish-name').value.trim();
   if(!name) { toast('Bitte Namen eingeben'); return; }
   const total = pendingDishItems.reduce((s,i)=>s+i.kcal,0);
-  state.dishes.push({ id:'d'+Date.now(), name, kcal: total, items: pendingDishItems, custom: true });
+  const totalProtein = pendingDishItems.reduce((s,i)=>s+(i.protein||0),0);
+  state.dishes.push({ id:'d'+Date.now(), name, kcal: total, protein: totalProtein > 0 ? Math.round(totalProtein*10)/10 : null, items: pendingDishItems, custom: true });
   closeDialog('dialog-dish');
   if(state.mode === 'db') {
     state.sessionItems = [];
@@ -5370,10 +5403,11 @@ function renderDbPageFull() {
           <div class="db-item">
             <div class="log-left">
               <div class="db-name">${d.name}</div>
-              <div class="db-detail">${d.kcal} kcal · ${d.items?d.items.length:0} Zutaten</div>
+              <div class="db-detail">${d.kcal} kcal${d.protein ? ' · ' + d.protein + 'g Eiweiß' : ''} · ${d.items?d.items.length:0} Zutaten</div>
             </div>
             <div class="db-actions">
               <button style="background:none;border:none;cursor:pointer;font-size:15px;padding:4px;" onclick="toggleFavoriteDb('${d.name.replace(/'/g,"\\'")}','dish')" title="Favorit">${isFav?'★':'☆'}</button>
+              <button class="btn btn-secondary" style="font-size:12px;padding:6px 10px;" onclick="openDishEdit(${i})">✎</button>
               <button class="btn btn-secondary" style="font-size:12px;padding:6px 10px;" onclick="toggleDishDetail(${i})">Details</button>
               <button class="btn btn-danger" style="font-size:12px;padding:6px 10px;" onclick="deleteDishConfirm(${i})">−</button>
             </div>
@@ -5433,6 +5467,55 @@ function deleteDbItemConfirm(id) {
   renderDbPageFull(); renderFavorites(); saveStateAndSync();
   toast(`${f.name} gelöscht`);
 }
+let editingDishIdx = null;
+
+function openDishEdit(i) {
+  const d = state.dishes[i];
+  if(!d) return;
+  editingDishIdx = i;
+  document.getElementById('dish-edit-name').value = d.name;
+  document.getElementById('dish-edit-kcal').value = d.kcal;
+  document.getElementById('dish-edit-protein').value = d.protein || '';
+  const itemsEl = document.getElementById('dish-edit-items');
+  if(itemsEl && d.items && d.items.length > 0) {
+    itemsEl.innerHTML = '<b>Zutaten:</b> ' + d.items.map(it => `${it.name} (${it.kcal} kcal${it.protein ? ', '+it.protein+'g E' : ''})`).join(' · ');
+  } else if(itemsEl) {
+    itemsEl.innerHTML = '';
+  }
+  openDialog('dialog-dish-edit');
+}
+
+function confirmDishEdit() {
+  const d = state.dishes[editingDishIdx];
+  if(!d) return;
+  const name = document.getElementById('dish-edit-name').value.trim();
+  const kcal = parseInt(document.getElementById('dish-edit-kcal').value);
+  const protein = parseFloat(document.getElementById('dish-edit-protein').value);
+  if(!name || !kcal) { toast('Name und kcal eingeben'); return; }
+  // Favoriten-Name ggf. aktualisieren
+  const fav = state.favorites.find(f => f.name === d.name);
+  if(fav) fav.name = name;
+  d.name = name;
+  d.kcal = kcal;
+  d.protein = protein > 0 ? Math.round(protein * 10) / 10 : null;
+  closeDialog('dialog-dish-edit');
+  saveStateAndSync();
+  renderDbPageFull();
+  renderFavorites();
+  toast(`${name} gespeichert`);
+}
+
+function confirmDishDelete() {
+  const d = state.dishes[editingDishIdx];
+  if(!d || !confirm(`"${d.name}" wirklich löschen?`)) return;
+  state.dishes.splice(editingDishIdx, 1);
+  closeDialog('dialog-dish-edit');
+  saveStateAndSync();
+  renderDbPageFull();
+  toast('Gericht gelöscht');
+}
+
+
 function deleteDishConfirm(i) {
   const d = state.dishes[i];
   if(!d) return;
