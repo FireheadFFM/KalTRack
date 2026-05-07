@@ -401,6 +401,11 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
           <div class="stat-value green" id="s-remain">0</div>
           <div class="stat-label" id="s-remain-label">kcal</div>
         </div>
+        <div class="stat-card" id="protein-stat-card" style="display:none;">
+          <div class="stat-label">Eiweiß heute</div>
+          <div class="stat-value" id="s-protein" style="font-size:20px;">0</div>
+          <div class="stat-label">g</div>
+        </div>
       </div>
       <div class="progress-wrap">
         <div class="progress-bar" style="position:relative;overflow:hidden;">
@@ -417,6 +422,14 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
           <button id="exception-day-btn" onclick="toggleExceptionDay()" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;padding:0 0 0 6px;"></button>
         </div>
       </div>
+    </div>
+
+    <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Gewicht</span>
+      <button class="btn btn-secondary" style="font-size:12px;padding:4px 10px;" onclick="openWeightEntry()">+ Eintragen</button>
+    </div>
+    <div class="card" id="weight-card">
+      <div id="weight-summary" style="font-size:13px;color:var(--text2);">Noch keine Gewichtsdaten.</div>
     </div>
 
     <div class="section-title">Heutige Einträge</div>
@@ -450,6 +463,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <div class="mic-transcript" id="mic-transcript"></div>
       <button id="voice-toggle" onclick="toggleVoiceOutput()" title="Sprachausgabe ein/aus"
         style="position:absolute;top:12px;right:12px;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3);padding:4px;line-height:1;">🔊</button>
+      <label id="photo-btn" title="Foto analysieren (Gemini Vision)"
+        style="position:absolute;top:12px;left:12px;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3);padding:4px;line-height:1;display:none;">
+        📷<input type="file" accept="image/*" capture="environment" onchange="analyzePhoto(event)" style="display:none;" />
+      </label>
     </div>
 
     <div class="card">
@@ -767,6 +784,24 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
           <div id="toggle-gemini-knob" style="width:20px;height:20px;border-radius:50%;background:white;position:absolute;top:1px;left:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
         </div>
       </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">KI-Suche (DeepSeek V4)</div>
+          <div class="settings-sub">Stufe 6 · günstig · deepseek.com</div>
+        </div>
+        <div id="toggle-deepseek" onclick="toggleSource('deepseek')" style="width:44px;height:24px;border-radius:12px;background:var(--bg2);border:1px solid var(--border);position:relative;cursor:pointer;transition:background 0.2s;flex-shrink:0;">
+          <div id="toggle-deepseek-knob" style="width:20px;height:20px;border-radius:50%;background:white;position:absolute;top:1px;left:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">📷 Foto-Erkennung</div>
+          <div class="settings-sub">Gemini Vision · Foto → Kalorien</div>
+        </div>
+        <div id="toggle-photo" onclick="toggleSource('photo')" style="width:44px;height:24px;border-radius:12px;background:var(--bg2);border:1px solid var(--border);position:relative;cursor:pointer;transition:background 0.2s;flex-shrink:0;">
+          <div id="toggle-photo-knob" style="width:20px;height:20px;border-radius:50%;background:white;position:absolute;top:1px;left:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -778,6 +813,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <div class="settings-row">
         <div><div class="settings-label">Gemini API Key</div><div class="settings-sub">aistudio.google.com · kostenlos</div></div>
         <input type="text" id="set-geminikey" placeholder="AIza..." onchange="saveSettings()" style="width:110px;font-size:11px;" />
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">DeepSeek API Key</div><div class="settings-sub">platform.deepseek.com</div></div>
+        <input type="text" id="set-deepseekkey" placeholder="sk-..." onchange="saveSettings()" style="width:110px;font-size:11px;" />
       </div>
       <div class="settings-row">
         <div><div class="settings-label">Nutritionix App ID</div><div class="settings-sub">nutritionix.com/business/api</div></div>
@@ -877,7 +916,12 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.78 — Mai 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.79 — Mai 2026</div>
+        <div>· NEU: DeepSeek V4 Flash als Stufe 6 für Kaloriensuche (platform.deepseek.com)</div>
+        <div>· NEU: Foto-Erkennung via Gemini Vision — 📷 Button in der Eingabe, Gemini schätzt Kalorien</div>
+        <div>· NEU: Gewicht-Tracking — tägliche Einträge mit Mini-Chart und Verlauf auf der Übersicht</div>
+        <div>· NEU: Protein-Tracking — Eiweißgehalt in DB hinterlegen, tägliche Aufnahme wird summiert</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.78 — Mai 2026</div>
         <div>· Fix: Einträge von gestern rutschten in heutigen Tag — cloudIsToday prüft jetzt strikt ob lastDate == heute</div>
         <div>· Fix: History-Merge berücksichtigt jetzt Anzahl der Mahlzeiten und Schritte — vollständigerer Eintrag gewinnt</div>
         <div>· Fix: Browser konnte unvollständigen Rollover-Stand mit altem Timestamp über den korrekten Handy-Stand schreiben</div>
@@ -1412,6 +1456,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       </select>
       <input type="number" id="db-edit-grams" placeholder="g oder ml/Stück (opt.)" style="flex:1;" />
     </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <input type="number" id="db-edit-protein" placeholder="Eiweiß g/100g (opt.)" step="0.1"
+        style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" />
+    </div>
     <div id="db-edit-hint" style="font-size:11px;color:var(--accent);margin-bottom:10px;min-height:14px;"></div>
     <select id="db-edit-category" style="width:100%;padding:9px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;margin-bottom:10px;"></select>
     <div class="dialog-btns">
@@ -1443,6 +1491,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       </select>
       <input type="number" id="db-add-grams" placeholder="g oder ml/Stück (opt.)" style="flex:1;" oninput="updateAddHint()" />
     </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <input type="number" id="db-add-protein" placeholder="Eiweiß g/100g (opt.)" step="0.1"
+        style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" />
+    </div>
     <select id="db-add-category" style="width:100%;padding:9px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;margin-bottom:10px;" onchange="toggleNewCatInput(this.value)">
     </select>
     <input type="text" id="db-add-newcat" placeholder="Neue Kategorie eingeben…" style="display:none;margin-bottom:10px;" />
@@ -1450,6 +1502,23 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
     <div class="dialog-btns">
       <button class="btn btn-secondary" onclick="closeDialog('dialog-db-add')">Abbrechen</button>
       <button class="btn btn-primary" onclick="confirmDbAdd()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="dialog-weight" onclick="closeDialog('dialog-weight')">
+  <div class="dialog" onclick="event.stopPropagation()">
+    <h3>Gewicht eintragen</h3>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <input type="number" id="weight-input" placeholder="z.B. 84.5" step="0.1" min="30" max="300"
+        style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:18px;font-family:'DM Mono';background:var(--bg);color:var(--text);outline:none;text-align:center;"
+        onkeydown="if(event.key==='Enter')confirmWeight()" />
+      <div style="display:flex;align-items:center;font-size:16px;color:var(--text2);padding:0 8px;">kg</div>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px;" id="weight-dialog-hint"></div>
+    <div class="dialog-btns">
+      <button class="btn btn-secondary" onclick="closeDialog('dialog-weight')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="confirmWeight()">Speichern</button>
     </div>
   </div>
 </div>
@@ -1842,7 +1911,7 @@ async function init() {
   renderFavorites();
   renderVoiceToggle();
   renderSplashToggle();
-  // Startbildschirm anzeigen wenn aktiviert
+  renderPhotoBtn();
   if(state.settings.splashEnabled !== false) {
     showSplash();
   }
@@ -2210,7 +2279,87 @@ function getGoalForDate(dateStr) {
   }
 }
 
-// ─── AUSNAHMETAG ──────────────────────────────────────────────────────────────
+// ─── GEWICHT-TRACKING ─────────────────────────────────────────────────────────
+function openWeightEntry() {
+  const el = document.getElementById('weight-input');
+  if(el) el.value = '';
+  const hint = document.getElementById('weight-dialog-hint');
+  const last = (state.weightLog||[]).slice(-1)[0];
+  if(hint && last) {
+    const d = new Date(last.date);
+    hint.textContent = `Letzter Eintrag: ${last.weight} kg am ${d.toLocaleDateString('de-DE')}`;
+  } else if(hint) {
+    hint.textContent = 'Erster Eintrag';
+  }
+  openDialog('dialog-weight');
+  setTimeout(() => { if(el) el.focus(); }, 100);
+}
+
+function confirmWeight() {
+  const el = document.getElementById('weight-input');
+  const weight = parseFloat(el?.value?.replace(',','.'));
+  if(!weight || weight < 20 || weight > 300) { toast('Ungültiger Wert'); return; }
+  if(!state.weightLog) state.weightLog = [];
+  const today = new Date().toISOString().slice(0,10);
+  // Heutigen Eintrag überschreiben oder neuen anlegen
+  const existing = state.weightLog.findIndex(e => e.date === today);
+  if(existing >= 0) state.weightLog[existing].weight = weight;
+  else state.weightLog.push({ date: today, weight });
+  state.weightLog.sort((a,b) => a.date.localeCompare(b.date));
+  saveStateAndSync();
+  closeDialog('dialog-weight');
+  renderWeightSummary();
+  toast(`${weight} kg gespeichert`);
+}
+
+function renderWeightSummary() {
+  const el = document.getElementById('weight-summary');
+  if(!el) return;
+  const log = state.weightLog || [];
+  if(log.length === 0) { el.innerHTML = '<span style="color:var(--text3);">Noch keine Gewichtsdaten.</span>'; return; }
+
+  const last = log[log.length - 1];
+  const first = log[0];
+  const diff = (last.weight - first.weight).toFixed(1);
+  const diffColor = parseFloat(diff) < 0 ? 'var(--accent)' : 'var(--danger)';
+  const diffSign = parseFloat(diff) > 0 ? '+' : '';
+  const lastDate = new Date(last.date).toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit'});
+
+  // Mini-Chart der letzten 10 Einträge
+  const recent = log.slice(-10);
+  const minW = Math.min(...recent.map(e=>e.weight));
+  const maxW = Math.max(...recent.map(e=>e.weight));
+  const range = maxW - minW || 1;
+  const w = 100 / recent.length;
+  const points = recent.map((e,i) => {
+    const x = i * w + w/2;
+    const y = 40 - ((e.weight - minW) / range) * 32;
+    return `${x},${y}`;
+  }).join(' ');
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div>
+        <div style="font-size:24px;font-weight:600;font-family:'DM Mono';">${last.weight} <span style="font-size:14px;font-weight:400;color:var(--text3);">kg</span></div>
+        <div style="font-size:11px;color:var(--text3);">zuletzt am ${lastDate}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:18px;font-weight:600;font-family:'DM Mono';color:${diffColor};">${diffSign}${diff} kg</div>
+        <div style="font-size:11px;color:var(--text3);">seit ${new Date(first.date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})}</div>
+      </div>
+    </div>
+    ${recent.length > 1 ? `
+    <svg width="100%" height="44" viewBox="0 0 100 44" preserveAspectRatio="none" style="overflow:visible;">
+      <polyline points="${points}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      ${recent.map((e,i) => {
+        const x = i * w + w/2;
+        const y = 40 - ((e.weight - minW) / range) * 32;
+        return `<circle cx="${x}" cy="${y}" r="2" fill="var(--accent)"/>`;
+      }).join('')}
+    </svg>` : ''}`;
+}
+
+
 function toggleExceptionDay() {
   if(state.exceptionDayGoal) {
     // Ausnahmetag aufheben
@@ -2915,6 +3064,12 @@ function loadState() {
     state.backlogIdeas.unshift({ id: 'bi-sw', text: swEntry, star: true, ts: Date.now() });
   }
 
+  // Protein-Tracking Backlog-Eintrag
+  const proteinEntry = 'Protein-Tracking: Eiweißmenge pro 100g/Portion in der Datenbank hinterlegen, tägliche Eiweißaufnahme pro Mahlzeit und als Tagesgesamtwert anzeigen';
+  if(!state.backlogIdeas.find(i => i.id === 'bi-protein')) {
+    state.backlogIdeas.unshift({ id: 'bi-protein', text: proteinEntry, star: true, ts: Date.now() });
+  }
+
   // Animierter Maulwurf Backlog-Eintrag
   const moleEntry = 'Animierter Maulwurf auf der Startseite: hüpft & freut sich bei Kaloriendefizit vom Vortag, schüttelt traurig den Kopf & hält Hände vors Gesicht bei Überschuss';
   if(!state.backlogIdeas.find(i => i.id === 'bi-mole-anim')) {
@@ -3076,6 +3231,15 @@ function renderHome() {
   }
 
   renderExceptionDayBtn();
+  renderWeightSummary();
+
+  // Eiweiß
+  const totalProtein = (state.todayLog||[]).reduce((s,i) => s + (i.protein||0), 0);
+  const proteinCard = document.getElementById('protein-stat-card');
+  const proteinEl = document.getElementById('s-protein');
+  const hasProteinData = (state.todayLog||[]).some(i => i.protein > 0);
+  if(proteinCard) proteinCard.style.display = hasProteinData ? 'block' : 'none';
+  if(proteinEl) proteinEl.textContent = totalProtein.toFixed(1);
   const ll = document.getElementById('log-list');
   if(state.todayLog.length === 0) { ll.innerHTML = '<div class="empty-state">Noch keine Einträge heute</div>'; }
   else {
@@ -3083,7 +3247,7 @@ function renderHome() {
       <div class="log-item">
         <div class="log-left">
           <div class="log-name">${item.name}${item.noDb ? '<span class="badge badge-warn">kein DB-Eintrag</span>' : ''}</div>
-          <div class="log-detail">${item.detail || ''}</div>
+          <div class="log-detail">${item.detail || ''}${item.protein ? ` · ${item.protein}g Eiweiß` : ''}</div>
         </div>
         <div class="log-right">
           <div class="log-kcal">${item.kcal} kcal</div>
@@ -3143,6 +3307,8 @@ function renderSettings() {
   document.getElementById('set-steps').value = state.settings.stepsGoal || '';
   document.getElementById('set-apikey').value = state.settings.apiKey || '';
   document.getElementById('set-geminikey').value = state.settings.geminiKey || '';
+  const dsKeyEl = document.getElementById('set-deepseekkey');
+  if(dsKeyEl) dsKeyEl.value = state.settings.deepseekKey || '';
   document.getElementById('set-nx-id').value = state.settings.nutritionixAppId || '';
   document.getElementById('set-nx-key').value = state.settings.nutritionixKey || '';
   renderAiToggle();
@@ -3199,6 +3365,7 @@ function saveSettings() {
   state.settings.stepsGoal = parseInt(document.getElementById('set-steps').value) || 10000;
   state.settings.apiKey = document.getElementById('set-apikey').value.trim();
   state.settings.geminiKey = document.getElementById('set-geminikey').value.trim();
+  state.settings.deepseekKey = (document.getElementById('set-deepseekkey')?.value || '').trim();
   state.settings.nutritionixAppId = document.getElementById('set-nx-id').value.trim();
   state.settings.nutritionixKey = document.getElementById('set-nx-key').value.trim();
   saveStateAndSync();
@@ -3211,6 +3378,11 @@ function toggleSource(src) {
   if(src === 'nx') state.settings.nxEnabled = !state.settings.nxEnabled;
   if(src === 'ai') { state.settings.aiEnabled = !state.settings.aiEnabled; state.settings.aiSearchEnabled = state.settings.aiEnabled; }
   if(src === 'gemini') state.settings.geminiEnabled = !state.settings.geminiEnabled;
+  if(src === 'deepseek') state.settings.deepseekEnabled = !state.settings.deepseekEnabled;
+  if(src === 'photo') {
+    state.settings.photoEnabled = !state.settings.photoEnabled;
+    renderPhotoBtn();
+  }
   renderSourceToggles();
   saveStateAndSync();
 }
@@ -3222,10 +3394,14 @@ function renderSourceToggles() {
   const nx = !!state.settings.nxEnabled;
   const ai = !!(state.settings.aiEnabled ?? state.settings.aiSearchEnabled);
   const gemini = !!state.settings.geminiEnabled;
+  const deepseek = !!state.settings.deepseekEnabled;
+  const photo = !!state.settings.photoEnabled;
   setToggle('off', off);
   setToggle('nx', nx);
   setToggle('ai', ai);
   setToggle('gemini', gemini);
+  setToggle('deepseek', deepseek);
+  setToggle('photo', photo);
 }
 
 function setToggle(id, on) {
@@ -3432,7 +3608,14 @@ async function processInput(text) {
     cleanup(); return;
   }
 
-  // Stufe 6: OFF-Fallback — Portionsdaten unbekannt, jetzt Nutzer fragen
+  // Stufe 6: DeepSeek V4 (wenn aktiviert und Key vorhanden)
+  if(state.settings.deepseekEnabled && state.settings.deepseekKey) {
+    document.getElementById('mic-status').textContent = 'DeepSeek sucht Nährwerte…';
+    await processWithDeepSeek(text, state.settings.deepseekKey);
+    cleanup(); return;
+  }
+
+  // Stufe 7: OFF-Fallback — Portionsdaten unbekannt, jetzt Nutzer fragen
   if(offFallback) { showPortionInputDialog(offFallback.productName, offFallback.kcalPer100); cleanup(); return; }
 
   toast('Nicht gefunden — weitere Quellen in Einstellungen aktivieren');
@@ -4229,6 +4412,95 @@ function clearErrorLog() {
   toast('Fehlerlog geleert');
 }
 
+// ─── DEEPSEEK V4 ──────────────────────────────────────────────────────────────
+async function processWithDeepSeek(text, apiKey) {
+  const prompt = `Du bist ein Kalorien-Assistent. Der Nutzer hat eingegeben: "${text}"
+Antworte NUR mit diesem JSON (kein anderer Text):
+{"items":[{"name":"Name","amount":1,"amountUnit":"Stück","kcal":300,"detail":"Quelle","saveToDb":false,"kcalPer100":null}],"totalKcal":300,"confidence":"hoch","source":"DeepSeek V4"}`;
+  try {
+    const resp = await apiFetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({
+        model: 'deepseek-v4-flash',
+        max_tokens: 500,
+        temperature: 0.1,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await resp.json();
+    if(data.error) { logError('DeepSeek', data.error.message, ''); toast('DeepSeek: ' + data.error.message); return; }
+    const raw = data.choices?.[0]?.message?.content || '';
+    let clean = raw.replace(/```json\s*/gi,'').replace(/```/g,'').trim();
+    if(clean[0] !== '{') { const s=clean.indexOf('{'),e=clean.lastIndexOf('}'); if(s>=0&&e>s) clean=clean.slice(s,e+1); }
+    const parsed = JSON.parse(clean);
+    if(!parsed.items?.length) { toast('DeepSeek: Nichts gefunden'); return; }
+    showClaudeSearchResult(parsed, text);
+  } catch(e) {
+    logError('DeepSeek', e.message, text);
+    toast('DeepSeek-Suche fehlgeschlagen');
+  }
+}
+
+// ─── FOTO-ERKENNUNG (Gemini Vision) ───────────────────────────────────────────
+function renderPhotoBtn() {
+  const btn = document.getElementById('photo-btn');
+  if(btn) btn.style.display = (state.settings.photoEnabled && state.settings.geminiKey) ? 'block' : 'none';
+}
+
+async function analyzePhoto(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  if(!state.settings.geminiKey) { toast('Gemini API Key fehlt'); return; }
+
+  document.getElementById('mic-btn').classList.add('processing');
+  document.getElementById('mic-status').textContent = 'Foto wird analysiert…';
+
+  // Bild als Base64
+  const base64 = await new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+
+  const prompt = `Du bist ein Kalorien-Assistent. Analysiere dieses Foto eines Essens und schätze die Nährwerte.
+Antworte NUR mit diesem JSON:
+{"items":[{"name":"Name des Gerichts/Lebensmittels","amount":1,"amountUnit":"Portion","kcal":450,"detail":"geschätzte Portion","saveToDb":false,"kcalPer100":null}],"totalKcal":450,"confidence":"geschätzt","source":"Gemini Vision"}`;
+
+  try {
+    const resp = await apiFetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${state.settings.geminiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [
+            { inline_data: { mime_type: file.type, data: base64 } },
+            { text: prompt }
+          ]}],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 500 }
+        })
+      }
+    );
+    const data = await resp.json();
+    if(data.error) { toast('Foto-Analyse: ' + data.error.message); return; }
+    const raw = data.candidates?.[0]?.content?.parts?.find(p=>p.text)?.text || '';
+    let clean = raw.replace(/```json\s*/gi,'').replace(/```/g,'').trim();
+    if(clean[0] !== '{') { const s=clean.indexOf('{'),e=clean.lastIndexOf('}'); if(s>=0&&e>s) clean=clean.slice(s,e+1); }
+    const parsed = JSON.parse(clean);
+    if(!parsed.items?.length) { toast('Keine Kalorien erkannt'); return; }
+    showClaudeSearchResult(parsed, 'Foto-Analyse');
+  } catch(e) {
+    logError('Foto-Analyse', e.message, '');
+    toast('Foto-Analyse fehlgeschlagen');
+  } finally {
+    document.getElementById('mic-btn').classList.remove('processing');
+    document.getElementById('mic-status').textContent = 'Tippen zum Starten';
+    event.target.value = '';
+  }
+}
+
 async function processWithGemini(text, apiKey, offContext) {
   const offHint = offContext
     ? `\nHinweis: Open Food Facts hat für "${offContext.productName}" bereits ${offContext.kcalPer100} kcal/100g gefunden, aber keine Portionsgröße. Nutze diesen Wert und ergänze die typische Portionsgröße in Gramm um die Gesamtkalorien zu berechnen.`
@@ -4463,11 +4735,17 @@ function handleParsedInput(parsed, originalText) {
       detail = `${parsed.amount} ${food.unit}`;
       directLog = true;
     } else {
-      // Gramm/ml-Angabe → in Sitzung (könnte Zutat sein)
       kcal = Math.round((parseFloat(parsed.amount) * food.kcalPer100) / 100);
       detail = `${parsed.amount}${parsed.amountUnit||'g'} · ${food.kcalPer100} kcal/100${food.unit==='100ml'?'ml':'g'}`;
     }
-    addToLog({ name: food.name, kcal, detail }, directLog);
+    // Eiweiß berechnen wenn vorhanden
+    let protein = null;
+    if(food.proteinPer100) {
+      if(food.gramsPerUnit && isPieceUnit) protein = Math.round((food.gramsPerUnit * parseFloat(parsed.amount) * food.proteinPer100) / 100 * 10) / 10;
+      else if(!isPer100Unit) protein = Math.round(food.proteinPer100 * parseFloat(parsed.amount) * 10) / 10;
+      else protein = Math.round(parseFloat(parsed.amount) * food.proteinPer100 / 100 * 10) / 10;
+    }
+    addToLog({ name: food.name, kcal, detail, protein }, directLog);
 
   } else if(parsed.type === 'dish') {
     const dish = state.dishes.find(d=>d.name===parsed.name);
@@ -4948,6 +5226,8 @@ function openDbEdit(id) {
   document.getElementById('db-edit-kcal-mode').value = isPiece ? 'total' : 'per100';
   document.getElementById('db-edit-unit').value = f.unit||'100g';
   document.getElementById('db-edit-grams').value = f.gramsPerUnit||'';
+  const editProtein = document.getElementById('db-edit-protein');
+  if(editProtein) editProtein.value = f.proteinPer100||'';
   document.getElementById('db-edit-hint').textContent = '';
   // Populate category dropdown
   const cats = [...new Set(state.db.map(x=>x.category||'Sonstiges').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
@@ -4971,6 +5251,8 @@ function confirmDbEdit() {
   if(mode === 'total' && grams > 0) kcalPer100 = Math.round((kcalRaw / grams) * 100);
   f.name = name; f.kcalPer100 = kcalPer100; f.unit = unit; f.category = category; f.custom = true;
   if(grams > 0) f.gramsPerUnit = grams; else delete f.gramsPerUnit;
+  const protein = parseFloat(document.getElementById('db-edit-protein')?.value);
+  if(protein > 0) f.proteinPer100 = protein; else delete f.proteinPer100;
   closeDialog('dialog-db-edit');
   renderDbPageFull(); saveStateAndSync();
   toast(`${name} gespeichert`);
@@ -5079,6 +5361,8 @@ function confirmDbAdd() {
 
   const entry = { id:'m'+Date.now(), name, kcalPer100, unit, category, custom: true };
   if(grams > 0) entry.gramsPerUnit = grams;
+  const protein = parseFloat(document.getElementById('db-add-protein')?.value);
+  if(protein > 0) entry.proteinPer100 = protein;
   state.db.push(entry);
   closeDialog('dialog-db-add');
   renderDbPageFull(); saveStateAndSync();
