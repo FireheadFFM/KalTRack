@@ -749,6 +749,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <div style="display:flex;gap:6px;align-items:center;">
           <input type="number" id="set-protein-goal" placeholder="120" onchange="saveSettings()" />
           <button class="btn btn-secondary" style="font-size:11px;padding:5px 8px;white-space:nowrap;" onclick="recalcProteinGoal()" title="Aus aktuellem Gewicht + Aktivitätslevel neu berechnen">↺</button>
+          <button class="btn btn-secondary" style="font-size:11px;padding:5px 8px;white-space:nowrap;color:var(--accent);" onclick="setProteinLoss()" title="Abnehmphase: 2g pro kg Körpergewicht">🔥</button>
         </div>
       </div>
     </div>
@@ -2492,6 +2493,19 @@ function calcProteinGoal() {
   else if(actFactor <= 1.725) proteinFactor = 1.8;
   else                        proteinFactor = 2.0;
   return Math.round(weight * proteinFactor);
+}
+
+function setProteinLoss() {
+  const weight = getCurrentWeight() || parseFloat(state.settings.bmrWeight);
+  if(!weight) { toast('Bitte zuerst Gewicht tracken'); return; }
+  const goal = Math.round(weight * 2.0);
+  const pgEl = document.getElementById('set-protein-goal');
+  if(pgEl) pgEl.value = goal;
+  state.settings.proteinGoal = goal;
+  saveStateAndSync();
+  renderProteinGoalHint();
+  renderHome();
+  toast(`🔥 Abnehmphase: ${goal}g Eiweiß/Tag (${weight}kg × 2g)`);
 }
 
 function recalcProteinGoal() {
