@@ -2911,7 +2911,7 @@ async function autoLoadFromCloud() {
     // Einstellungen: persönliche Werte aus Cloud übernehmen (bmr, goal, stepsGoal, voiceEnabled)
     // API-Keys und Toggles bleiben lokal (geräteabhängig)
     if(cloud.settings) {
-      const personalKeys = ['bmr','goal','stepsGoal','voiceEnabled','apiKey','geminiKey','nutritionixAppId','nutritionixKey'];
+      const personalKeys = ['bmr','goal','stepsGoal','voiceEnabled','apiKey','geminiKey','nutritionixAppId','nutritionixKey','deepseekKey','deepseekEnabled','photoEnabled','proteinGoal','goalWeek','goalWeekend','bmrActivity','bmrWeight','bmrAge','bmrHeight','bmrGender','splashEnabled'];
       let settingsChanged = false;
       personalKeys.forEach(k => {
         if(cloud.settings[k] !== undefined && cloud.settings[k] !== state.settings[k]) {
@@ -3022,6 +3022,26 @@ async function autoLoadFromCloud() {
     // Schritte: nur übernehmen wenn Cloud von heute
     if(cloudIsToday && cloud.steps && cloud.steps > (state.steps||0)) {
       state.steps = cloud.steps; changed = true;
+    }
+
+    // WeightLog: per Datum mergen — neuerer Wert gewinnt
+    if(cloud.weightLog && cloud.weightLog.length > 0) {
+      if(!state.weightLog) state.weightLog = [];
+      const localDates = {};
+      state.weightLog.forEach(e => { localDates[e.date] = e; });
+      let wChanged = false;
+      cloud.weightLog.forEach(ce => {
+        if(!localDates[ce.date]) {
+          state.weightLog.push(ce);
+          wChanged = true;
+        }
+        // Wenn beide vorhanden: Cloud gewinnt nur wenn lokaler Eintrag nicht frisch ist
+        // (kein updatedAt auf weightLog-Einträgen → Cloud gewinnt nie über lokalen)
+      });
+      if(wChanged) {
+        state.weightLog.sort((a,b) => a.date.localeCompare(b.date));
+        changed = true;
+      }
     }
 
     // Historie: tagesweise mergen — neueste Version (updatedAt) gewinnt immer
@@ -3137,6 +3157,7 @@ function loadState() {
   if(!state.deletedFavNames) state.deletedFavNames = [];
   if(!state.backlogIdeas) state.backlogIdeas = [];
   if(!state.errorLog) state.errorLog = [];
+  if(!state.weightLog) state.weightLog = [];
 
   // Migration: altes einheitliches goal → goalWeek/goalWeekend
   if(!state.settings.goalWeek && state.settings.goal) {
@@ -6160,7 +6181,7 @@ let syncTimer = null;
 function saveStateAndSync() {
   saveState();
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(() => { syncToCloud(); }, 3000);
+  syncTimer = setTimeout(() => { syncToCloud(); }, 1000);
 }
 
 // ─── EXPORT / IMPORT ──────────────────────────────────────────────────────────
