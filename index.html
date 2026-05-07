@@ -746,7 +746,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
           <div class="settings-label">Protein-Ziel</div>
           <div class="settings-sub" id="protein-goal-hint">g Eiweiß pro Tag</div>
         </div>
-        <input type="number" id="set-protein-goal" placeholder="120" onchange="saveSettings()" />
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="number" id="set-protein-goal" placeholder="120" onchange="saveSettings()" />
+          <button class="btn btn-secondary" style="font-size:11px;padding:5px 8px;white-space:nowrap;" onclick="recalcProteinGoal()" title="Aus aktuellem Gewicht + Aktivitätslevel neu berechnen">↺</button>
+        </div>
       </div>
     </div>
 
@@ -927,7 +930,12 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.82 — Mai 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.83 — Mai 2026</div>
+        <div>· BMR, TDEE und Protein-Ziel werden automatisch neu berechnet wenn sich das getrackte Gewicht um ≥2kg verändert</div>
+        <div>· Kein separates Körpergewicht-Feld mehr — Gewicht-Tracking ist die einzige Quelle</div>
+        <div>· Protein-Ziel-Hint zeigt ob Wert aus Gewicht-Tracking oder BMR-Rechner kommt</div>
+        <div>· ↺-Button berechnet Protein-Ziel sofort aus aktuellem Tracking-Gewicht neu</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.82 — Mai 2026</div>
         <div>· Protein-Zielwert: automatisch berechnet aus Körpergewicht × Aktivitätsfaktor (0.8–2.0 g/kg)</div>
         <div>· Tagesübersicht: Eiweiß Soll/Ist mit Prozentanzeige (erscheint sobald Ziel gesetzt)</div>
         <div>· Historie: Protein-Tageswert + Ziel pro Eintrag gespeichert und angezeigt</div>
@@ -1937,6 +1945,7 @@ async function init() {
   renderVoiceToggle();
   renderSplashToggle();
   renderPhotoBtn();
+  checkWeightDrivenRecalc(true); // still beim Start — nur updaten ohne Toast
   if(state.settings.splashEnabled !== false) {
     showSplash();
   }
@@ -2332,6 +2341,7 @@ function confirmWeight() {
   state.weightLog.sort((a,b) => a.date.localeCompare(b.date));
   saveStateAndSync();
   closeDialog('dialog-weight');
+  checkWeightDrivenRecalc(false);
   renderWeightSummary();
   toast(`${weight} kg gespeichert`);
 }
@@ -2410,13 +2420,73 @@ function renderWeightSummary() {
 }
 
 
-// ─── PROTEIN-ZIEL ─────────────────────────────────────────────────────────────
+// ─── GEWICHTSBASIERTE BMR/TDEE/PROTEIN NEUBERECHNUNG ─────────────────────────
+function getCurrentWeight() {
+  // Letzten Gewichtseintrag aus weightLog holen
+  const log = (state.weightLog||[]).filter(e => e.weight > 0);
+  if(log.length === 0) return null;
+  return log[log.length - 1].weight;
+}
+
+function checkWeightDrivenRecalc(silent) {
+  const currentWeight = getCurrentWeight();
+  if(!currentWeight) return;
+  const baseWeight = state.settings.bmrWeight;
+  if(!baseWeight) {
+    // Noch kein Basis-Gewicht — einfach setzen ohne Neuberechnung
+    state.settings.bmrWeight = currentWeight;
+    recalcFromWeight(currentWeight, false);
+    return;
+  }
+  const diff = Math.abs(currentWeight - baseWeight);
+  if(diff >= 2) {
+    const dir = currentWeight < baseWeight ? '↓' : '↑';
+    recalcFromWeight(currentWeight, true);
+    if(!silent) toast(`Gewicht ${dir} ${diff.toFixed(1)}kg — BMR & Protein neu berechnet`);
+  }
+}
+
+function recalcFromWeight(weight, updateBmr) {
+  state.settings.bmrWeight = weight;
+  // BMR neu berechnen wenn alle Daten vorhanden
+  if(updateBmr && state.settings.bmrAge && state.settings.bmrHeight && state.settings.bmrGender) {
+    const age = state.settings.bmrAge;
+    const height = state.settings.bmrHeight;
+    const gender = state.settings.bmrGender;
+    let bmr;
+    if(gender === 'm') bmr = Math.round(10*weight + 6.25*height - 5*age + 5);
+    else               bmr = Math.round(10*weight + 6.25*height - 5*age - 161);
+    state.settings.bmr = bmr;
+    // TDEE aus Aktivitätslevel
+    const actFactor = parseFloat(state.settings.bmrActivity || 0);
+    if(actFactor) {
+      const tdee = Math.round(bmr * actFactor);
+      // Kalorienziel anpassen: Differenz zum alten TDEE beibehalten
+      const oldBmr = state.settings.bmr;
+      const oldTdee = actFactor ? Math.round(oldBmr * actFactor) : oldBmr;
+      const deficit = oldTdee - (state.settings.goalWeek || state.settings.goal || oldTdee);
+      state.settings.goalWeek = Math.max(500, tdee - deficit);
+      if(!state.settings.goalWeekend || state.settings.goalWeekend === state.settings.goalWeek) {
+        state.settings.goalWeekend = state.settings.goalWeek;
+      }
+    }
+  }
+  // Protein-Ziel neu berechnen
+  const newProtein = calcProteinGoal();
+  if(newProtein) state.settings.proteinGoal = newProtein;
+  cacheTodayGoal();
+  saveStateAndSync();
+  renderHome();
+  renderSettings();
+}
+
 function calcProteinGoal() {
-  const weight = parseFloat(state.settings.bmrWeight);
+  // Gewicht: aktueller Eintrag aus weightLog, Fallback auf bmrWeight
+  const weight = getCurrentWeight() || parseFloat(state.settings.bmrWeight) || parseFloat(state.settings.bodyWeight);
   if(!weight) return null;
   const actFactor = parseFloat(state.settings.bmrActivity || 0);
   let proteinFactor = 1.2;
-  if(actFactor <= 1.2)       proteinFactor = 0.8;
+  if(actFactor <= 1.2)        proteinFactor = 0.8;
   else if(actFactor <= 1.375) proteinFactor = 1.2;
   else if(actFactor <= 1.55)  proteinFactor = 1.5;
   else if(actFactor <= 1.725) proteinFactor = 1.8;
@@ -2424,16 +2494,46 @@ function calcProteinGoal() {
   return Math.round(weight * proteinFactor);
 }
 
+function recalcProteinGoal() {
+  const weight = getCurrentWeight() || parseFloat(state.settings.bmrWeight);
+  if(!weight) {
+    toast('Bitte zuerst Gewicht tracken oder im BMR-Rechner eintragen');
+    return;
+  }
+  const auto = calcProteinGoal();
+  if(!auto) { toast('Aktivitätslevel fehlt'); return; }
+  const pgEl = document.getElementById('set-protein-goal');
+  if(pgEl) pgEl.value = auto;
+  state.settings.proteinGoal = auto;
+  saveStateAndSync();
+  renderProteinGoalHint();
+  renderHome();
+  toast(`Protein-Ziel: ${auto}g/Tag (${weight}kg)`);
+}
+
 function renderProteinGoalHint() {
   const hintEl = document.getElementById('protein-goal-hint');
   if(!hintEl) return;
+  const currentWeight = getCurrentWeight();
+  const weight = currentWeight || parseFloat(state.settings.bmrWeight);
+  const actFactor = parseFloat(state.settings.bmrActivity || 0);
   const auto = calcProteinGoal();
   const pgEl = document.getElementById('set-protein-goal');
-  if(auto) {
-    hintEl.textContent = `g/Tag · Vorschlag: ${auto}g (${state.settings.bmrWeight}kg × Faktor)`;
-    if(pgEl && !pgEl.value && !state.settings.proteinGoal) pgEl.value = auto;
+
+  if(!weight) {
+    hintEl.innerHTML = 'g/Tag · <span style="color:var(--warn);">Gewicht tracken oder im BMR-Rechner eintragen → ↺</span>';
+  } else if(!actFactor) {
+    hintEl.innerHTML = `g/Tag · ${weight}kg · <span style="color:var(--warn);">Aktivitätslevel im BMR-Rechner setzen → ↺</span>`;
   } else {
-    hintEl.textContent = 'g/Tag · Gewicht im BMR-Rechner eingeben für Vorschlag';
+    let factor = 1.2;
+    if(actFactor <= 1.2)        factor = 0.8;
+    else if(actFactor <= 1.375) factor = 1.2;
+    else if(actFactor <= 1.55)  factor = 1.5;
+    else if(actFactor <= 1.725) factor = 1.8;
+    else                        factor = 2.0;
+    const src = currentWeight ? 'Gewicht-Tracking' : 'BMR-Rechner';
+    hintEl.innerHTML = `g/Tag · ${weight}kg × ${factor} = <b>${auto}g</b> <span style="color:var(--text3);font-size:10px;">(${src})</span>`;
+    if(pgEl && !pgEl.value && !state.settings.proteinGoal) pgEl.value = auto;
   }
 }
 
@@ -2911,7 +3011,7 @@ async function autoLoadFromCloud() {
     // Einstellungen: persönliche Werte aus Cloud übernehmen (bmr, goal, stepsGoal, voiceEnabled)
     // API-Keys und Toggles bleiben lokal (geräteabhängig)
     if(cloud.settings) {
-      const personalKeys = ['bmr','goal','stepsGoal','voiceEnabled','apiKey','geminiKey','nutritionixAppId','nutritionixKey','deepseekKey','deepseekEnabled','photoEnabled','proteinGoal','goalWeek','goalWeekend','bmrActivity','bmrWeight','bmrAge','bmrHeight','bmrGender','splashEnabled'];
+      const personalKeys = ['bmr','goal','stepsGoal','voiceEnabled','apiKey','geminiKey','nutritionixAppId','nutritionixKey','deepseekKey','deepseekEnabled','photoEnabled','proteinGoal','goalWeek','goalWeekend','bmrActivity','bmrWeight','bmrAge','bmrHeight','bmrGender','splashEnabled','bodyWeight'];
       let settingsChanged = false;
       personalKeys.forEach(k => {
         if(cloud.settings[k] !== undefined && cloud.settings[k] !== state.settings[k]) {
