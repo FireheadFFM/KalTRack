@@ -2335,12 +2335,14 @@ function confirmWeight() {
   const weight = parseFloat(el?.value?.replace(',','.'));
   if(!weight || weight < 20 || weight > 300) { toast('Ungültiger Wert'); return; }
   if(!state.weightLog) state.weightLog = [];
-  const today = new Date().toISOString().slice(0,10);
-  const existing = state.weightLog.findIndex(e => e.date === today);
-  if(existing >= 0) state.weightLog[existing].weight = weight;
-  else state.weightLog.push({ date: today, weight });
+  const today2 = new Date().toISOString().slice(0,10);
+  const existing2 = state.weightLog.findIndex(e => e.date === today2);
+  const entry = { date: today2, weight, savedAt: Date.now() };
+  if(existing2 >= 0) state.weightLog[existing2] = entry;
+  else state.weightLog.push(entry);
   state.weightLog.sort((a,b) => a.date.localeCompare(b.date));
-  saveStateAndSync();
+  saveState(); // Sofort lokal speichern
+  syncToCloud(); // Sofort hochladen — kein Debounce bei Gewicht
   closeDialog('dialog-weight');
   checkWeightDrivenRecalc(false);
   renderWeightSummary();
@@ -3138,19 +3140,24 @@ async function autoLoadFromCloud() {
       state.steps = cloud.steps; changed = true;
     }
 
-    // WeightLog: per Datum mergen — neuerer Wert gewinnt
+    // WeightLog: per Datum mergen — savedAt-Timestamp entscheidet bei Konflikt
     if(cloud.weightLog && cloud.weightLog.length > 0) {
       if(!state.weightLog) state.weightLog = [];
-      const localDates = {};
-      state.weightLog.forEach(e => { localDates[e.date] = e; });
+      const localByDate = {};
+      state.weightLog.forEach(e => { localByDate[e.date] = e; });
       let wChanged = false;
       cloud.weightLog.forEach(ce => {
-        if(!localDates[ce.date]) {
+        const local = localByDate[ce.date];
+        if(!local) {
+          // Nur aus Cloud hinzufügen wenn kein lokaler Eintrag
           state.weightLog.push(ce);
           wChanged = true;
+        } else if(ce.savedAt && local.savedAt && ce.savedAt > local.savedAt) {
+          // Cloud ist neuer — übernehmen
+          Object.assign(local, ce);
+          wChanged = true;
         }
-        // Wenn beide vorhanden: Cloud gewinnt nur wenn lokaler Eintrag nicht frisch ist
-        // (kein updatedAt auf weightLog-Einträgen → Cloud gewinnt nie über lokalen)
+        // Kein savedAt in Cloud → lokaler Eintrag gewinnt immer
       });
       if(wChanged) {
         state.weightLog.sort((a,b) => a.date.localeCompare(b.date));
@@ -6290,13 +6297,19 @@ async function syncFromCloud() {
   }
 }
 
-// Auto-sync nach jedem Speichern (debounced, 3 Sekunden)
+// Auto-sync nach jedem Speichern (debounced, 1 Sekunde)
 let syncTimer = null;
 function saveStateAndSync() {
   saveState();
   clearTimeout(syncTimer);
   syncTimer = setTimeout(() => { syncToCloud(); }, 1000);
 }
+
+// Beim Refresh/Schließen: localStorage sichern damit autoLoadFromCloud nichts überschreibt
+window.addEventListener('beforeunload', () => {
+  saveState(); // Stellt sicher dass localStorage aktuell ist
+  if(syncTimer) { clearTimeout(syncTimer); syncTimer = null; }
+});
 
 // ─── EXPORT / IMPORT ──────────────────────────────────────────────────────────
 function exportData() {
