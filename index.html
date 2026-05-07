@@ -404,7 +404,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <div class="stat-card" id="protein-stat-card" style="display:none;">
           <div class="stat-label">Eiweiß heute</div>
           <div class="stat-value" id="s-protein" style="font-size:20px;">0</div>
-          <div class="stat-label">g</div>
+          <div class="stat-label" id="s-protein-label">g</div>
         </div>
       </div>
       <div class="progress-wrap">
@@ -422,14 +422,6 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
           <button id="exception-day-btn" onclick="toggleExceptionDay()" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;padding:0 0 0 6px;"></button>
         </div>
       </div>
-    </div>
-
-    <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
-      <span>Gewicht</span>
-      <button class="btn btn-secondary" style="font-size:12px;padding:4px 10px;" onclick="openWeightEntry()">+ Eintragen</button>
-    </div>
-    <div class="card" id="weight-card">
-      <div id="weight-summary" style="font-size:13px;color:var(--text2);">Noch keine Gewichtsdaten.</div>
     </div>
 
     <div class="section-title">Heutige Einträge</div>
@@ -506,10 +498,17 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       </div>
       <!-- Schnellauswahl-Chips: Top 5 direkt sichtbar -->
       <div id="fav-chips" style="width:100%;margin-bottom:4px;"></div>
-      <!-- Ausgeklappte vollständige Liste -->
       <div id="fav-list" style="display:none;margin-top:10px;">
         <div id="fav-items"></div>
       </div>
+    </div>
+
+    <div class="card" style="margin-top:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="card-label" style="margin:0;">Gewicht heute</div>
+        <button class="btn btn-secondary" style="font-size:12px;padding:4px 10px;" onclick="openWeightEntry()">+ Eintragen</button>
+      </div>
+      <div id="weight-summary" style="font-size:13px;color:var(--text2);margin-top:8px;">Noch keine Gewichtsdaten.</div>
     </div>
   </div>
 
@@ -585,26 +584,31 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span><span style="display:inline-block;width:10px;height:10px;background:#993C1D;border-radius:2px;margin-right:4px;"></span>Überschuss</span>
         <span><span style="display:inline-block;width:10px;height:2px;background:#9e9b95;margin-right:4px;vertical-align:middle;"></span>Schritte</span>
       </div>
-      <div class="stats-grid" style="margin-top:10px;">
+      <div class="stats-grid" style="margin-top:10px;grid-template-columns:repeat(3,1fr);">
         <div class="stat-card">
-          <div class="stat-label">Ø Bilanz / Tag</div>
-          <div class="stat-value" id="week-avg" style="font-size:18px;">—</div>
-          <div class="stat-label">kcal</div>
+          <div class="stat-label" style="font-size:10px;">Ø Bilanz/Tag</div>
+          <div class="stat-value" id="week-avg" style="font-size:15px;">—</div>
+          <div class="stat-label" style="font-size:10px;">kcal</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Gesamtbilanz 7 Tage</div>
-          <div class="stat-value" id="week-total" style="font-size:18px;">—</div>
-          <div class="stat-label">kcal</div>
+          <div class="stat-label" style="font-size:10px;">Bilanz 7 Tage</div>
+          <div class="stat-value" id="week-total" style="font-size:15px;">—</div>
+          <div class="stat-label" style="font-size:10px;">kcal</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">⚖ Gewicht (7 Tage)</div>
-          <div class="stat-value" id="week-weight" style="font-size:18px;">—</div>
-          <div class="stat-label" id="week-weight-label">kg</div>
+          <div class="stat-label" style="font-size:10px;">⚖ Rechn. (7T)</div>
+          <div class="stat-value" id="week-weight" style="font-size:15px;">—</div>
+          <div class="stat-label" id="week-weight-label" style="font-size:10px;">kg</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">⚖ Rechn. Verlust gesamt</div>
-          <div class="stat-value" id="total-weight" style="font-size:18px;">—</div>
-          <div class="stat-label" id="total-weight-label">kg</div>
+          <div class="stat-label" style="font-size:10px;">⚖ Rechn. gesamt</div>
+          <div class="stat-value" id="total-weight" style="font-size:15px;">—</div>
+          <div class="stat-label" id="total-weight-label" style="font-size:10px;">kg</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label" style="font-size:10px;">⚖ Echte Abnahme</div>
+          <div class="stat-value" id="real-weight-loss" style="font-size:15px;">—</div>
+          <div class="stat-label" id="real-weight-loss-label" style="font-size:10px;">kg</div>
         </div>
       </div>
     </div>
@@ -736,6 +740,13 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <div class="settings-row">
         <div><div class="settings-label">Tägliches Schrittziel</div><div class="settings-sub">Schritte</div></div>
         <input type="number" id="set-steps" placeholder="10000" onchange="saveSettings()" />
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Protein-Ziel</div>
+          <div class="settings-sub" id="protein-goal-hint">g Eiweiß pro Tag</div>
+        </div>
+        <input type="number" id="set-protein-goal" placeholder="120" onchange="saveSettings()" />
       </div>
     </div>
 
@@ -916,7 +927,16 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.80 — Mai 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.82 — Mai 2026</div>
+        <div>· Protein-Zielwert: automatisch berechnet aus Körpergewicht × Aktivitätsfaktor (0.8–2.0 g/kg)</div>
+        <div>· Tagesübersicht: Eiweiß Soll/Ist mit Prozentanzeige (erscheint sobald Ziel gesetzt)</div>
+        <div>· Historie: Protein-Tageswert + Ziel pro Eintrag gespeichert und angezeigt</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.81 — Mai 2026</div>
+        <div>· Gewicht von Übersicht → Eingabe-Tab verschoben</div>
+        <div>· Gewicht wird beim Archivieren im Historieneintrag gespeichert</div>
+        <div>· Historie: Gewicht pro Tag anzeigbar + per Klick nachpflegbar</div>
+        <div>· Wochenübersicht: 5 kompakte Kacheln inkl. neuer „Echte Abnahme" (erstes vs. letztes Gewicht)</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.80 — Mai 2026</div>
         <div>· Proteinwerte für alle ~220 Default-Lebensmittel eingetragen</div>
         <div>· Migration: bestehende DB-Einträge werden beim Start automatisch mit Proteinwerten ergänzt</div>
         <div>· Custom-Einträge und eigene Lebensmittel bleiben unberührt</div>
@@ -1600,7 +1620,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let state = {
   mode: 'track',
-  settings: { bmr: 2000, goal: 1800, stepsGoal: 10000, apiKey: '', aiSearchEnabled: false, nutritionixAppId: '', nutritionixKey: '', offEnabled: true, nxEnabled: false, aiEnabled: false, geminiKey: '', geminiEnabled: false },
+  settings: { bmr: 2000, goal: 1800, stepsGoal: 10000, apiKey: '', aiSearchEnabled: false, nutritionixAppId: '', nutritionixKey: '', offEnabled: true, nxEnabled: false, aiEnabled: false, geminiKey: '', geminiEnabled: false, deepseekKey: '', deepseekEnabled: false, photoEnabled: false, proteinGoal: 0 },
   todayLog: [],
   activityLog: [],
   steps: 0,
@@ -1615,7 +1635,8 @@ let state = {
   deletedDishNames: [],  // [{name, ts}]
   deletedFavNames: [],   // [{name, ts}]
   backlogIdeas: [],      // [{id, text, ts}] — eigene Ideen
-  errorLog: []           // [{ts, source, message, detail}] — Fehlerprotokoll
+  errorLog: [],          // [{ts, source, message, detail}] — Fehlerprotokoll
+  weightLog: []          // [{date: 'YYYY-MM-DD', weight: 84.5}]
 };
 
 const FOOD_DB_DEFAULT = [
@@ -2305,7 +2326,6 @@ function confirmWeight() {
   if(!weight || weight < 20 || weight > 300) { toast('Ungültiger Wert'); return; }
   if(!state.weightLog) state.weightLog = [];
   const today = new Date().toISOString().slice(0,10);
-  // Heutigen Eintrag überschreiben oder neuen anlegen
   const existing = state.weightLog.findIndex(e => e.date === today);
   if(existing >= 0) state.weightLog[existing].weight = weight;
   else state.weightLog.push({ date: today, weight });
@@ -2315,6 +2335,31 @@ function confirmWeight() {
   renderWeightSummary();
   toast(`${weight} kg gespeichert`);
 }
+
+function editHistoryWeight(dateStr) {
+  const day = (state.history||[]).find(d => d.date === dateStr);
+  if(!day) return;
+  const d = new Date(dateStr);
+  const label = d.toLocaleDateString('de-DE', {weekday:'short', day:'2-digit', month:'2-digit'});
+  const current = day.weight || '';
+  const input = prompt(`Gewicht am ${label} (kg):`, current);
+  if(input === null) return;
+  const val = parseFloat(input.replace(',','.'));
+  if(!val || val < 20 || val > 300) { toast('Ungültiger Wert'); return; }
+  day.weight = val;
+  day.updatedAt = Date.now();
+  // Auch in weightLog eintragen/updaten
+  if(!state.weightLog) state.weightLog = [];
+  const iso = d.toISOString().slice(0,10);
+  const existing = state.weightLog.findIndex(e => e.date === iso);
+  if(existing >= 0) state.weightLog[existing].weight = val;
+  else { state.weightLog.push({ date: iso, weight: val }); state.weightLog.sort((a,b)=>a.date.localeCompare(b.date)); }
+  saveStateAndSync();
+  renderHistory();
+  renderWeightSummary();
+  toast(`${val} kg für ${label} gespeichert`);
+}
+
 
 function renderWeightSummary() {
   const el = document.getElementById('weight-summary');
@@ -2328,42 +2373,71 @@ function renderWeightSummary() {
   const diffColor = parseFloat(diff) < 0 ? 'var(--accent)' : 'var(--danger)';
   const diffSign = parseFloat(diff) > 0 ? '+' : '';
   const lastDate = new Date(last.date).toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit'});
+  const firstDate = new Date(first.date).toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit'});
 
-  // Mini-Chart der letzten 10 Einträge
   const recent = log.slice(-10);
   const minW = Math.min(...recent.map(e=>e.weight));
   const maxW = Math.max(...recent.map(e=>e.weight));
   const range = maxW - minW || 1;
-  const w = 100 / recent.length;
+  const colW = 100 / recent.length;
   const points = recent.map((e,i) => {
-    const x = i * w + w/2;
+    const x = i * colW + colW/2;
     const y = 40 - ((e.weight - minW) / range) * 32;
-    return `${x},${y}`;
+    return x+','+y;
   }).join(' ');
+  const circles = recent.map((e,i) => {
+    const x = i * colW + colW/2;
+    const y = 40 - ((e.weight - minW) / range) * 32;
+    return '<circle cx="'+x+'" cy="'+y+'" r="2" fill="var(--accent)"/>';
+  }).join('');
 
-  el.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <div>
-        <div style="font-size:24px;font-weight:600;font-family:'DM Mono';">${last.weight} <span style="font-size:14px;font-weight:400;color:var(--text3);">kg</span></div>
-        <div style="font-size:11px;color:var(--text3);">zuletzt am ${lastDate}</div>
-      </div>
-      <div style="text-align:right;">
-        <div style="font-size:18px;font-weight:600;font-family:'DM Mono';color:${diffColor};">${diffSign}${diff} kg</div>
-        <div style="font-size:11px;color:var(--text3);">seit ${new Date(first.date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})}</div>
-      </div>
-    </div>
-    ${recent.length > 1 ? `
-    <svg width="100%" height="44" viewBox="0 0 100 44" preserveAspectRatio="none" style="overflow:visible;">
-      <polyline points="${points}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      ${recent.map((e,i) => {
-        const x = i * w + w/2;
-        const y = 40 - ((e.weight - minW) / range) * 32;
-        return `<circle cx="${x}" cy="${y}" r="2" fill="var(--accent)"/>`;
-      }).join('')}
-    </svg>` : ''}`;
+  let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+    + '<div>'
+    + '<div style="font-size:24px;font-weight:600;font-family:\'DM Mono\';">'+last.weight+' <span style="font-size:14px;font-weight:400;color:var(--text3);">kg</span></div>'
+    + '<div style="font-size:11px;color:var(--text3);">zuletzt am '+lastDate+'</div>'
+    + '</div>'
+    + '<div style="text-align:right;">'
+    + '<div style="font-size:18px;font-weight:600;font-family:\'DM Mono\';color:'+diffColor+';">'+diffSign+diff+' kg</div>'
+    + '<div style="font-size:11px;color:var(--text3);">seit '+firstDate+'</div>'
+    + '</div></div>';
+  if(recent.length > 1) {
+    html += '<svg width="100%" height="44" viewBox="0 0 100 44" preserveAspectRatio="none" style="overflow:visible;">'
+      + '<polyline points="'+points+'" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'
+      + circles
+      + '</svg>';
+  }
+  el.innerHTML = html;
 }
 
 
+// ─── PROTEIN-ZIEL ─────────────────────────────────────────────────────────────
+function calcProteinGoal() {
+  const weight = parseFloat(state.settings.bmrWeight);
+  if(!weight) return null;
+  const actFactor = parseFloat(state.settings.bmrActivity || 0);
+  let proteinFactor = 1.2;
+  if(actFactor <= 1.2)       proteinFactor = 0.8;
+  else if(actFactor <= 1.375) proteinFactor = 1.2;
+  else if(actFactor <= 1.55)  proteinFactor = 1.5;
+  else if(actFactor <= 1.725) proteinFactor = 1.8;
+  else                        proteinFactor = 2.0;
+  return Math.round(weight * proteinFactor);
+}
+
+function renderProteinGoalHint() {
+  const hintEl = document.getElementById('protein-goal-hint');
+  if(!hintEl) return;
+  const auto = calcProteinGoal();
+  const pgEl = document.getElementById('set-protein-goal');
+  if(auto) {
+    hintEl.textContent = `g/Tag · Vorschlag: ${auto}g (${state.settings.bmrWeight}kg × Faktor)`;
+    if(pgEl && !pgEl.value && !state.settings.proteinGoal) pgEl.value = auto;
+  } else {
+    hintEl.textContent = 'g/Tag · Gewicht im BMR-Rechner eingeben für Vorschlag';
+  }
+}
+
+// ─── AUSNAHMETAG ──────────────────────────────────────────────────────────────
 function toggleExceptionDay() {
   if(state.exceptionDayGoal) {
     // Ausnahmetag aufheben
@@ -2744,11 +2818,19 @@ function archiveDayToHistory(data, settings) {
   const burned = hasTdee ? tdee + activityBonus : bmr + realActivity;
   // Ziel: gecachten Tageswert nutzen falls vorhanden, sonst aus Datum berechnen
   const goal = data.todayGoal || getGoalForDate(data.lastDate);
+  // Gewicht des Tages aus weightLog holen
+  const todayIso = data.lastDate ? new Date(data.lastDate).toISOString().slice(0,10) : null;
+  const weightEntry = todayIso ? (data.weightLog||[]).find(e => e.date === todayIso) : null;
+  const proteinTotal = (data.todayLog||[]).reduce((s,i) => s + (i.protein||0), 0);
+  const proteinGoal = (data.settings||{}).proteinGoal || null;
   return {
     date: data.lastDate,
     eaten, burned, goal,
     balance: eaten - burned,
     steps: data.steps||0,
+    weight: weightEntry ? weightEntry.weight : null,
+    protein: Math.round(proteinTotal * 10) / 10,
+    proteinGoal,
     log: Array.isArray(data.todayLog) ? [...data.todayLog] : [],
     activityLog: Array.isArray(data.activityLog) ? [...data.activityLog] : [],
     updatedAt: Date.now()
@@ -3243,15 +3325,28 @@ function renderHome() {
   }
 
   renderExceptionDayBtn();
-  renderWeightSummary();
 
   // Eiweiß
   const totalProtein = (state.todayLog||[]).reduce((s,i) => s + (i.protein||0), 0);
+  const proteinGoal = state.settings.proteinGoal || calcProteinGoal() || 0;
   const proteinCard = document.getElementById('protein-stat-card');
   const proteinEl = document.getElementById('s-protein');
+  const proteinLabel = document.getElementById('s-protein-label');
   const hasProteinData = (state.todayLog||[]).some(i => i.protein > 0);
-  if(proteinCard) proteinCard.style.display = hasProteinData ? 'block' : 'none';
-  if(proteinEl) proteinEl.textContent = totalProtein.toFixed(1);
+  if(proteinCard) {
+    // Immer anzeigen wenn Ziel gesetzt, sonst nur wenn Daten vorhanden
+    proteinCard.style.display = (proteinGoal > 0 || hasProteinData) ? 'block' : 'none';
+  }
+  if(proteinEl) proteinEl.textContent = Math.round(totalProtein * 10) / 10;
+  if(proteinLabel) {
+    if(proteinGoal > 0) {
+      const pct = Math.min(Math.round((totalProtein / proteinGoal) * 100), 100);
+      const color = totalProtein >= proteinGoal ? 'var(--accent)' : 'var(--text3)';
+      proteinLabel.innerHTML = `g <span style="color:${color};font-size:10px;">/ ${proteinGoal}g Ziel (${pct}%)</span>`;
+    } else {
+      proteinLabel.textContent = 'g';
+    }
+  }
   const ll = document.getElementById('log-list');
   if(state.todayLog.length === 0) { ll.innerHTML = '<div class="empty-state">Noch keine Einträge heute</div>'; }
   else {
@@ -3317,6 +3412,9 @@ function renderSettings() {
   const actSel = document.getElementById('bmr-activity');
   if(actSel) actSel.value = state.settings.bmrActivity || '';
   document.getElementById('set-steps').value = state.settings.stepsGoal || '';
+  const pgEl = document.getElementById('set-protein-goal');
+  if(pgEl) pgEl.value = state.settings.proteinGoal || '';
+  renderProteinGoalHint();
   document.getElementById('set-apikey').value = state.settings.apiKey || '';
   document.getElementById('set-geminikey').value = state.settings.geminiKey || '';
   const dsKeyEl = document.getElementById('set-deepseekkey');
@@ -3375,6 +3473,7 @@ function saveSettings() {
     state.settings.goalWeekend = state.settings.goalWeek;
   }
   state.settings.stepsGoal = parseInt(document.getElementById('set-steps').value) || 10000;
+  state.settings.proteinGoal = parseInt(document.getElementById('set-protein-goal')?.value) || calcProteinGoal();
   state.settings.apiKey = document.getElementById('set-apikey').value.trim();
   state.settings.geminiKey = document.getElementById('set-geminikey').value.trim();
   state.settings.deepseekKey = (document.getElementById('set-deepseekkey')?.value || '').trim();
@@ -5712,6 +5811,8 @@ function renderHistory() {
           <span>·</span>
           <span>🎯 Ziel ${day.goal}${dayBonus > 0 ? '+'+dayBonus : ''} kcal</span>
           ${day.steps ? `<span>· 🚶 ${day.steps.toLocaleString('de-DE')}</span>` : ''}
+          ${day.weight ? `<span>· ⚖ <b style="color:var(--text);">${day.weight} kg</b></span>` : `<span style="cursor:pointer;color:var(--accent);" onclick="editHistoryWeight('${day.date}')">· ⚖ Gewicht eintragen</span>`}
+          ${day.protein > 0 ? `<span>· 🥩 <b style="color:var(--text);">${day.protein}g</b>${day.proteinGoal ? ` / ${day.proteinGoal}g` : ''} Eiweiß</span>` : ''}
         </div>
         <div class="progress-bar" style="position:relative;overflow:hidden;height:5px;">
           <div style="position:absolute;left:0;top:0;height:100%;width:${gPct}%;background:#2563eb;"></div>
@@ -5820,6 +5921,27 @@ function renderWeekChart() {
       totalWeightEl.textContent = w.val;
       totalWeightEl.style.color = w.color;
       if(totalLabelEl) totalLabelEl.textContent = `kg (${state.history.length} Tag${state.history.length!==1?'e':''})`;
+    }
+  }
+
+  // Echte Abnahme: erstes Gewicht vs. aktuellstes Gewicht
+  const realLossEl    = document.getElementById('real-weight-loss');
+  const realLabelEl   = document.getElementById('real-weight-loss-label');
+  const weightLog = (state.weightLog||[]).filter(e => e.weight > 0).sort((a,b)=>a.date.localeCompare(b.date));
+  if(realLossEl) {
+    if(weightLog.length < 2) {
+      realLossEl.textContent = '—';
+      if(realLabelEl) realLabelEl.textContent = weightLog.length === 0 ? 'kein Gewicht erfasst' : 'erst 1 Eintrag';
+    } else {
+      const first = weightLog[0];
+      const last  = weightLog[weightLog.length - 1];
+      const diff  = last.weight - first.weight;
+      const sign  = diff > 0 ? '+' : '';
+      realLossEl.textContent = sign + diff.toFixed(1);
+      realLossEl.style.color = diff <= 0 ? '#2563eb' : '#993C1D';
+      const fd = new Date(first.date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
+      const ld = new Date(last.date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
+      if(realLabelEl) realLabelEl.textContent = `kg (${fd}→${ld})`;
     }
   }
 
