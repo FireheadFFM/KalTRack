@@ -455,9 +455,15 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <div class="mic-transcript" id="mic-transcript"></div>
       <button id="voice-toggle" onclick="toggleVoiceOutput()" title="Sprachausgabe ein/aus"
         style="position:absolute;top:12px;right:12px;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3);padding:4px;line-height:1;">🔊</button>
-      <label id="photo-btn" title="Foto aufnehmen oder aus Galerie wählen"
+      <!-- Kamera-Button -->
+      <label id="photo-btn" title="Neues Foto aufnehmen"
         style="position:absolute;top:12px;left:12px;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3);padding:4px;line-height:1;display:none;">
-        📷<input type="file" accept="image/*" onchange="analyzePhoto(event)" style="display:none;" />
+        📷<input type="file" accept="image/*" capture="environment" onchange="analyzePhoto(event)" style="display:none;" />
+      </label>
+      <!-- Galerie-Button -->
+      <label id="gallery-btn" title="Foto aus Galerie wählen"
+        style="position:absolute;top:12px;left:44px;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3);padding:4px;line-height:1;display:none;">
+        🖼️<input type="file" accept="image/*" onchange="analyzePhoto(event)" style="display:none;" />
       </label>
     </div>
 
@@ -805,6 +811,15 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       </div>
       <div class="settings-row">
         <div>
+          <div class="settings-label">KI-Suche (Perplexity)</div>
+          <div class="settings-sub">Stufe 7 · Websuche + Vision · sonar-pro</div>
+        </div>
+        <div id="toggle-perplexity" onclick="toggleSource('perplexity')" style="width:44px;height:24px;border-radius:12px;background:var(--bg2);border:1px solid var(--border);position:relative;cursor:pointer;transition:background 0.2s;flex-shrink:0;">
+          <div id="toggle-perplexity-knob" style="width:20px;height:20px;border-radius:50%;background:white;position:absolute;top:1px;left:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div>
           <div class="settings-label">📷 Foto-Erkennung</div>
           <div class="settings-sub">Gemini Vision · Foto → Kalorien</div>
         </div>
@@ -827,6 +842,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <div class="settings-row">
         <div><div class="settings-label">DeepSeek API Key</div><div class="settings-sub">platform.deepseek.com</div></div>
         <input type="text" id="set-deepseekkey" placeholder="sk-..." onchange="saveSettings()" style="width:110px;font-size:11px;" />
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">Perplexity API Key</div><div class="settings-sub">perplexity.ai/settings/api</div></div>
+        <input type="text" id="set-perplexitykey" placeholder="pplx-..." onchange="saveSettings()" style="width:110px;font-size:11px;" />
       </div>
       <div class="settings-row">
         <div><div class="settings-label">Nutritionix App ID</div><div class="settings-sub">nutritionix.com/business/api</div></div>
@@ -926,7 +945,11 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.85 — Mai 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.86 — Mai 2026</div>
+        <div>· NEU: Perplexity Sonar als Stufe 7 für Kaloriensuche (eingebaute Websuche, aktuelle Daten)</div>
+        <div>· Perplexity sonar-pro als weiterer Fallback für Foto-Analyse (Vision-fähig)</div>
+        <div>· Foto-Fallback-Kette: Gemini → Claude → Perplexity</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.85 — Mai 2026</div>
         <div>· Foto-Erkennung: Galerie-Auswahl möglich (nicht mehr nur Kamera)</div>
         <div>· Foto-Erkennung: schätzt jetzt auch Proteingehalt in Gramm</div>
         <div>· Foto-Erkennung: alle Fehler werden im Fehlerlog protokolliert</div>
@@ -1660,7 +1683,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let state = {
   mode: 'track',
-  settings: { bmr: 2000, goal: 1800, stepsGoal: 10000, apiKey: '', aiSearchEnabled: false, nutritionixAppId: '', nutritionixKey: '', offEnabled: true, nxEnabled: false, aiEnabled: false, geminiKey: '', geminiEnabled: false, deepseekKey: '', deepseekEnabled: false, photoEnabled: false, proteinGoal: 0 },
+  settings: { bmr: 2000, goal: 1800, stepsGoal: 10000, apiKey: '', aiSearchEnabled: false, nutritionixAppId: '', nutritionixKey: '', offEnabled: true, nxEnabled: false, aiEnabled: false, geminiKey: '', geminiEnabled: false, deepseekKey: '', deepseekEnabled: false, perplexityKey: '', perplexityEnabled: false, photoEnabled: false, proteinGoal: 0 },
   todayLog: [],
   activityLog: [],
   steps: 0,
@@ -3059,7 +3082,7 @@ async function autoLoadFromCloud() {
     // Einstellungen: persönliche Werte aus Cloud übernehmen (bmr, goal, stepsGoal, voiceEnabled)
     // API-Keys und Toggles bleiben lokal (geräteabhängig)
     if(cloud.settings) {
-      const personalKeys = ['bmr','goal','stepsGoal','voiceEnabled','apiKey','geminiKey','nutritionixAppId','nutritionixKey','deepseekKey','deepseekEnabled','photoEnabled','proteinGoal','goalWeek','goalWeekend','bmrActivity','bmrWeight','bmrAge','bmrHeight','bmrGender','splashEnabled','bodyWeight'];
+      const personalKeys = ['bmr','goal','stepsGoal','voiceEnabled','apiKey','geminiKey','nutritionixAppId','nutritionixKey','deepseekKey','deepseekEnabled','photoEnabled','proteinGoal','goalWeek','goalWeekend','bmrActivity','bmrWeight','bmrAge','bmrHeight','bmrGender','splashEnabled','bodyWeight','perplexityKey','perplexityEnabled'];
       let settingsChanged = false;
       personalKeys.forEach(k => {
         if(cloud.settings[k] !== undefined && cloud.settings[k] !== state.settings[k]) {
@@ -3592,6 +3615,8 @@ function renderSettings() {
   document.getElementById('set-geminikey').value = state.settings.geminiKey || '';
   const dsKeyEl = document.getElementById('set-deepseekkey');
   if(dsKeyEl) dsKeyEl.value = state.settings.deepseekKey || '';
+  const pxKeyEl = document.getElementById('set-perplexitykey');
+  if(pxKeyEl) pxKeyEl.value = state.settings.perplexityKey || '';
   document.getElementById('set-nx-id').value = state.settings.nutritionixAppId || '';
   document.getElementById('set-nx-key').value = state.settings.nutritionixKey || '';
   renderAiToggle();
@@ -3650,6 +3675,7 @@ function saveSettings() {
   state.settings.apiKey = document.getElementById('set-apikey').value.trim();
   state.settings.geminiKey = document.getElementById('set-geminikey').value.trim();
   state.settings.deepseekKey = (document.getElementById('set-deepseekkey')?.value || '').trim();
+  state.settings.perplexityKey = (document.getElementById('set-perplexitykey')?.value || '').trim();
   state.settings.nutritionixAppId = document.getElementById('set-nx-id').value.trim();
   state.settings.nutritionixKey = document.getElementById('set-nx-key').value.trim();
   saveStateAndSync();
@@ -3663,6 +3689,7 @@ function toggleSource(src) {
   if(src === 'ai') { state.settings.aiEnabled = !state.settings.aiEnabled; state.settings.aiSearchEnabled = state.settings.aiEnabled; }
   if(src === 'gemini') state.settings.geminiEnabled = !state.settings.geminiEnabled;
   if(src === 'deepseek') state.settings.deepseekEnabled = !state.settings.deepseekEnabled;
+  if(src === 'perplexity') state.settings.perplexityEnabled = !state.settings.perplexityEnabled;
   if(src === 'photo') {
     state.settings.photoEnabled = !state.settings.photoEnabled;
     renderPhotoBtn();
@@ -3679,13 +3706,11 @@ function renderSourceToggles() {
   const ai = !!(state.settings.aiEnabled ?? state.settings.aiSearchEnabled);
   const gemini = !!state.settings.geminiEnabled;
   const deepseek = !!state.settings.deepseekEnabled;
+  const perplexity = !!state.settings.perplexityEnabled;
   const photo = !!state.settings.photoEnabled;
-  setToggle('off', off);
-  setToggle('nx', nx);
-  setToggle('ai', ai);
-  setToggle('gemini', gemini);
-  setToggle('deepseek', deepseek);
-  setToggle('photo', photo);
+  setToggle('off', off); setToggle('nx', nx); setToggle('ai', ai);
+  setToggle('gemini', gemini); setToggle('deepseek', deepseek);
+  setToggle('perplexity', perplexity); setToggle('photo', photo);
 }
 
 function setToggle(id, on) {
@@ -3896,6 +3921,13 @@ async function processInput(text) {
   if(state.settings.deepseekEnabled && state.settings.deepseekKey) {
     document.getElementById('mic-status').textContent = 'DeepSeek sucht Nährwerte…';
     await processWithDeepSeek(text, state.settings.deepseekKey);
+    cleanup(); return;
+  }
+
+  // Stufe 7: Perplexity Sonar (wenn aktiviert und Key vorhanden)
+  if(state.settings.perplexityEnabled && state.settings.perplexityKey) {
+    document.getElementById('mic-status').textContent = 'Perplexity sucht Nährwerte…';
+    await processWithPerplexity(text, state.settings.perplexityKey);
     cleanup(); return;
   }
 
@@ -4696,7 +4728,73 @@ function clearErrorLog() {
   toast('Fehlerlog geleert');
 }
 
-// ─── DEEPSEEK V4 ──────────────────────────────────────────────────────────────
+// ─── PERPLEXITY ───────────────────────────────────────────────────────────────
+async function processWithPerplexity(text, apiKey) {
+  const prompt = `Der Nutzer hat eingegeben: "${text}"
+Suche nach den genauen Nährwerten dieses Lebensmittels/Gerichts im Web.
+Antworte NUR mit diesem JSON (kein anderer Text):
+{"items":[{"name":"Name","amount":1,"amountUnit":"Portion","kcal":300,"protein":20,"detail":"Quelle","saveToDb":false,"kcalPer100":null}],"totalKcal":300,"totalProtein":20,"confidence":"hoch","source":"Perplexity Sonar"}
+protein = Gramm Eiweiß (schätze wenn nötig).`;
+  try {
+    const resp = await apiFetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({
+        model: 'sonar',
+        max_tokens: 500,
+        temperature: 0.1,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await resp.json();
+    if(data.error) { logError('Perplexity', data.error.message||JSON.stringify(data.error), text); toast('Perplexity: ' + (data.error.message||'Fehler').substring(0,60)); return; }
+    const raw = data.choices?.[0]?.message?.content || '';
+    let clean = raw.replace(/```json\s*/gi,'').replace(/```/g,'').trim();
+    if(clean[0]!=='{'){const s=clean.indexOf('{'),e=clean.lastIndexOf('}');if(s>=0&&e>s)clean=clean.slice(s,e+1);}
+    const parsed = JSON.parse(clean);
+    if(!parsed.items?.length) { toast('Perplexity: Nichts gefunden'); return; }
+    showClaudeSearchResult(parsed, text);
+  } catch(e) {
+    logError('Perplexity', e.message, text);
+    toast('Perplexity-Suche fehlgeschlagen');
+  }
+}
+
+async function analyzePhotoWithPerplexity(base64, file) {
+  const prompt = `Analysiere dieses Foto eines Essens. Schätze Kalorien UND Proteingehalt.
+Antworte NUR mit diesem JSON:
+{"items":[{"name":"Name","amount":1,"amountUnit":"Portion","kcal":450,"protein":28,"detail":"ca. 350g","saveToDb":false,"kcalPer100":null}],"totalKcal":450,"totalProtein":28,"confidence":"geschätzt","source":"Perplexity Vision"}
+protein = Gramm Eiweiß. Mehrere Komponenten = mehrere items.`;
+  try {
+    const resp = await apiFetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + state.settings.perplexityKey },
+      body: JSON.stringify({
+        model: 'sonar-pro',
+        max_tokens: 600,
+        temperature: 0.2,
+        messages: [{ role: 'user', content: [
+          { type: 'image_url', image_url: { url: `data:${file.type};base64,${base64}` } },
+          { type: 'text', text: prompt }
+        ]}]
+      })
+    });
+    const data = await resp.json();
+    if(data.error) { logError('Perplexity Vision', data.error.message||'', file.name); toast('Perplexity Vision Fehler'); return null; }
+    const raw = data.choices?.[0]?.message?.content || '';
+    let clean = raw.replace(/```json\s*/gi,'').replace(/```/g,'').trim();
+    if(clean[0]!=='{'){const s=clean.indexOf('{'),e=clean.lastIndexOf('}');if(s>=0&&e>s)clean=clean.slice(s,e+1);}
+    const parsed = JSON.parse(clean);
+    if(!parsed.items?.length) return null;
+    showClaudeSearchResult(parsed, 'Foto-Analyse');
+    return parsed;
+  } catch(e) {
+    logError('Perplexity Vision', e.message, file?.name||'');
+    return null;
+  }
+}
+
+
 async function processWithDeepSeek(text, apiKey) {
   const prompt = `Du bist ein Ernährungs-Assistent. Der Nutzer hat eingegeben: "${text}"
 Antworte NUR mit diesem JSON (kein anderer Text):
@@ -4715,7 +4813,12 @@ protein = Gramm Eiweiß pro Portion (schätze wenn nötig)`;
       })
     });
     const data = await resp.json();
-    if(data.error) { logError('DeepSeek', data.error.message, ''); toast('DeepSeek: ' + data.error.message); return; }
+    if(data.error) {
+      const msg = data.error.message || JSON.stringify(data.error);
+      logError('DeepSeek', msg, text);
+      toast('DeepSeek: ' + msg.substring(0,80));
+      return;
+    }
     const raw = data.choices?.[0]?.message?.content || '';
     let clean = raw.replace(/```json\s*/gi,'').replace(/```/g,'').trim();
     if(clean[0] !== '{') { const s=clean.indexOf('{'),e=clean.lastIndexOf('}'); if(s>=0&&e>s) clean=clean.slice(s,e+1); }
@@ -4730,20 +4833,31 @@ protein = Gramm Eiweiß pro Portion (schätze wenn nötig)`;
 
 // ─── FOTO-ERKENNUNG (Gemini Vision) ───────────────────────────────────────────
 function renderPhotoBtn() {
+  const show = !!(state.settings.photoEnabled && state.settings.geminiKey);
   const btn = document.getElementById('photo-btn');
-  if(btn) btn.style.display = (state.settings.photoEnabled && state.settings.geminiKey) ? 'block' : 'none';
+  const gal = document.getElementById('gallery-btn');
+  if(btn) btn.style.display = show ? 'block' : 'none';
+  if(gal) gal.style.display = show ? 'block' : 'none';
 }
 
 async function analyzePhoto(event) {
   const file = event.target.files[0];
   if(!file) return;
-  if(!state.settings.geminiKey) { toast('Gemini API Key fehlt (⚙ → Externe Dienste)'); return; }
+
+  // Prüfe verfügbare Vision-fähige KIs
+  const hasGemini = !!(state.settings.geminiKey && state.settings.geminiEnabled);
+  const hasClaude = !!(state.settings.apiKey && state.settings.apiKey.startsWith('sk-ant-') && state.settings.aiEnabled);
+  const hasPerplexity = !!(state.settings.perplexityKey && state.settings.perplexityEnabled);
+  if(!hasGemini && !hasClaude && !hasPerplexity) {
+    toast('Foto-Analyse benötigt Gemini, Claude oder Perplexity API Key');
+    event.target.value = '';
+    return;
+  }
 
   document.getElementById('mic-btn').classList.add('processing');
   document.getElementById('mic-status').textContent = 'Foto wird analysiert…';
 
   try {
-    // Bild als Base64
     const base64 = await new Promise((res, rej) => {
       const r = new FileReader();
       r.onload = () => res(r.result.split(',')[1]);
@@ -4751,47 +4865,30 @@ async function analyzePhoto(event) {
       r.readAsDataURL(file);
     });
 
-    const prompt = `Du bist ein Ernährungs-Assistent. Analysiere dieses Foto eines Essens und schätze Kalorien UND Proteingehalt.
-Antworte NUR mit diesem JSON (kein anderer Text, keine Markdown-Blöcke):
-{"items":[{"name":"Name des Gerichts/Lebensmittels","amount":1,"amountUnit":"Portion","kcal":450,"protein":28,"detail":"geschätzte Portion ca. 350g","saveToDb":false,"kcalPer100":null}],"totalKcal":450,"totalProtein":28,"confidence":"geschätzt","source":"Gemini Vision"}
-
-Regeln:
-- protein = Gramm Eiweiß pro Portion (Pflichtfeld, schätze wenn nötig)
-- Wenn mehrere Komponenten sichtbar: alle als separate items auflisten
-- confidence: "hoch" wenn Gericht klar erkennbar, "mittel" bei unklarer Portion, "geschätzt" wenn unsicher`;
-
-    const resp = await apiFetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${state.settings.geminiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [
-            { inline_data: { mime_type: file.type, data: base64 } },
-            { text: prompt }
-          ]}],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 600 }
-        })
+    // Gemini zuerst, Claude als Fallback
+    if(hasGemini) {
+      const result = await analyzePhotoWithGemini(base64, file);
+      if(result === 'QUOTA') {
+        logError('Foto-Analyse', 'Gemini Tageslimit erreicht', file.name);
+        if(hasClaude) {
+          toast('Gemini Limit — versuche Claude…');
+          document.getElementById('mic-status').textContent = 'Claude analysiert Foto…';
+          await analyzePhotoWithClaude(base64, file);
+        } else if(hasPerplexity) {
+          toast('Gemini Limit — versuche Perplexity…');
+          document.getElementById('mic-status').textContent = 'Perplexity analysiert Foto…';
+          await analyzePhotoWithPerplexity(base64, file);
+        } else {
+          toast('Gemini Tageslimit erreicht — morgen wieder verfügbar');
+        }
+      } else if(result) {
+        showClaudeSearchResult(result, 'Foto-Analyse');
       }
-    );
-    const data = await resp.json();
-    if(data.error) {
-      const msg = data.error.message || JSON.stringify(data.error);
-      logError('Foto-Analyse', msg, file.name);
-      toast('Foto-Analyse Fehler: ' + msg.substring(0,60));
-      return;
+    } else if(hasClaude) {
+      await analyzePhotoWithClaude(base64, file);
+    } else if(hasPerplexity) {
+      await analyzePhotoWithPerplexity(base64, file);
     }
-    const raw = data.candidates?.[0]?.content?.parts?.find(p=>p.text)?.text || '';
-    if(!raw) {
-      logError('Foto-Analyse', 'Leere Antwort von Gemini', file.name);
-      toast('Keine Antwort von Gemini erhalten');
-      return;
-    }
-    let clean = raw.replace(/```json\s*/gi,'').replace(/```/g,'').trim();
-    if(clean[0] !== '{') { const s=clean.indexOf('{'),e=clean.lastIndexOf('}'); if(s>=0&&e>s) clean=clean.slice(s,e+1); }
-    const parsed = JSON.parse(clean);
-    if(!parsed.items?.length) { toast('Keine Lebensmittel erkannt'); return; }
-    showClaudeSearchResult(parsed, 'Foto-Analyse');
   } catch(e) {
     logError('Foto-Analyse', e.message, file?.name || '');
     toast('Foto-Analyse fehlgeschlagen — siehe Fehlerlog');
@@ -4800,6 +4897,64 @@ Regeln:
     document.getElementById('mic-status').textContent = 'Tippen zum Starten';
     event.target.value = '';
   }
+}
+
+async function analyzePhotoWithGemini(base64, file) {
+  const prompt = `Du bist ein Ernährungs-Assistent. Analysiere dieses Foto und schätze Kalorien UND Proteingehalt.
+Antworte NUR mit diesem JSON (kein anderer Text):
+{"items":[{"name":"Name","amount":1,"amountUnit":"Portion","kcal":450,"protein":28,"detail":"ca. 350g","saveToDb":false,"kcalPer100":null}],"totalKcal":450,"totalProtein":28,"confidence":"geschätzt","source":"Gemini Vision"}
+protein = Gramm Eiweiß (Pflichtfeld). Mehrere Komponenten = mehrere items.`;
+  const resp = await apiFetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${state.settings.geminiKey}`,
+    { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ contents:[{parts:[
+        {inline_data:{mime_type:file.type,data:base64}},
+        {text:prompt}
+      ]}], generationConfig:{temperature:0.2,maxOutputTokens:600} })
+    }
+  );
+  const data = await resp.json();
+  if(data.error) {
+    const msg = data.error.message || '';
+    if(msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('limit')) return 'QUOTA';
+    logError('Gemini Vision', msg, file.name);
+    toast('Gemini Fehler: ' + msg.substring(0,60));
+    return null;
+  }
+  const raw = data.candidates?.[0]?.content?.parts?.find(p=>p.text)?.text || '';
+  if(!raw) { logError('Gemini Vision', 'Leere Antwort', file.name); return null; }
+  let clean = raw.replace(/```json\s*/gi,'').replace(/```/g,'').trim();
+  if(clean[0]!=='{'){const s=clean.indexOf('{'),e=clean.lastIndexOf('}');if(s>=0&&e>s)clean=clean.slice(s,e+1);}
+  const parsed = JSON.parse(clean);
+  if(!parsed.items?.length) return null;
+  return parsed;
+}
+
+async function analyzePhotoWithClaude(base64, file) {
+  const prompt = `Analysiere dieses Foto eines Essens. Schätze Kalorien UND Proteingehalt.
+Antworte NUR mit diesem JSON:
+{"items":[{"name":"Name","amount":1,"amountUnit":"Portion","kcal":450,"protein":28,"detail":"ca. 350g","saveToDb":false,"kcalPer100":null}],"totalKcal":450,"totalProtein":28,"confidence":"geschätzt","source":"Claude Vision"}`;
+  const resp = await apiFetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':state.settings.apiKey,
+      'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body: JSON.stringify({
+      model:'claude-sonnet-4-20250514', max_tokens:600,
+      messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:file.type,data:base64}},
+        {type:'text',text:prompt}
+      ]}]
+    })
+  });
+  const data = await resp.json();
+  if(data.error) { logError('Claude Vision', data.error.message||'', file.name); toast('Claude Fehler: '+(data.error.message||'').substring(0,60)); return; }
+  const raw = data.content?.find(b=>b.type==='text')?.text || '';
+  if(!raw) { logError('Claude Vision','Leere Antwort',file.name); return; }
+  let clean = raw.replace(/```json\s*/gi,'').replace(/```/g,'').trim();
+  if(clean[0]!=='{'){const s=clean.indexOf('{'),e=clean.lastIndexOf('}');if(s>=0&&e>s)clean=clean.slice(s,e+1);}
+  const parsed = JSON.parse(clean);
+  if(!parsed.items?.length) { toast('Keine Lebensmittel erkannt'); return; }
+  showClaudeSearchResult(parsed, 'Foto-Analyse');
 }
 
 async function processWithGemini(text, apiKey, offContext) {
