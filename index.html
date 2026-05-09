@@ -455,9 +455,9 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <div class="mic-transcript" id="mic-transcript"></div>
       <button id="voice-toggle" onclick="toggleVoiceOutput()" title="Sprachausgabe ein/aus"
         style="position:absolute;top:12px;right:12px;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3);padding:4px;line-height:1;">🔊</button>
-      <label id="photo-btn" title="Foto analysieren (Gemini Vision)"
+      <label id="photo-btn" title="Foto aufnehmen oder aus Galerie wählen"
         style="position:absolute;top:12px;left:12px;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3);padding:4px;line-height:1;display:none;">
-        📷<input type="file" accept="image/*" capture="environment" onchange="analyzePhoto(event)" style="display:none;" />
+        📷<input type="file" accept="image/*" onchange="analyzePhoto(event)" style="display:none;" />
       </label>
     </div>
 
@@ -485,7 +485,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
           style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;"
           onkeydown="if(event.key==='Enter')document.getElementById('quick-kcal').focus()" />
         <input type="number" id="quick-kcal" placeholder="kcal" autocomplete="off"
-          style="width:80px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Mono';background:var(--bg);color:var(--text);outline:none;text-align:right;"
+          style="width:72px;padding:9px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Mono';background:var(--bg);color:var(--text);outline:none;text-align:right;"
+          onkeydown="if(event.key==='Enter')document.getElementById('quick-protein').focus()" />
+        <input type="number" id="quick-protein" placeholder="g E" autocomplete="off" title="Eiweiß in Gramm (optional)"
+          style="width:60px;padding:9px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Mono';background:var(--bg);color:var(--text);outline:none;text-align:right;"
           onkeydown="if(event.key==='Enter')quickAdd()" />
         <button class="btn btn-primary" onclick="quickAdd()" style="padding:9px 14px;">+</button>
       </div>
@@ -923,7 +926,14 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.84 — Mai 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.85 — Mai 2026</div>
+        <div>· Foto-Erkennung: Galerie-Auswahl möglich (nicht mehr nur Kamera)</div>
+        <div>· Foto-Erkennung: schätzt jetzt auch Proteingehalt in Gramm</div>
+        <div>· Foto-Erkennung: alle Fehler werden im Fehlerlog protokolliert</div>
+        <div>· KI-Ergebnisdialog: zeigt Protein pro Item und Gesamt-Eiweiß</div>
+        <div>· DeepSeek-Prompt: fragt jetzt auch nach Proteingehalt</div>
+        <div>· Schnellerfassung: optionales Feld „g E" für Eiweißmenge</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.84 — Mai 2026</div>
         <div>· Gerichte: Protein wird automatisch aus Zutaten summiert und gespeichert</div>
         <div>· Gerichte: bearbeitbar in der Datenbank (✎) — Name, kcal und Eiweiß anpassbar</div>
         <div>· Gerichte: Löschen auch über den Bearbeiten-Dialog möglich</div>
@@ -1410,6 +1420,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <div style="font-size:13px;color:var(--text2);">Gesamt</div>
       <div style="font-size:18px;font-weight:500;color:var(--text);" id="dialog-ai-total"></div>
     </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:4px;" id="dialog-ai-protein" style="display:none;"></div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:12px;" id="dialog-ai-source"></div>
     <div class="dialog-btns">
       <button class="btn btn-secondary" onclick="closeDialog('dialog-ai-result')">Abbrechen</button>
@@ -2089,17 +2100,21 @@ function getYesterdayDateStr() {
 function quickAdd() {
   const nameEl = document.getElementById('quick-name');
   const kcalEl = document.getElementById('quick-kcal');
+  const proteinEl = document.getElementById('quick-protein');
   const name = nameEl ? nameEl.value.trim() : '';
   const kcal = parseInt(kcalEl ? kcalEl.value : '');
+  const protein = parseFloat(proteinEl ? proteinEl.value : '') || null;
   if(!name) { toast('Bitte Bezeichnung eingeben'); nameEl && nameEl.focus(); return; }
   if(!kcal || kcal <= 0) { toast('Bitte kcal eingeben'); kcalEl && kcalEl.focus(); return; }
   if(state.mode === 'db') { toast('Schnellerfassung nicht im Datenbank-Modus'); return; }
   const ts = Date.now();
-  state.todayLog.push({ id: 'q'+ts, name, kcal, detail: 'Schnellerfassung' });
+  const detail = 'Schnellerfassung' + (protein ? ` · ${protein}g Eiweiß` : '');
+  state.todayLog.push({ id: 'q'+ts, name, kcal, protein, detail });
   speak(`${name}, ${kcal} Kilokalorien`);
-  toast(`${name}: ${kcal} kcal`);
+  toast(`${name}: ${kcal} kcal${protein ? ', ' + protein + 'g E' : ''}`);
   if(nameEl) nameEl.value = '';
   if(kcalEl) kcalEl.value = '';
+  if(proteinEl) proteinEl.value = '';
   nameEl && nameEl.focus();
   renderHome();
   saveStateAndSync();
@@ -3013,9 +3028,6 @@ async function autoLoadFromCloud() {
     }
     const cloud = JSON.parse(rows[0].payload);
     let changed = false;
-    // DEBUG: weightLog vor Merge
-    console.log('[SYNC] cloud.weightLog:', JSON.stringify(cloud.weightLog));
-    console.log('[SYNC] local weightLog vor Merge:', JSON.stringify(state.weightLog));
 
     // ── Tombstones anwenden: Cloud-Löschungen lokal durchsetzen ──
     // DB-Einträge löschen
@@ -3246,9 +3258,7 @@ async function autoLoadFromCloud() {
     }
 
     if(changed) {
-      console.log('[SYNC] changed=true, weightLog vor saveState:', JSON.stringify(state.weightLog));
       saveState();
-      console.log('[SYNC] nach saveState, localStorage weightLog:', JSON.parse(localStorage.getItem('fitmole_state')||'{}').weightLog);
       if(todayHasActivity()) dismissReminder();
       renderHome();
       renderWeightSummary();
@@ -4688,9 +4698,11 @@ function clearErrorLog() {
 
 // ─── DEEPSEEK V4 ──────────────────────────────────────────────────────────────
 async function processWithDeepSeek(text, apiKey) {
-  const prompt = `Du bist ein Kalorien-Assistent. Der Nutzer hat eingegeben: "${text}"
+  const prompt = `Du bist ein Ernährungs-Assistent. Der Nutzer hat eingegeben: "${text}"
 Antworte NUR mit diesem JSON (kein anderer Text):
-{"items":[{"name":"Name","amount":1,"amountUnit":"Stück","kcal":300,"detail":"Quelle","saveToDb":false,"kcalPer100":null}],"totalKcal":300,"confidence":"hoch","source":"DeepSeek V4"}`;
+{"items":[{"name":"Name","amount":1,"amountUnit":"Stück","kcal":300,"protein":20,"detail":"Quelle","saveToDb":false,"kcalPer100":null}],"totalKcal":300,"totalProtein":20,"confidence":"hoch","source":"DeepSeek V4"}
+
+protein = Gramm Eiweiß pro Portion (schätze wenn nötig)`;
   try {
     const resp = await apiFetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
@@ -4725,24 +4737,29 @@ function renderPhotoBtn() {
 async function analyzePhoto(event) {
   const file = event.target.files[0];
   if(!file) return;
-  if(!state.settings.geminiKey) { toast('Gemini API Key fehlt'); return; }
+  if(!state.settings.geminiKey) { toast('Gemini API Key fehlt (⚙ → Externe Dienste)'); return; }
 
   document.getElementById('mic-btn').classList.add('processing');
   document.getElementById('mic-status').textContent = 'Foto wird analysiert…';
 
-  // Bild als Base64
-  const base64 = await new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(r.result.split(',')[1]);
-    r.onerror = rej;
-    r.readAsDataURL(file);
-  });
-
-  const prompt = `Du bist ein Kalorien-Assistent. Analysiere dieses Foto eines Essens und schätze die Nährwerte.
-Antworte NUR mit diesem JSON:
-{"items":[{"name":"Name des Gerichts/Lebensmittels","amount":1,"amountUnit":"Portion","kcal":450,"detail":"geschätzte Portion","saveToDb":false,"kcalPer100":null}],"totalKcal":450,"confidence":"geschätzt","source":"Gemini Vision"}`;
-
   try {
+    // Bild als Base64
+    const base64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result.split(',')[1]);
+      r.onerror = () => rej(new Error('Bild konnte nicht gelesen werden'));
+      r.readAsDataURL(file);
+    });
+
+    const prompt = `Du bist ein Ernährungs-Assistent. Analysiere dieses Foto eines Essens und schätze Kalorien UND Proteingehalt.
+Antworte NUR mit diesem JSON (kein anderer Text, keine Markdown-Blöcke):
+{"items":[{"name":"Name des Gerichts/Lebensmittels","amount":1,"amountUnit":"Portion","kcal":450,"protein":28,"detail":"geschätzte Portion ca. 350g","saveToDb":false,"kcalPer100":null}],"totalKcal":450,"totalProtein":28,"confidence":"geschätzt","source":"Gemini Vision"}
+
+Regeln:
+- protein = Gramm Eiweiß pro Portion (Pflichtfeld, schätze wenn nötig)
+- Wenn mehrere Komponenten sichtbar: alle als separate items auflisten
+- confidence: "hoch" wenn Gericht klar erkennbar, "mittel" bei unklarer Portion, "geschätzt" wenn unsicher`;
+
     const resp = await apiFetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${state.settings.geminiKey}`,
       {
@@ -4753,21 +4770,31 @@ Antworte NUR mit diesem JSON:
             { inline_data: { mime_type: file.type, data: base64 } },
             { text: prompt }
           ]}],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 500 }
+          generationConfig: { temperature: 0.2, maxOutputTokens: 600 }
         })
       }
     );
     const data = await resp.json();
-    if(data.error) { toast('Foto-Analyse: ' + data.error.message); return; }
+    if(data.error) {
+      const msg = data.error.message || JSON.stringify(data.error);
+      logError('Foto-Analyse', msg, file.name);
+      toast('Foto-Analyse Fehler: ' + msg.substring(0,60));
+      return;
+    }
     const raw = data.candidates?.[0]?.content?.parts?.find(p=>p.text)?.text || '';
+    if(!raw) {
+      logError('Foto-Analyse', 'Leere Antwort von Gemini', file.name);
+      toast('Keine Antwort von Gemini erhalten');
+      return;
+    }
     let clean = raw.replace(/```json\s*/gi,'').replace(/```/g,'').trim();
     if(clean[0] !== '{') { const s=clean.indexOf('{'),e=clean.lastIndexOf('}'); if(s>=0&&e>s) clean=clean.slice(s,e+1); }
     const parsed = JSON.parse(clean);
-    if(!parsed.items?.length) { toast('Keine Kalorien erkannt'); return; }
+    if(!parsed.items?.length) { toast('Keine Lebensmittel erkannt'); return; }
     showClaudeSearchResult(parsed, 'Foto-Analyse');
   } catch(e) {
-    logError('Foto-Analyse', e.message, '');
-    toast('Foto-Analyse fehlgeschlagen');
+    logError('Foto-Analyse', e.message, file?.name || '');
+    toast('Foto-Analyse fehlgeschlagen — siehe Fehlerlog');
   } finally {
     document.getElementById('mic-btn').classList.remove('processing');
     document.getElementById('mic-status').textContent = 'Tippen zum Starten';
@@ -4953,7 +4980,7 @@ function showClaudeSearchResult(result, originalText) {
     `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:14px;">
       <div>
         <div style="color:var(--text);font-weight:500;">${item.name}</div>
-        <div style="font-size:11px;color:var(--text3);">${item.amount} ${item.amountUnit} · ${item.detail||''}</div>
+        <div style="font-size:11px;color:var(--text3);">${item.amount} ${item.amountUnit} · ${item.detail||''}${item.protein ? ' · ' + item.protein + 'g E' : ''}</div>
       </div>
       <div style="font-weight:500;color:var(--text);white-space:nowrap;margin-left:8px;">${item.kcal} kcal</div>
     </div>`
@@ -4961,6 +4988,13 @@ function showClaudeSearchResult(result, originalText) {
 
   document.getElementById('dialog-ai-items').innerHTML = itemsHtml;
   document.getElementById('dialog-ai-total').textContent = result.totalKcal + ' kcal';
+  // Protein-Gesamt anzeigen wenn vorhanden
+  const totalProtein = result.totalProtein || result.items.reduce((s,i)=>s+(i.protein||0),0);
+  const proteinEl = document.getElementById('dialog-ai-protein');
+  if(proteinEl) {
+    if(totalProtein > 0) { proteinEl.textContent = '🥩 Eiweiß gesamt: ' + Math.round(totalProtein*10)/10 + 'g'; proteinEl.style.display = 'block'; }
+    else { proteinEl.style.display = 'none'; }
+  }
   document.getElementById('dialog-ai-source').innerHTML =
     `<span style="color:${confColor};font-weight:500;">${confLabel}</span>${result.source ? ' · ' + result.source : ''}`;
   openDialog('dialog-ai-result');
@@ -4969,11 +5003,12 @@ function showClaudeSearchResult(result, originalText) {
 function confirmClaudeResult() {
   if(!pendingClaudeResult) return;
   pendingClaudeResult.items.forEach(item => {
-    // Optional: in DB speichern wenn kcalPer100 bekannt
     if(item.saveToDb && item.kcalPer100 && !state.db.find(f=>f.name.toLowerCase()===item.name.toLowerCase())) {
-      state.db.push({ id:'ai'+Date.now(), name: item.name, kcalPer100: item.kcalPer100, unit:'100g', category:'Sonstiges', custom: true });
+      const entry = { id:'ai'+Date.now(), name: item.name, kcalPer100: item.kcalPer100, unit:'100g', category:'Sonstiges', custom: true };
+      if(item.proteinPer100) entry.proteinPer100 = item.proteinPer100;
+      state.db.push(entry);
     }
-    addToSession({ name: item.name, kcal: item.kcal, detail: `${item.amount} ${item.amountUnit} · ${item.detail||'KI-Suche'}` });
+    addToSession({ name: item.name, kcal: item.kcal, protein: item.protein || null, detail: `${item.amount} ${item.amountUnit} · ${item.detail||'KI-Suche'}` });
   });
   closeDialog('dialog-ai-result');
   pendingClaudeResult = null;
