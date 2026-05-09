@@ -945,7 +945,9 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.86 — Mai 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.87 — Mai 2026</div>
+        <div>· Fix: Gemini-Modell auf gemini-2.5-flash aktualisiert — 2.0-flash für neue Nutzer nicht mehr verfügbar</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.86 — Mai 2026</div>
         <div>· NEU: Perplexity Sonar als Stufe 7 für Kaloriensuche (eingebaute Websuche, aktuelle Daten)</div>
         <div>· Perplexity sonar-pro als weiterer Fallback für Foto-Analyse (Vision-fähig)</div>
         <div>· Foto-Fallback-Kette: Gemini → Claude → Perplexity</div>
@@ -4905,7 +4907,7 @@ Antworte NUR mit diesem JSON (kein anderer Text):
 {"items":[{"name":"Name","amount":1,"amountUnit":"Portion","kcal":450,"protein":28,"detail":"ca. 350g","saveToDb":false,"kcalPer100":null}],"totalKcal":450,"totalProtein":28,"confidence":"geschätzt","source":"Gemini Vision"}
 protein = Gramm Eiweiß (Pflichtfeld). Mehrere Komponenten = mehrere items.`;
   const resp = await apiFetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${state.settings.geminiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.settings.geminiKey}`,
     { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ contents:[{parts:[
         {inline_data:{mime_type:file.type,data:base64}},
