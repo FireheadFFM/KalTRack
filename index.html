@@ -945,7 +945,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.88 — Mai 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.89 — Mai 2026</div>
+        <div>· Fix: Gemini 2.5 Flash Thinking deaktiviert — verhindert abgeschnittene JSON-Antworten</div>
+        <div>· Max Output-Token auf 2048 erhöht, temperature auf 0 gesetzt</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.88 — Mai 2026</div>
         <div>· Fix: Gemini Vision liefert jetzt responseMimeType JSON — verhindert kaputte Antworten</div>
         <div>· Fix: JSON-Parser fängt Fehler ab und loggt die rohe Antwort zur Diagnose</div>
         <div>· Mehr Output-Token (1000 statt 600) für vollständigere Antworten</div>
@@ -4906,10 +4909,10 @@ async function analyzePhoto(event) {
 }
 
 async function analyzePhotoWithGemini(base64, file) {
-  const prompt = `Analysiere dieses Foto eines Essens. Antworte ausschliesslich mit validem JSON, kein Text davor oder danach, keine Markdown-Formatierung.
-Format:
-{"items":[{"name":"Produktname","amount":1,"amountUnit":"Portion","kcal":450,"protein":28,"detail":"ca. 350g"}],"totalKcal":450,"totalProtein":28,"confidence":"geschätzt","source":"Gemini Vision"}
-Pflicht: protein (Gramm Eiweiß schätzen). Mehrere Speisen = mehrere items.`;
+  const prompt = `Analysiere dieses Foto eines Essens. Gib NUR ein JSON-Objekt zurück, absolut kein anderer Text.
+Format (exakt so, keine Abweichungen):
+{"items":[{"name":"Hähnchenbrust","amount":1,"amountUnit":"Portion","kcal":165,"protein":31,"detail":"ca. 100g"}],"totalKcal":165,"totalProtein":31,"confidence":"geschätzt","source":"Gemini Vision"}
+Regeln: protein = Gramm Eiweiß. Mehrere Speisen = mehrere items in der Liste.`;
   const resp = await apiFetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.settings.geminiKey}`,
     { method:'POST', headers:{'Content-Type':'application/json'},
@@ -4919,10 +4922,11 @@ Pflicht: protein (Gramm Eiweiß schätzen). Mehrere Speisen = mehrere items.`;
           {text:prompt}
         ]}],
         generationConfig:{
-          temperature:0.1,
-          maxOutputTokens:1000,
-          responseMimeType:'application/json'
-        }
+          temperature:0.0,
+          maxOutputTokens:2048
+        },
+        // Thinking deaktivieren — verursacht abgeschnittene Antworten bei JSON
+        thinkingConfig:{ thinkingBudget: 0 }
       })
     }
   );
@@ -4940,7 +4944,7 @@ Pflicht: protein (Gramm Eiweiß schätzen). Mehrere Speisen = mehrere items.`;
     let clean = raw.replace(/```json\s*/gi,'').replace(/```/g,'').trim();
     if(clean[0]!=='{'){const s=clean.indexOf('{'),e=clean.lastIndexOf('}');if(s>=0&&e>s)clean=clean.slice(s,e+1);}
     const parsed = JSON.parse(clean);
-    if(!parsed.items?.length) { logError('Gemini Vision','Kein items-Array im JSON',raw.substring(0,100)); return null; }
+    if(!parsed.items?.length) { logError('Gemini Vision','Kein items-Array im JSON',raw.substring(0,200)); return null; }
     return parsed;
   } catch(e) {
     logError('Gemini Vision', 'JSON-Parse-Fehler: ' + e.message, raw.substring(0,200));
