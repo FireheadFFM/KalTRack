@@ -945,7 +945,11 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.87 — Mai 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.88 — Mai 2026</div>
+        <div>· Fix: Gemini Vision liefert jetzt responseMimeType JSON — verhindert kaputte Antworten</div>
+        <div>· Fix: JSON-Parser fängt Fehler ab und loggt die rohe Antwort zur Diagnose</div>
+        <div>· Mehr Output-Token (1000 statt 600) für vollständigere Antworten</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.87 — Mai 2026</div>
         <div>· Fix: Gemini-Modell auf gemini-2.5-flash aktualisiert — 2.0-flash für neue Nutzer nicht mehr verfügbar</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.86 — Mai 2026</div>
         <div>· NEU: Perplexity Sonar als Stufe 7 für Kaloriensuche (eingebaute Websuche, aktuelle Daten)</div>
@@ -4902,17 +4906,24 @@ async function analyzePhoto(event) {
 }
 
 async function analyzePhotoWithGemini(base64, file) {
-  const prompt = `Du bist ein Ernährungs-Assistent. Analysiere dieses Foto und schätze Kalorien UND Proteingehalt.
-Antworte NUR mit diesem JSON (kein anderer Text):
-{"items":[{"name":"Name","amount":1,"amountUnit":"Portion","kcal":450,"protein":28,"detail":"ca. 350g","saveToDb":false,"kcalPer100":null}],"totalKcal":450,"totalProtein":28,"confidence":"geschätzt","source":"Gemini Vision"}
-protein = Gramm Eiweiß (Pflichtfeld). Mehrere Komponenten = mehrere items.`;
+  const prompt = `Analysiere dieses Foto eines Essens. Antworte ausschliesslich mit validem JSON, kein Text davor oder danach, keine Markdown-Formatierung.
+Format:
+{"items":[{"name":"Produktname","amount":1,"amountUnit":"Portion","kcal":450,"protein":28,"detail":"ca. 350g"}],"totalKcal":450,"totalProtein":28,"confidence":"geschätzt","source":"Gemini Vision"}
+Pflicht: protein (Gramm Eiweiß schätzen). Mehrere Speisen = mehrere items.`;
   const resp = await apiFetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.settings.geminiKey}`,
     { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ contents:[{parts:[
-        {inline_data:{mime_type:file.type,data:base64}},
-        {text:prompt}
-      ]}], generationConfig:{temperature:0.2,maxOutputTokens:600} })
+      body: JSON.stringify({
+        contents:[{parts:[
+          {inline_data:{mime_type:file.type,data:base64}},
+          {text:prompt}
+        ]}],
+        generationConfig:{
+          temperature:0.1,
+          maxOutputTokens:1000,
+          responseMimeType:'application/json'
+        }
+      })
     }
   );
   const data = await resp.json();
@@ -4925,11 +4936,17 @@ protein = Gramm Eiweiß (Pflichtfeld). Mehrere Komponenten = mehrere items.`;
   }
   const raw = data.candidates?.[0]?.content?.parts?.find(p=>p.text)?.text || '';
   if(!raw) { logError('Gemini Vision', 'Leere Antwort', file.name); return null; }
-  let clean = raw.replace(/```json\s*/gi,'').replace(/```/g,'').trim();
-  if(clean[0]!=='{'){const s=clean.indexOf('{'),e=clean.lastIndexOf('}');if(s>=0&&e>s)clean=clean.slice(s,e+1);}
-  const parsed = JSON.parse(clean);
-  if(!parsed.items?.length) return null;
-  return parsed;
+  try {
+    let clean = raw.replace(/```json\s*/gi,'').replace(/```/g,'').trim();
+    if(clean[0]!=='{'){const s=clean.indexOf('{'),e=clean.lastIndexOf('}');if(s>=0&&e>s)clean=clean.slice(s,e+1);}
+    const parsed = JSON.parse(clean);
+    if(!parsed.items?.length) { logError('Gemini Vision','Kein items-Array im JSON',raw.substring(0,100)); return null; }
+    return parsed;
+  } catch(e) {
+    logError('Gemini Vision', 'JSON-Parse-Fehler: ' + e.message, raw.substring(0,200));
+    toast('Gemini: Antwort konnte nicht verarbeitet werden');
+    return null;
+  }
 }
 
 async function analyzePhotoWithClaude(base64, file) {
