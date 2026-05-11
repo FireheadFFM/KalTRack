@@ -2142,7 +2142,8 @@ function quickAdd() {
   if(!kcal || kcal <= 0) { toast('Bitte kcal eingeben'); kcalEl && kcalEl.focus(); return; }
   if(state.mode === 'db') { toast('Schnellerfassung nicht im Datenbank-Modus'); return; }
   const ts = Date.now();
-  const detail = 'Schnellerfassung' + (protein ? ` · ${protein}g Eiweiß` : '');
+  // Detail ohne Protein — renderHome zeigt Protein separat aus item.protein an
+  const detail = 'Schnellerfassung';
   state.todayLog.push({ id: 'q'+ts, name, kcal, protein, detail });
   speak(`${name}, ${kcal} Kilokalorien`);
   toast(`${name}: ${kcal} kcal${protein ? ', ' + protein + 'g E' : ''}`);
@@ -2360,12 +2361,15 @@ function applyBmr(type) {
 }
 
 function getGoalForDate(dateStr) {
-  // dateStr ist entweder null (heute) oder ein toDateString()-Format wie "Thu Apr 24 2026"
+  // dateStr ist entweder null (heute/FitMole-Tag) oder ein toDateString()-Format
   let dow;
   if(!dateStr) {
-    dow = new Date().getDay();
+    // FitMole-Logik: vor 02:00 Uhr gilt noch der Vortag
+    const now = new Date();
+    const fitMoleDate = new Date(now);
+    if(now.getHours() < 2) fitMoleDate.setDate(fitMoleDate.getDate() - 1);
+    dow = fitMoleDate.getDay();
   } else {
-    // toDateString()-Format direkt parsen — kein UTC-Problem da kein ISO-Format
     dow = new Date(dateStr).getDay();
   }
   const isWeekend = (dow === 0 || dow === 5 || dow === 6); // So=0, Fr=5, Sa=6
