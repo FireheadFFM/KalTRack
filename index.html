@@ -368,6 +368,7 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
       <button class="nav-btn active" onclick="showPage('home')">Übersicht</button>
       <button class="nav-btn" onclick="showPage('input')">Eingabe</button>
       <button class="nav-btn" onclick="showPage('activity')">Aktivität</button>
+      <button class="nav-btn" onclick="showPage('cocktail')">🍹</button>
       <button class="nav-btn" onclick="showPage('history')">Historie</button>
       <button class="nav-btn" onclick="showPage('settings')">⚙</button>
     </div>
@@ -579,6 +580,108 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
     </div>
 
     <div id="db-page-list"></div>
+  </div>
+
+  <!-- COCKTAIL PAGE -->
+  <div class="page" id="page-cocktail">
+
+    <!-- Vorlagen -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div class="card-label" style="margin:0;">Vorlagen</div>
+        <select id="cocktail-template" onchange="loadCocktailTemplate(this.value)"
+          style="flex:1;margin-left:10px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;">
+          <option value="">— Vorlage wählen —</option>
+          <optgroup label="Eigene gespeicherte">
+          </optgroup>
+          <optgroup label="Klassiker">
+            <option value="margarita">Margarita</option>
+            <option value="daiquiri">Daiquiri</option>
+            <option value="mojito">Mojito</option>
+            <option value="gimlet">Gimlet</option>
+            <option value="negroni">Negroni</option>
+            <option value="oldFashioned">Old Fashioned</option>
+            <option value="manhattan">Manhattan</option>
+            <option value="aperolSpritz">Aperol Spritz</option>
+            <option value="ginTonic">Gin Tonic</option>
+            <option value="cubalibre">Cuba Libre</option>
+            <option value="pinaColada">Piña Colada</option>
+            <option value="espressoMartini">Espresso Martini</option>
+          </optgroup>
+        </select>
+      </div>
+    </div>
+
+    <!-- Aktueller Cocktail -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <input type="text" id="cocktail-name" placeholder="Name des Cocktails"
+          style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:15px;font-weight:500;font-family:'DM Sans';background:var(--bg);color:var(--text);outline:none;" />
+        <button class="btn btn-secondary" style="margin-left:8px;padding:9px 12px;font-size:12px;" onclick="resetCocktail()">↺</button>
+      </div>
+
+      <!-- Zutaten-Liste -->
+      <div id="cocktail-ingredients" style="margin-bottom:10px;"></div>
+
+      <!-- Neue Zutat -->
+      <div style="background:var(--bg);border-radius:var(--radius-sm);padding:10px;margin-bottom:10px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:500;">+ Zutat hinzufügen</div>
+        <div style="display:flex;gap:6px;margin-bottom:6px;">
+          <input type="text" id="ci-name" placeholder="Name" autocomplete="off"
+            style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans';background:white;color:var(--text);outline:none;" />
+          <input type="number" id="ci-cl" placeholder="cl" step="0.5" min="0.1"
+            style="width:55px;padding:8px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Mono';background:white;color:var(--text);outline:none;text-align:right;" />
+        </div>
+        <div style="display:flex;gap:6px;">
+          <select id="ci-type" onchange="updateCiInputs()" style="flex:1;padding:8px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:'DM Sans';background:white;color:var(--text);outline:none;">
+            <option value="spirit">Spirituose</option>
+            <option value="liqueur">Likör</option>
+            <option value="vermouth">Wermut</option>
+            <option value="amaro">Amaro</option>
+            <option value="juice">Saft</option>
+            <option value="syrup">Sirup/Zucker</option>
+            <option value="soda">Soda/Wasser/Eis</option>
+            <option value="softdrink">Limonade/Softdrink</option>
+            <option value="cream">Sahne/Milch</option>
+            <option value="other">Sonstiges</option>
+          </select>
+          <button class="btn btn-primary" onclick="addCocktailIngredient()" style="padding:8px 14px;">+</button>
+        </div>
+        <!-- Dynamische Felder je nach Typ -->
+        <div id="ci-extra" style="margin-top:6px;"></div>
+      </div>
+
+      <!-- Ergebnis -->
+      <div id="cocktail-result" style="display:none;">
+        <div style="background:var(--accent-bg);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:12px;color:var(--text2);">Gesamt</div>
+              <div style="font-size:26px;font-weight:700;font-family:'DM Mono';color:var(--accent);" id="cocktail-total-kcal">—</div>
+              <div style="font-size:11px;color:var(--text3);" id="cocktail-total-ml">—</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:11px;color:var(--text2);">davon Alkohol</div>
+              <div style="font-size:16px;font-weight:600;font-family:'DM Mono';" id="cocktail-alcohol-kcal">—</div>
+              <div style="font-size:11px;color:var(--text3);" id="cocktail-alcohol-vol">—</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary" style="flex:1;" onclick="saveCocktailToDb()">In DB speichern</button>
+          <button class="btn btn-primary" style="flex:1;" onclick="logCocktail()">+ Ins Tageslog</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gespeicherte Cocktails -->
+    <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Gespeicherte Cocktails</span>
+    </div>
+    <div class="card" id="saved-cocktails-list">
+      <div class="empty-state">Noch keine eigenen Cocktails gespeichert.</div>
+    </div>
+
   </div>
 
   <!-- HISTORY PAGE -->
@@ -945,7 +1048,15 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.90 — Mai 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.91 — Mai 2026</div>
+        <div>· NEU: Cocktail-Rechner — eigener 🍹-Tab</div>
+        <div>· 7 Zutaten-Typen: Spirituose (ABV-Berechnung), Likör/Wermut/Amaro (kcal/100ml), Saft, Sirup, Soda, Limonade, Sahne</div>
+        <div>· 30 vorgespeicherte Produkte mit verifizierten Kalorienwerten (Luxardo, Campari, Dolin, Averna u.v.m.)</div>
+        <div>· 12 Klassikervorlagen: Margarita, Daiquiri, Negroni, Old Fashioned, Aperol Spritz u.v.m.</div>
+        <div>· Cocktails speicherbar, benennbar, als Vorlage nutzbar</div>
+        <div>· Direktes Einloggen ins Tageslog per „+ Ins Tageslog"</div>
+        <div>· Fix: getGoalForDate(null) nutzt jetzt FitMole-02h-Logik (verhindert falsches Wochentags-Ziel nach Mitternacht)</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.90 — Mai 2026</div>
         <div>· Fix: thinkingConfig korrekt in generationConfig verschachtelt (war fälschlich Top-Level-Feld)</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.89 — Mai 2026</div>
         <div>· Fix: Gemini 2.5 Flash Thinking deaktiviert — verhindert abgeschnittene JSON-Antworten</div>
@@ -1710,7 +1821,8 @@ let state = {
   deletedFavNames: [],   // [{name, ts}]
   backlogIdeas: [],      // [{id, text, ts}] — eigene Ideen
   errorLog: [],          // [{ts, source, message, detail}] — Fehlerprotokoll
-  weightLog: []          // [{date: 'YYYY-MM-DD', weight: 84.5}]
+  weightLog: [],         // [{date: 'YYYY-MM-DD', weight: 84.5}]
+  cocktails: []          // gespeicherte Cocktail-Rezepte
 };
 
 const FOOD_DB_DEFAULT = [
@@ -2011,7 +2123,9 @@ async function init() {
   renderVoiceToggle();
   renderSplashToggle();
   renderPhotoBtn();
-  checkWeightDrivenRecalc(true); // still beim Start — nur updaten ohne Toast
+  checkWeightDrivenRecalc(true);
+  updateCiInputs();
+  updateCocktailTemplateDropdown();
   if(state.settings.splashEnabled !== false) {
     showSplash();
   }
@@ -2378,6 +2492,463 @@ function getGoalForDate(dateStr) {
   } else {
     return state.settings.goalWeek || state.settings.goal || (state.settings.bmr||2000);
   }
+}
+
+// ─── COCKTAIL-RECHNER ────────────────────────────────────────────────────────
+
+// Kalorienwerte kcal/100ml für Liköre, Wermut, Amari
+const COCKTAIL_PRESETS = {
+  // Liköre
+  'Luxardo Maraschino':          { kcal: 247, type: 'liqueur' },
+  'Campari':                     { kcal: 267, type: 'liqueur' },
+  'Pierre Ferrand Dry Curacao':  { kcal: 310, type: 'liqueur' },
+  'DeKuyper Dutch Cacao':        { kcal: 338, type: 'liqueur' },
+  'Tempus Fugit Crème de Banane':{ kcal: 300, type: 'liqueur' },
+  'Aperol':                      { kcal: 210, type: 'liqueur' },
+  'Mr. Black Kaffee Likör':      { kcal: 288, type: 'liqueur' },
+  'Chartreuse Grün':             { kcal: 330, type: 'liqueur' },
+  'Chartreuse Gelb':             { kcal: 310, type: 'liqueur' },
+  'St. Germain':                 { kcal: 348, type: 'liqueur' },
+  'Cherry Heering':              { kcal: 310, type: 'liqueur' },
+  'Mozart Dark':                 { kcal: 290, type: 'liqueur' },
+  'Bitter Truth Pimento Dram':   { kcal: 290, type: 'liqueur' },
+  'Aloha Fassionola':            { kcal: 280, type: 'liqueur' },
+  'JD Taylor Velvet Falernum':   { kcal: 220, type: 'liqueur' },
+  'Midori':                      { kcal: 325, type: 'liqueur' },
+  'Guignolet de Dijon':          { kcal: 250, type: 'liqueur' },
+  'Giffard Caribbean Pineapple': { kcal: 295, type: 'liqueur' },
+  'Giffard Banane du Brésil':    { kcal: 295, type: 'liqueur' },
+  'Giffard Cassis Noir':         { kcal: 290, type: 'liqueur' },
+  // Wermut
+  'Dolin Blanc':                 { kcal: 115, type: 'vermouth' },
+  'Dolin Dry':                   { kcal: 105, type: 'vermouth' },
+  'Cocchi Vermouth di Torino':   { kcal: 140, type: 'vermouth' },
+  'Punt e Mes':                  { kcal: 145, type: 'vermouth' },
+  // Amari
+  'Averna':                      { kcal: 249, type: 'amaro' },
+  'Montenegro':                  { kcal: 195, type: 'amaro' },
+  'Cynar':                       { kcal: 193, type: 'amaro' },
+  'Nonio':                       { kcal: 190, type: 'amaro' },
+  'Fernet Branca':               { kcal: 227, type: 'amaro' },
+  // Spezialitäten
+  'Real Cream of Coconut':       { kcal: 400, type: 'other' },
+  'Pernod Absinth':              { kcal: 300, type: 'spirit' },
+  // Softdrinks
+  'Cola':                        { kcal: 42,  type: 'softdrink' },
+  'Cola Zero':                   { kcal: 0,   type: 'softdrink' },
+  'Sprite / 7Up':                { kcal: 42,  type: 'softdrink' },
+  'Fanta':                       { kcal: 44,  type: 'softdrink' },
+  'Ginger Beer':                 { kcal: 37,  type: 'softdrink' },
+  'Tonic Water':                 { kcal: 34,  type: 'softdrink' },
+  'Bitter Lemon':                { kcal: 40,  type: 'softdrink' },
+};
+
+// Standardrezepte (cl-Mengen)
+const COCKTAIL_TEMPLATES = {
+  margarita: {
+    name: 'Margarita',
+    ingredients: [
+      { name: 'Tequila Blanco',          cl: 4.5, type: 'spirit',  abv: 40 },
+      { name: 'Pierre Ferrand Dry Curacao', cl: 1.5, type: 'liqueur' },
+      { name: 'Limettensaft',            cl: 3,   type: 'juice',   kcalPer100: 25 },
+    ]
+  },
+  daiquiri: {
+    name: 'Daiquiri',
+    ingredients: [
+      { name: 'Weißer Rum',       cl: 4.5, type: 'spirit', abv: 40 },
+      { name: 'Limettensaft',     cl: 2.5, type: 'juice',  kcalPer100: 25 },
+      { name: 'Zuckersirup',      cl: 1.5, type: 'syrup',  kcalPer100: 280 },
+    ]
+  },
+  mojito: {
+    name: 'Mojito',
+    ingredients: [
+      { name: 'Weißer Rum',       cl: 5,   type: 'spirit', abv: 40 },
+      { name: 'Limettensaft',     cl: 3,   type: 'juice',  kcalPer100: 25 },
+      { name: 'Zuckersirup',      cl: 1.5, type: 'syrup',  kcalPer100: 280 },
+      { name: 'Soda',             cl: 6,   type: 'soda' },
+    ]
+  },
+  gimlet: {
+    name: 'Gimlet',
+    ingredients: [
+      { name: 'Gin',              cl: 6,   type: 'spirit', abv: 43 },
+      { name: 'Limettensaft',     cl: 2,   type: 'juice',  kcalPer100: 25 },
+      { name: 'Zuckersirup',      cl: 1,   type: 'syrup',  kcalPer100: 280 },
+    ]
+  },
+  negroni: {
+    name: 'Negroni',
+    ingredients: [
+      { name: 'Gin',              cl: 3,   type: 'spirit',  abv: 43 },
+      { name: 'Campari',          cl: 3,   type: 'liqueur' },
+      { name: 'Cocchi Vermouth di Torino', cl: 3, type: 'vermouth' },
+    ]
+  },
+  oldFashioned: {
+    name: 'Old Fashioned',
+    ingredients: [
+      { name: 'Bourbon',          cl: 5,   type: 'spirit', abv: 43 },
+      { name: 'Zuckersirup',      cl: 1,   type: 'syrup',  kcalPer100: 280 },
+      { name: 'Angostura Bitters',cl: 0.3, type: 'other',  kcalPer100: 50 },
+    ]
+  },
+  manhattan: {
+    name: 'Manhattan',
+    ingredients: [
+      { name: 'Rye Whiskey',      cl: 5,   type: 'spirit',  abv: 45 },
+      { name: 'Punt e Mes',       cl: 2.5, type: 'vermouth' },
+      { name: 'Angostura Bitters',cl: 0.3, type: 'other',   kcalPer100: 50 },
+    ]
+  },
+  aperolSpritz: {
+    name: 'Aperol Spritz',
+    ingredients: [
+      { name: 'Aperol',           cl: 6,   type: 'liqueur' },
+      { name: 'Prosecco',         cl: 9,   type: 'spirit',  abv: 11 },
+      { name: 'Soda',             cl: 3,   type: 'soda' },
+    ]
+  },
+  ginTonic: {
+    name: 'Gin Tonic',
+    ingredients: [
+      { name: 'Gin',              cl: 4,   type: 'spirit',   abv: 43 },
+      { name: 'Tonic Water',      cl: 12,  type: 'softdrink' },
+    ]
+  },
+  cubalibre: {
+    name: 'Cuba Libre',
+    ingredients: [
+      { name: 'Weißer Rum',       cl: 5,   type: 'spirit',   abv: 40 },
+      { name: 'Cola',             cl: 12,  type: 'softdrink' },
+      { name: 'Limettensaft',     cl: 1,   type: 'juice',    kcalPer100: 25 },
+    ]
+  },
+  pinaColada: {
+    name: 'Piña Colada',
+    ingredients: [
+      { name: 'Weißer Rum',           cl: 5,   type: 'spirit', abv: 40 },
+      { name: 'Real Cream of Coconut',cl: 3,   type: 'other' },
+      { name: 'Ananassaft',           cl: 9,   type: 'juice',  kcalPer100: 50 },
+    ]
+  },
+  espressoMartini: {
+    name: 'Espresso Martini',
+    ingredients: [
+      { name: 'Vodka',                cl: 4,   type: 'spirit',  abv: 40 },
+      { name: 'Mr. Black Kaffee Likör',cl: 2,  type: 'liqueur' },
+      { name: 'Espresso (kalt)',      cl: 3,   type: 'other',   kcalPer100: 9 },
+      { name: 'Zuckersirup',          cl: 1,   type: 'syrup',   kcalPer100: 280 },
+    ]
+  },
+};
+
+let cocktailIngredients = []; // aktuelle Zutaten-Liste
+
+function calcIngredientKcal(ing) {
+  const ml = ing.cl * 10;
+  switch(ing.type) {
+    case 'spirit':
+      // Alkohol: ml × dichte(0.789) × abv/100 × 7.1 kcal/g
+      return Math.round(ml * 0.789 * ((ing.abv||40)/100) * 7.1);
+    case 'liqueur':
+    case 'vermouth':
+    case 'amaro':
+    case 'softdrink':
+    case 'juice':
+    case 'syrup':
+    case 'cream':
+    case 'other':
+      return Math.round(ml * (ing.kcalPer100||0) / 100);
+    case 'soda':
+      return 0;
+    default:
+      return 0;
+  }
+}
+
+function calcCocktailTotal() {
+  let totalKcal = 0, alcoholKcal = 0, totalMl = 0, totalAlcoholG = 0;
+  cocktailIngredients.forEach(ing => {
+    const ml = ing.cl * 10;
+    totalMl += ml;
+    const kcal = calcIngredientKcal(ing);
+    totalKcal += kcal;
+    if(ing.type === 'spirit') {
+      const alc = ml * 0.789 * ((ing.abv||40)/100);
+      totalAlcoholG += alc;
+      alcoholKcal += Math.round(alc * 7.1);
+    }
+  });
+  return { totalKcal: Math.round(totalKcal), alcoholKcal: Math.round(alcoholKcal), totalMl: Math.round(totalMl), totalAlcoholG: Math.round(totalAlcoholG * 10)/10 };
+}
+
+function renderCocktailIngredients() {
+  const el = document.getElementById('cocktail-ingredients');
+  if(!el) return;
+  if(cocktailIngredients.length === 0) { el.innerHTML = ''; }
+  else {
+    el.innerHTML = cocktailIngredients.map((ing, i) => {
+      const kcal = calcIngredientKcal(ing);
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border);">
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:500;color:var(--text);">${ing.name}</div>
+          <div style="font-size:11px;color:var(--text3);">${ing.cl} cl · ${ing.type === 'spirit' ? ing.abv+'% Vol · ' : ''}${kcal} kcal</div>
+        </div>
+        <button style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:4px 8px;" onclick="removeCocktailIngredient(${i})">×</button>
+      </div>`;
+    }).join('');
+  }
+  updateCocktailResult();
+}
+
+function updateCocktailResult() {
+  const resultEl = document.getElementById('cocktail-result');
+  if(cocktailIngredients.length === 0) { if(resultEl) resultEl.style.display = 'none'; return; }
+  const { totalKcal, alcoholKcal, totalMl, totalAlcoholG } = calcCocktailTotal();
+  document.getElementById('cocktail-total-kcal').textContent = totalKcal + ' kcal';
+  document.getElementById('cocktail-total-ml').textContent = totalMl + ' ml gesamt';
+  document.getElementById('cocktail-alcohol-kcal').textContent = alcoholKcal + ' kcal';
+  document.getElementById('cocktail-alcohol-vol').textContent = totalAlcoholG + 'g reiner Alkohol';
+  if(resultEl) resultEl.style.display = 'block';
+}
+
+function updateCiInputs() {
+  const type = document.getElementById('ci-type')?.value;
+  const extra = document.getElementById('ci-extra');
+  if(!extra) return;
+
+  if(type === 'spirit') {
+    extra.innerHTML = `<div style="display:flex;gap:6px;align-items:center;">
+      <input type="number" id="ci-abv" placeholder="% Vol" step="0.5" value="40" min="0" max="96"
+        style="width:80px;padding:8px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Mono';background:white;color:var(--text);outline:none;" />
+      <span style="font-size:12px;color:var(--text3);">% Vol (Alkoholgehalt)</span>
+    </div>`;
+  } else if(['liqueur','vermouth','amaro'].includes(type)) {
+    // Preset-Dropdown + manuelle kcal
+    const opts = Object.entries(COCKTAIL_PRESETS)
+      .filter(([,v]) => v.type === type || (type === 'liqueur' && v.type === 'liqueur') || (type === 'vermouth' && v.type === 'vermouth') || (type === 'amaro' && v.type === 'amaro'))
+      .map(([k,v]) => `<option value="${v.kcal}" data-name="${k}">${k} (${v.kcal} kcal/100ml)</option>`)
+      .join('');
+    extra.innerHTML = `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+      <select id="ci-preset" onchange="applyCocktailPreset()" style="flex:1;min-width:150px;padding:8px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:'DM Sans';background:white;color:var(--text);outline:none;">
+        <option value="">— Preset wählen —</option>${opts}
+      </select>
+      <input type="number" id="ci-kcal" placeholder="kcal/100ml" step="1"
+        style="width:110px;padding:8px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Mono';background:white;color:var(--text);outline:none;" />
+    </div>`;
+  } else if(type === 'softdrink') {
+    const sdOpts = Object.entries(COCKTAIL_PRESETS)
+      .filter(([,v]) => v.type === 'softdrink')
+      .map(([k,v]) => `<option value="${v.kcal}" data-name="${k}">${k} (${v.kcal} kcal/100ml)</option>`)
+      .join('');
+    extra.innerHTML = `<div style="display:flex;gap:6px;align-items:center;">
+      <select id="ci-preset" onchange="applyCocktailPreset()" style="flex:1;padding:8px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:'DM Sans';background:white;color:var(--text);outline:none;">
+        <option value="">— Preset wählen —</option>${sdOpts}
+      </select>
+      <input type="number" id="ci-kcal" placeholder="kcal/100ml" step="1"
+        style="width:110px;padding:8px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Mono';background:white;color:var(--text);outline:none;" />
+    </div>`;
+  } else if(type === 'juice') {
+    extra.innerHTML = `<div style="display:flex;gap:6px;align-items:center;">
+      <input type="number" id="ci-kcal" placeholder="kcal/100ml" step="1" value="45"
+        style="width:110px;padding:8px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Mono';background:white;color:var(--text);outline:none;" />
+      <span style="font-size:11px;color:var(--text3);">kcal/100ml (Standard: 45)</span>
+    </div>`;
+  } else if(type === 'syrup') {
+    extra.innerHTML = `<div style="display:flex;gap:6px;align-items:center;">
+      <input type="number" id="ci-kcal" placeholder="kcal/100ml" step="1" value="280"
+        style="width:110px;padding:8px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Mono';background:white;color:var(--text);outline:none;" />
+      <span style="font-size:11px;color:var(--text3);">kcal/100ml (Zuckersirup: 280)</span>
+    </div>`;
+  } else if(type === 'cream') {
+    extra.innerHTML = `<div style="display:flex;gap:6px;align-items:center;">
+      <input type="number" id="ci-kcal" placeholder="kcal/100ml" step="1" value="337"
+        style="width:110px;padding:8px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Mono';background:white;color:var(--text);outline:none;" />
+      <span style="font-size:11px;color:var(--text3);">kcal/100ml (Sahne: 337)</span>
+    </div>`;
+  } else if(type === 'other') {
+    extra.innerHTML = `<div style="display:flex;gap:6px;align-items:center;">
+      <input type="number" id="ci-kcal" placeholder="kcal/100ml" step="1"
+        style="width:110px;padding:8px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Mono';background:white;color:var(--text);outline:none;" />
+      <span style="font-size:11px;color:var(--text3);">kcal/100ml eingeben</span>
+    </div>`;
+  } else {
+    extra.innerHTML = '';
+  }
+}
+
+function applyCocktailPreset() {
+  const sel = document.getElementById('ci-preset');
+  if(!sel || !sel.value) return;
+  const kcal = sel.value;
+  const name = sel.options[sel.selectedIndex]?.getAttribute('data-name') || '';
+  const kcalEl = document.getElementById('ci-kcal');
+  if(kcalEl) kcalEl.value = kcal;
+  const nameEl = document.getElementById('ci-name');
+  if(nameEl && !nameEl.value) nameEl.value = name;
+}
+
+function addCocktailIngredient() {
+  const name = document.getElementById('ci-name')?.value.trim();
+  const cl   = parseFloat(document.getElementById('ci-cl')?.value);
+  const type = document.getElementById('ci-type')?.value;
+  if(!name) { toast('Bitte Name eingeben'); return; }
+  if(!cl || cl <= 0) { toast('Bitte Menge in cl eingeben'); return; }
+
+  const ing = { name, cl, type };
+
+  if(type === 'spirit') {
+    ing.abv = parseFloat(document.getElementById('ci-abv')?.value) || 40;
+  } else if(['liqueur','vermouth','amaro','juice','syrup','cream','softdrink','other'].includes(type)) {
+    ing.kcalPer100 = parseFloat(document.getElementById('ci-kcal')?.value) || 0;
+    if(!ing.kcalPer100) { toast('Bitte kcal/100ml eingeben'); return; }
+  }
+
+  cocktailIngredients.push(ing);
+  // Felder zurücksetzen
+  document.getElementById('ci-name').value = '';
+  document.getElementById('ci-cl').value = '';
+  document.getElementById('ci-type').value = 'spirit';
+  document.getElementById('ci-extra').innerHTML = '';
+  updateCiInputs();
+  renderCocktailIngredients();
+}
+
+function removeCocktailIngredient(i) {
+  cocktailIngredients.splice(i, 1);
+  renderCocktailIngredients();
+}
+
+function resetCocktail() {
+  cocktailIngredients = [];
+  document.getElementById('cocktail-name').value = '';
+  document.getElementById('ci-name').value = '';
+  document.getElementById('ci-cl').value = '';
+  document.getElementById('ci-type').value = 'spirit';
+  updateCiInputs();
+  renderCocktailIngredients();
+  document.getElementById('cocktail-template').value = '';
+}
+
+function loadCocktailTemplate(key) {
+  if(!key) return;
+  // Erst in eigenen gespeicherten suchen
+  const saved = (state.cocktails||[]).find(c => c.id === key);
+  if(saved) {
+    cocktailIngredients = JSON.parse(JSON.stringify(saved.ingredients));
+    document.getElementById('cocktail-name').value = saved.name;
+    renderCocktailIngredients();
+    return;
+  }
+  // Dann in Klassikern
+  const tpl = COCKTAIL_TEMPLATES[key];
+  if(!tpl) return;
+  cocktailIngredients = JSON.parse(JSON.stringify(tpl.ingredients));
+  document.getElementById('cocktail-name').value = tpl.name;
+  renderCocktailIngredients();
+}
+
+function saveCocktailToDb() {
+  const name = document.getElementById('cocktail-name')?.value.trim();
+  if(!name) { toast('Bitte Cocktail benennen'); return; }
+  if(cocktailIngredients.length === 0) { toast('Keine Zutaten'); return; }
+  if(!state.cocktails) state.cocktails = [];
+  const { totalKcal } = calcCocktailTotal();
+  const id = 'cocktail_' + Date.now();
+  const existing = state.cocktails.findIndex(c => c.name === name);
+  if(existing >= 0) {
+    if(!confirm(`"${name}" überschreiben?`)) return;
+    state.cocktails[existing] = { id: state.cocktails[existing].id, name, kcal: totalKcal, ingredients: JSON.parse(JSON.stringify(cocktailIngredients)) };
+  } else {
+    state.cocktails.push({ id, name, kcal: totalKcal, ingredients: JSON.parse(JSON.stringify(cocktailIngredients)) });
+  }
+  saveStateAndSync();
+  renderSavedCocktails();
+  updateCocktailTemplateDropdown();
+  toast(`"${name}" gespeichert (${totalKcal} kcal)`);
+}
+
+function logCocktail() {
+  const name = document.getElementById('cocktail-name')?.value.trim() || 'Cocktail';
+  if(cocktailIngredients.length === 0) { toast('Keine Zutaten'); return; }
+  const { totalKcal, totalMl } = calcCocktailTotal();
+  const ts = Date.now();
+  state.todayLog.push({
+    id: 'c' + ts,
+    name,
+    kcal: totalKcal,
+    detail: `${totalMl}ml · Cocktail`
+  });
+  saveStateAndSync();
+  renderHome();
+  toast(`${name}: ${totalKcal} kcal ins Log eingetragen`);
+  showPage('home');
+}
+
+function renderSavedCocktails() {
+  const el = document.getElementById('saved-cocktails-list');
+  if(!el) return;
+  const cocktails = state.cocktails || [];
+  if(cocktails.length === 0) {
+    el.innerHTML = '<div class="empty-state">Noch keine eigenen Cocktails gespeichert.</div>';
+    return;
+  }
+  el.innerHTML = cocktails.map((c, i) => `
+    <div class="db-item">
+      <div class="log-left">
+        <div class="db-name">${c.name}</div>
+        <div class="db-detail">${c.kcal} kcal · ${c.ingredients.length} Zutaten</div>
+      </div>
+      <div class="db-actions">
+        <button class="btn btn-secondary" style="font-size:12px;padding:6px 10px;" onclick="loadAndEditCocktail(${i})">✎ Laden</button>
+        <button class="btn btn-primary" style="font-size:12px;padding:6px 10px;" onclick="quickLogCocktail(${i})">+ Log</button>
+        <button class="btn btn-danger" style="font-size:12px;padding:6px 10px;" onclick="deleteSavedCocktail(${i})">−</button>
+      </div>
+    </div>`).join('');
+}
+
+function loadAndEditCocktail(i) {
+  const c = (state.cocktails||[])[i];
+  if(!c) return;
+  cocktailIngredients = JSON.parse(JSON.stringify(c.ingredients));
+  document.getElementById('cocktail-name').value = c.name;
+  renderCocktailIngredients();
+  // Scroll nach oben
+  document.getElementById('page-cocktail').scrollTop = 0;
+}
+
+function quickLogCocktail(i) {
+  const c = (state.cocktails||[])[i];
+  if(!c) return;
+  const ts = Date.now();
+  state.todayLog.push({ id: 'c'+ts, name: c.name, kcal: c.kcal, detail: 'Cocktail' });
+  saveStateAndSync();
+  renderHome();
+  toast(`${c.name}: ${c.kcal} kcal eingetragen`);
+}
+
+function deleteSavedCocktail(i) {
+  const c = (state.cocktails||[])[i];
+  if(!c || !confirm(`"${c.name}" löschen?`)) return;
+  state.cocktails.splice(i, 1);
+  saveStateAndSync();
+  renderSavedCocktails();
+  updateCocktailTemplateDropdown();
+  toast(`${c.name} gelöscht`);
+}
+
+function updateCocktailTemplateDropdown() {
+  const sel = document.getElementById('cocktail-template');
+  if(!sel) return;
+  // Erste optgroup (eigene) aktualisieren
+  const firstGroup = sel.querySelector('optgroup');
+  if(!firstGroup) return;
+  const cocktails = state.cocktails || [];
+  firstGroup.innerHTML = cocktails.map(c =>
+    `<option value="${c.id}">${c.name} (${c.kcal} kcal)</option>`
+  ).join('');
 }
 
 // ─── GEWICHT-TRACKING ─────────────────────────────────────────────────────────
@@ -3348,8 +3919,7 @@ function loadState() {
   if(!state.backlogIdeas) state.backlogIdeas = [];
   if(!state.errorLog) state.errorLog = [];
   if(!state.weightLog) state.weightLog = [];
-
-  // Migration: altes einheitliches goal → goalWeek/goalWeekend
+  if(!state.cocktails) state.cocktails = [];
   if(!state.settings.goalWeek && state.settings.goal) {
     state.settings.goalWeek = state.settings.goal;
     state.settings.goalWeekend = state.settings.goal;
@@ -3432,6 +4002,7 @@ function showPage(p) {
   if(p === 'settings') { renderSettings(); renderBacklogIdeas(); }
   if(p === 'input') { renderModeHint(); renderVoiceToggle(); }
   if(p === 'history') renderHistory();
+  if(p === 'cocktail') renderSavedCocktails();
   if(p === 'activity') renderStepsProgress();
   if(p === 'db') renderDbPageFull();
 }
