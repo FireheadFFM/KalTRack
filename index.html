@@ -3681,7 +3681,20 @@ async function autoLoadFromCloud() {
       if(settingsChanged) changed = true;
     }
 
-    // DB: nur custom-Einträge aus Cloud mergen (Default-Einträge sind lokal bereits vorhanden)
+    // Ausnahmetag: aus Cloud übernehmen wenn vorhanden und lokal nicht gesetzt
+    if(cloud.exceptionDayGoal && !state.exceptionDayGoal) {
+      state.exceptionDayGoal = cloud.exceptionDayGoal;
+      changed = true;
+    } else if(!cloud.exceptionDayGoal && state.exceptionDayGoal === undefined) {
+      // Cloud hat keinen Ausnahmetag → lokal auch keiner
+    } else if(cloud.exceptionDayGoal && state.exceptionDayGoal &&
+              cloud.exceptionDayGoal !== state.exceptionDayGoal) {
+      // Konflikt: Cloud-Wert gewinnt (neuere Änderung wahrscheinlicher)
+      state.exceptionDayGoal = cloud.exceptionDayGoal;
+      changed = true;
+    }
+
+    // DB: nur custom-Einträge aus Cloud mergen
     if(cloud.db && cloud.db.length > 0) {
       const localDeletedIds = new Set((state.deletedDbIds||[]).map(t=>t.id));
       const merged = [...(state.db||[])];
@@ -3872,6 +3885,7 @@ async function autoLoadFromCloud() {
       saveState();
       if(todayHasActivity()) dismissReminder();
       renderHome();
+      renderExceptionDayBtn();
       renderWeightSummary();
       renderSettings();
       renderActivityGrid();
