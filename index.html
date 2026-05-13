@@ -2860,9 +2860,9 @@ function saveCocktailToDb() {
   const existing = state.cocktails.findIndex(c => c.name === name);
   if(existing >= 0) {
     if(!confirm(`"${name}" überschreiben?`)) return;
-    state.cocktails[existing] = { id: state.cocktails[existing].id, name, kcal: totalKcal, ingredients: JSON.parse(JSON.stringify(cocktailIngredients)) };
+    state.cocktails[existing] = { id: state.cocktails[existing].id, name, kcal: totalKcal, ingredients: JSON.parse(JSON.stringify(cocktailIngredients)), updatedAt: Date.now() };
   } else {
-    state.cocktails.push({ id, name, kcal: totalKcal, ingredients: JSON.parse(JSON.stringify(cocktailIngredients)) });
+    state.cocktails.push({ id, name, kcal: totalKcal, ingredients: JSON.parse(JSON.stringify(cocktailIngredients)), updatedAt: Date.now() });
   }
   saveStateAndSync();
   renderSavedCocktails();
@@ -3720,6 +3720,25 @@ async function autoLoadFromCloud() {
       if(dishChanged) {
         state.dishes = merged; changed = true;
       }
+    }
+
+    // Cocktails: zusammenführen per id — beide Seiten behalten ihre Rezepte
+    if(cloud.cocktails && cloud.cocktails.length > 0) {
+      if(!state.cocktails) state.cocktails = [];
+      const localIds = new Set(state.cocktails.map(c => c.id));
+      const cloudOnly = cloud.cocktails.filter(c => c.id && !localIds.has(c.id));
+      if(cloudOnly.length > 0) {
+        state.cocktails = [...state.cocktails, ...cloudOnly];
+        changed = true;
+      }
+      // Bestehende updaten wenn Cloud-Version neuer
+      cloud.cocktails.forEach(cc => {
+        const local = state.cocktails.find(c => c.id === cc.id);
+        if(local && cc.updatedAt && (!local.updatedAt || cc.updatedAt > local.updatedAt)) {
+          Object.assign(local, cc);
+          changed = true;
+        }
+      });
     }
 
     // Aktivitäten: zusammenführen per id
