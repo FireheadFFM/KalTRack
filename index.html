@@ -2868,6 +2868,7 @@ function saveCocktailToDb() {
   renderSavedCocktails();
   updateCocktailTemplateDropdown();
   toast(`"${name}" gespeichert (${totalKcal} kcal)`);
+  resetCocktail();
 }
 
 function logCocktail() {
@@ -2884,6 +2885,7 @@ function logCocktail() {
   saveStateAndSync();
   renderHome();
   toast(`${name}: ${totalKcal} kcal ins Log eingetragen`);
+  resetCocktail();
   showPage('home');
 }
 
