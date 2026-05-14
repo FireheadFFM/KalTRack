@@ -2094,9 +2094,9 @@ const ACTIVITIES_DEFAULT = [
   {id:'a3',name:'Radfahren',kcalPerHour:450,icon:'🚴'},
   {id:'a4',name:'Schwimmen',kcalPerHour:500,icon:'🏊'},
   {id:'a5',name:'Krafttraining',kcalPerHour:350,icon:'🏋️'},
-  {id:'a6',name:'Yoga',kcalPerHour:200,icon:'🧘'},
+  {id:'a6',name:'Badminton',kcalPerHour:450,icon:'🏸'},
   {id:'a7',name:'Fußball',kcalPerHour:600,icon:'⚽'},
-  {id:'a8',name:'Tennis',kcalPerHour:500,icon:'🎾'},
+  {id:'a8',name:'Rudern (Maschine)',kcalPerHour:520,icon:'🚣'},
 ];
 
 let currentActivity = null;
@@ -3977,6 +3977,12 @@ function loadState() {
   if(!state.backlogIdeas.find(i => i.id === 'bi-mole-anim')) {
     state.backlogIdeas.unshift({ id: 'bi-mole-anim', text: moleEntry, star: true, ts: Date.now() });
   }
+
+  // Migration: Tennis → Rudern, Yoga → Badminton
+  const actTennis = state.activities.find(a => a.id === 'a8' && a.name === 'Tennis');
+  if(actTennis) { actTennis.name = 'Rudern (Maschine)'; actTennis.kcalPerHour = 520; actTennis.icon = '🚣'; }
+  const actYoga = state.activities.find(a => a.id === 'a6' && a.name === 'Yoga');
+  if(actYoga) { actYoga.name = 'Badminton'; actYoga.kcalPerHour = 450; actYoga.icon = '🏸'; }
 
   // Migration: neue Default-Einträge ergänzen wenn noch nicht vorhanden
   // Proteinwerte in bestehende Default-Einträge eintragen (custom-Einträge bleiben unberührt)
