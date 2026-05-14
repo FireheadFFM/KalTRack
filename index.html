@@ -3978,11 +3978,15 @@ function loadState() {
     state.backlogIdeas.unshift({ id: 'bi-mole-anim', text: moleEntry, star: true, ts: Date.now() });
   }
 
-  // Migration: Tennis → Rudern, Yoga → Badminton
-  const actTennis = state.activities.find(a => a.id === 'a8' && a.name === 'Tennis');
-  if(actTennis) { actTennis.name = 'Rudern (Maschine)'; actTennis.kcalPerHour = 840; actTennis.icon = '🚣'; }
-  const actYoga = state.activities.find(a => a.id === 'a6' && a.name === 'Yoga');
-  if(actYoga) { actYoga.name = 'Badminton'; actYoga.kcalPerHour = 450; actYoga.icon = '🏸'; }
+  // Migration: Tennis/Rudern → Rudern (Maschine) 840 kcal/h, Yoga → Badminton
+  const actA8 = state.activities.find(a => a.id === 'a8');
+  if(actA8 && actA8.kcalPerHour !== 840) {
+    actA8.name = 'Rudern (Maschine)'; actA8.kcalPerHour = 840; actA8.icon = '🚣';
+  }
+  const actA6 = state.activities.find(a => a.id === 'a6');
+  if(actA6 && actA6.name !== 'Badminton') {
+    actA6.name = 'Badminton'; actA6.kcalPerHour = 450; actA6.icon = '🏸';
+  }
 
   // Migration: neue Default-Einträge ergänzen wenn noch nicht vorhanden
   // Proteinwerte in bestehende Default-Einträge eintragen (custom-Einträge bleiben unberührt)
