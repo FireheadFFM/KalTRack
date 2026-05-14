@@ -2096,7 +2096,7 @@ const ACTIVITIES_DEFAULT = [
   {id:'a5',name:'Krafttraining',kcalPerHour:350,icon:'🏋️'},
   {id:'a6',name:'Badminton',kcalPerHour:450,icon:'🏸'},
   {id:'a7',name:'Fußball',kcalPerHour:600,icon:'⚽'},
-  {id:'a8',name:'Rudern (Maschine)',kcalPerHour:520,icon:'🚣'},
+  {id:'a8',name:'Rudern (Maschine)',kcalPerHour:840,icon:'🚣'},
 ];
 
 let currentActivity = null;
@@ -3980,7 +3980,7 @@ function loadState() {
 
   // Migration: Tennis → Rudern, Yoga → Badminton
   const actTennis = state.activities.find(a => a.id === 'a8' && a.name === 'Tennis');
-  if(actTennis) { actTennis.name = 'Rudern (Maschine)'; actTennis.kcalPerHour = 520; actTennis.icon = '🚣'; }
+  if(actTennis) { actTennis.name = 'Rudern (Maschine)'; actTennis.kcalPerHour = 840; actTennis.icon = '🚣'; }
   const actYoga = state.activities.find(a => a.id === 'a6' && a.name === 'Yoga');
   if(actYoga) { actYoga.name = 'Badminton'; actYoga.kcalPerHour = 450; actYoga.icon = '🏸'; }
 
