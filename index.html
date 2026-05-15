@@ -3642,6 +3642,7 @@ async function manualHomeSync() {
 }
 
 async function autoLoadFromCloud() {
+  console.log('[SYNC] autoLoadFromCloud gestartet', new Date().toLocaleTimeString());
   setSyncStatus('Verbinde mit Cloud…', 'var(--text3)');
   const splashSync = document.getElementById('splash-sync-status');
   if(splashSync) splashSync.textContent = 'Synchronisiere…';
@@ -3934,8 +3935,9 @@ async function autoLoadFromCloud() {
     if(splashSync) splashSync.textContent = '✓ Synchronisiert';
     setTimeout(() => setSyncStatus('', ''), 4000);
   } catch(e) {
-    setSyncStatus('Offline — lokale Daten werden verwendet', 'var(--text3)');
-    setTimeout(() => setSyncStatus('', ''), 4000);
+    console.error('[SYNC] Fehler in autoLoadFromCloud:', e.message, e.stack);
+    setSyncStatus('Sync-Fehler: ' + e.message.substring(0,50), 'var(--danger)');
+    setTimeout(() => setSyncStatus('', ''), 6000);
   }
 }
 
