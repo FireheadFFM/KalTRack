@@ -6569,6 +6569,7 @@ function triggerAmountMic() {
 // ─── MANUELLER TAG ────────────────────────────────────────────────────────────
 let manualMeals = [];
 let manualActs = [];
+let editingExistingDay = false;
 
 function editHistoryDay(dateStr) {
   const day = state.history.find(d => d.date === dateStr);
@@ -6577,6 +6578,7 @@ function editHistoryDay(dateStr) {
 }
 
 function openManualDay(existingDay, dateOverride) {
+  editingExistingDay = !!existingDay;
   manualMeals = existingDay ? (existingDay.log || []).map(l => ({ name: l.name, kcal: l.kcal })) : [];
   manualActs = existingDay ? (existingDay.activityLog || []).map(a => ({ name: a.name, minutes: a.minutes, kcal: a.kcal })) : [];
 
@@ -6717,7 +6719,7 @@ function confirmManualDay() {
   if(!state.history) state.history = [];
   const existing = state.history.findIndex(d => d.date === dateStr);
   if(existing >= 0) {
-    if(!confirm(`Für den ${dateObj.toLocaleDateString('de-DE')} gibt es bereits Daten. Überschreiben?`)) return;
+    if(!editingExistingDay && !confirm(`Für den ${dateObj.toLocaleDateString('de-DE')} gibt es bereits Daten. Überschreiben?`)) return;
     state.history[existing] = entry;
   } else {
     state.history.unshift(entry);
@@ -6866,7 +6868,7 @@ function renderHistory() {
         <div style="display:flex;gap:8px;margin-bottom:6px;font-size:11px;color:var(--text3);">
           <span>🍽 <b style="color:var(--text);">${day.eaten}</b> kcal</span>
           <span>·</span>
-          <span>🔥 <b style="color:var(--text);">${day.burned}</b> kcal</span>
+          <span>🔥 <b style="color:var(--text);">${burnedCalc}</b> kcal</span>
           <span>·</span>
           <span>🎯 Ziel ${day.goal}${dayBonus > 0 ? '+'+dayBonus : ''} kcal</span>
           ${day.steps ? `<span>· 🚶 ${day.steps.toLocaleString('de-DE')}</span>` : ''}
