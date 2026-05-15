@@ -2104,7 +2104,7 @@ const ACTIVITIES_DEFAULT = [
   {id:'a5',name:'Krafttraining',kcalPerHour:350,icon:'🏋️'},
   {id:'a6',name:'Badminton',kcalPerHour:450,icon:'🏸'},
   {id:'a7',name:'Fußball',kcalPerHour:600,icon:'⚽'},
-  {id:'a8',name:'Rudern (Maschine)',kcalPerHour:840,icon:'🚣'},
+  {id:'a8',name:'Rudern (Maschine)',kcalPerHour:600,icon:'🚣'},
 ];
 
 let currentActivity = null;
@@ -3642,7 +3642,6 @@ async function manualHomeSync() {
 }
 
 async function autoLoadFromCloud() {
-  console.log('[SYNC] autoLoadFromCloud gestartet', new Date().toLocaleTimeString());
   setSyncStatus('Verbinde mit Cloud…', 'var(--text3)');
   const splashSync = document.getElementById('splash-sync-status');
   if(splashSync) splashSync.textContent = 'Synchronisiere…';
@@ -3933,8 +3932,7 @@ async function autoLoadFromCloud() {
     if(splashSync) splashSync.textContent = '✓ Synchronisiert';
     setTimeout(() => setSyncStatus('', ''), 4000);
   } catch(e) {
-    console.error('[SYNC] Fehler in autoLoadFromCloud:', e.message, e.stack);
-    setSyncStatus('Sync-Fehler: ' + e.message.substring(0,50), 'var(--danger)');
+    setSyncStatus('Offline — lokale Daten werden verwendet', 'var(--text3)');
     setTimeout(() => setSyncStatus('', ''), 6000);
   }
 }
@@ -3996,7 +3994,7 @@ function loadState() {
   // Migration: Tennis/Rudern → Rudern (Maschine) 840 kcal/h, Yoga → Badminton
   const actA8 = state.activities.find(a => a.id === 'a8');
   if(actA8 && actA8.kcalPerHour !== 840) {
-    actA8.name = 'Rudern (Maschine)'; actA8.kcalPerHour = 840; actA8.icon = '🚣';
+    actA8.name = 'Rudern (Maschine)'; actA8.kcalPerHour = 600; actA8.icon = '🚣';
   }
   const actA6 = state.activities.find(a => a.id === 'a6');
   if(actA6 && actA6.name !== 'Badminton') {
