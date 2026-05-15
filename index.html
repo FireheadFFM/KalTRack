@@ -3798,6 +3798,9 @@ async function autoLoadFromCloud() {
       cloud.todayLog.forEach((item, i) => { if(!item.id) item.id = 'lc'+(Date.now()+i); });
       const localIds = new Set((state.todayLog||[]).map(i=>i.id).filter(Boolean));
       const cloudOnly = cloud.todayLog.filter(i => i.id && !localIds.has(i.id));
+      console.log('[SYNC] localIds:', [...localIds]);
+      console.log('[SYNC] cloud item ids:', cloud.todayLog.map(i=>i.id));
+      console.log('[SYNC] cloudOnly count:', cloudOnly.length);
       if(cloudOnly.length > 0) {
         state.todayLog = [...(state.todayLog||[]), ...cloudOnly];
         state.todayLog.sort((a,b) => (a.id||'').localeCompare(b.id||''));
@@ -6828,18 +6831,22 @@ function renderHistory() {
   container.innerHTML = state.history.map((day, i) => {
     const dateObj = new Date(day.date);
     const dateStr = dateObj.toLocaleDateString('de-DE', {weekday:'short', day:'2-digit', month:'2-digit', year:'numeric'});
-    const balance = day.eaten - day.burned;
-    const balSign = balance > 0 ? '+' : '';
-    const balColor = balance > 0 ? 'var(--danger)' : 'var(--accent)';
     const actLog = day.activityLog || [];
     const actKcal = actLog.reduce((s,a) => s+a.kcal, 0);
     // Aktivitätsbonus für diesen Tag berechnen
     const bmr = state.settings.bmr || 2000;
     const actFactor = parseFloat(state.settings.bmrActivity || 0);
     const hasTdee = !!actFactor;
+    const tdee = hasTdee ? Math.round(bmr * actFactor) : bmr;
     const plannedAct = hasTdee ? Math.round(bmr * (actFactor - 1)) : 0;
-    const realAct = Math.round((day.steps||0)*0.04) + actKcal;
+    const stepsKcal = Math.round((day.steps||0)*0.04);
+    const realAct = stepsKcal + actKcal;
     const dayBonus = hasTdee ? Math.max(0, realAct - plannedAct) : 0;
+    // burned neu berechnen aus aktuellen Aktivitäten (überschreibt gespeicherten Wert)
+    const burnedCalc = hasTdee ? tdee + dayBonus : bmr + realAct;
+    const balance = day.eaten - burnedCalc;
+    const balSign = balance > 0 ? '+' : '';
+    const balColor = balance > 0 ? 'var(--danger)' : 'var(--accent)';
     const totalCap = day.goal + dayBonus;
     const barMax = Math.max(day.eaten, totalCap, 1);
     const gPct = (Math.min(day.eaten, day.goal) / barMax * 100).toFixed(1);
@@ -6865,6 +6872,7 @@ function renderHistory() {
           <span>·</span>
           <span>🎯 Ziel ${day.goal}${dayBonus > 0 ? '+'+dayBonus : ''} kcal</span>
           ${day.steps ? `<span>· 🚶 ${day.steps.toLocaleString('de-DE')}</span>` : ''}
+          ${dayBonus > 0 ? `<span>· ⚡ +${dayBonus} Bonus</span>` : ''}
           ${day.weight ? `<span>· ⚖ <b style="color:var(--text);">${day.weight} kg</b></span>` : `<span style="cursor:pointer;color:var(--accent);" onclick="editHistoryWeight('${day.date}')">· ⚖ Gewicht eintragen</span>`}
           ${day.protein > 0 ? `<span>· 🥩 <b style="color:var(--text);">${day.protein}g</b>${day.proteinGoal ? ` / ${day.proteinGoal}g` : ''} Eiweiß</span>` : ''}
         </div>
