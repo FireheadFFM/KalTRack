@@ -3993,7 +3993,7 @@ function loadState() {
 
   // Migration: Tennis/Rudern → Rudern (Maschine) 840 kcal/h, Yoga → Badminton
   const actA8 = state.activities.find(a => a.id === 'a8');
-  if(actA8 && actA8.kcalPerHour !== 840) {
+  if(actA8 && actA8.kcalPerHour !== 600) {
     actA8.name = 'Rudern (Maschine)'; actA8.kcalPerHour = 600; actA8.icon = '🚣';
   }
   const actA6 = state.activities.find(a => a.id === 'a6');
