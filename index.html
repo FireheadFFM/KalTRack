@@ -2143,12 +2143,19 @@ async function init() {
   }
   await autoLoadFromCloud();
 
-  // Sync wenn App aus dem Hintergrund geholt wird (z.B. Handy-Tab reaktiviert)
+  // Sync wenn App aus dem Hintergrund geholt wird
   document.addEventListener('visibilitychange', () => {
     if(document.visibilityState === 'visible') {
       autoLoadFromCloud();
     }
   });
+
+  // Automatischer Sync alle 30 Sekunden (damit Browser Handy-Einträge bekommt)
+  setInterval(() => {
+    if(document.visibilityState === 'visible') {
+      autoLoadFromCloud();
+    }
+  }, 30000);
 }
 
 // ─── BACKLOG ──────────────────────────────────────────────────────────────────
@@ -3639,12 +3646,7 @@ async function autoLoadFromCloud() {
     }
     const cloud = JSON.parse(rows[0].payload);
     let changed = false;
-    // DIAGNOSE — kann nach dem Test entfernt werden
     const today = getFitMoleDay();
-    console.log('[SYNC] today:', today);
-    console.log('[SYNC] cloud.lastDate:', cloud.lastDate);
-    console.log('[SYNC] gleich?', cloud.lastDate === today);
-    console.log('[SYNC] cloud.todayLog:', cloud.todayLog?.length, 'Einträge');
 
     // ── Tombstones anwenden: Cloud-Löschungen lokal durchsetzen ──
     // DB-Einträge löschen
@@ -3791,16 +3793,12 @@ async function autoLoadFromCloud() {
     // Tageslog: per ID mergen — aber NUR wenn Cloud-Daten vom heutigen FitMole-Tag sind
     // Wenn cloud.lastDate fehlt oder von einem anderen Tag ist → NICHT mergen
     const cloudIsToday = cloud.lastDate === today;
-    console.log('[SYNC] cloudIsToday:', cloudIsToday);
 
     if(cloudIsToday && cloud.todayLog && cloud.todayLog.length > 0) {
       // Einträge ohne ID bekommen eine neue (Selbstheilung für alte Einträge)
       cloud.todayLog.forEach((item, i) => { if(!item.id) item.id = 'lc'+(Date.now()+i); });
       const localIds = new Set((state.todayLog||[]).map(i=>i.id).filter(Boolean));
       const cloudOnly = cloud.todayLog.filter(i => i.id && !localIds.has(i.id));
-      console.log('[SYNC] localIds:', [...localIds]);
-      console.log('[SYNC] cloud item ids:', cloud.todayLog.map(i=>i.id));
-      console.log('[SYNC] cloudOnly count:', cloudOnly.length);
       if(cloudOnly.length > 0) {
         state.todayLog = [...(state.todayLog||[]), ...cloudOnly];
         state.todayLog.sort((a,b) => (a.id||'').localeCompare(b.id||''));
