@@ -3656,6 +3656,7 @@ async function autoLoadFromCloud() {
     const cloud = JSON.parse(rows[0].payload);
     let changed = false;
     const today = getFitMoleDay();
+    const cloudIsToday = cloud.lastDate === today;
 
     // ── Tombstones anwenden: Cloud-Löschungen lokal durchsetzen ──
     // DB-Einträge löschen
@@ -3800,9 +3801,6 @@ async function autoLoadFromCloud() {
     }
 
     // Tageslog: per ID mergen — aber NUR wenn Cloud-Daten vom heutigen FitMole-Tag sind
-    // Wenn cloud.lastDate fehlt oder von einem anderen Tag ist → NICHT mergen
-    const cloudIsToday = cloud.lastDate === today;
-
     if(cloudIsToday && cloud.todayLog && cloud.todayLog.length > 0) {
       // Einträge ohne ID bekommen eine neue (Selbstheilung für alte Einträge)
       cloud.todayLog.forEach((item, i) => { if(!item.id) item.id = 'lc'+(Date.now()+i); });
