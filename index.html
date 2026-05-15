@@ -3786,6 +3786,7 @@ async function autoLoadFromCloud() {
     // Wenn cloud.lastDate fehlt oder von einem anderen Tag ist → NICHT mergen
     const today = getFitMoleDay();
     const cloudIsToday = cloud.lastDate === today;
+    console.log('[SYNC] today:', today, '| cloud.lastDate:', cloud.lastDate, '| cloudIsToday:', cloudIsToday, '| cloud.todayLog.length:', cloud.todayLog?.length);
 
     if(cloudIsToday && cloud.todayLog && cloud.todayLog.length > 0) {
       // Einträge ohne ID bekommen eine neue (Selbstheilung für alte Einträge)
