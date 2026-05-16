@@ -722,6 +722,11 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
           <div class="stat-value" id="real-weight-loss" style="font-size:15px;">—</div>
           <div class="stat-label" id="real-weight-loss-label" style="font-size:10px;">kg</div>
         </div>
+        <div class="stat-card">
+          <div class="stat-label" style="font-size:10px;">⚖ Echte Abnahme 7T</div>
+          <div class="stat-value" id="real-weight-loss-7d" style="font-size:15px;">—</div>
+          <div class="stat-label" id="real-weight-loss-7d-label" style="font-size:10px;">kg</div>
+        </div>
       </div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 2px 6px;">
@@ -1048,7 +1053,12 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.92 — Mai 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.93 — Mai 2026</div>
+        <div>· NEU: Kachel „Echte Abnahme 7T" in der Wochenübersicht (erstes vs. letztes Gewicht der letzten 7 Tage)</div>
+        <div>· NEU: TL (5g) und EL (15g) als Einheiten in DB-Formularen, Favoriten und Unbekannt-Dialog</div>
+        <div>· Fix: Rudern (Maschine) auf 650 kcal/h aktualisiert (MET-basiert, 80kg)</div>
+        <div>· Makro-Tracking (Fett + KH) ins Backlog aufgenommen — 7 Schritte geplant</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.92 — Mai 2026</div>
         <div>· Auto-Sync alle 30 Sekunden — Browser übernimmt Handy-Einträge automatisch</div>
         <div>· Fix: Historienkarte zeigt burned/Bilanz live aus activityLog berechnet</div>
         <div>· Fix: Kein Bestätigungsdialog mehr beim Bearbeiten eines Historientags</div>
@@ -1533,6 +1543,8 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <option value="ml">ml</option>
         <option value="Stück">Stück</option>
         <option value="Portion">Portion</option>
+        <option value="EL">EL (15g)</option>
+        <option value="TL">TL (5g)</option>
       </select>
     </div>
     <div class="dialog-btns">
@@ -1641,6 +1653,8 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
           <option value="g">g</option>
           <option value="ml">ml</option>
           <option value="Stück">Stück</option>
+          <option value="EL">EL (15g)</option>
+          <option value="TL">TL (5g)</option>
         </select>
         <button class="btn btn-secondary" onclick="triggerAmountMic()" style="padding:9px 12px;" id="unk-mic-btn">🎙</button>
       </div>
@@ -1670,6 +1684,8 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <option value="Stück">Stück</option>
         <option value="Scheibe">Scheibe</option>
         <option value="Portion">Portion</option>
+        <option value="EL">EL (15g)</option>
+        <option value="TL">TL (5g)</option>
       </select>
       <input type="number" id="db-edit-grams" placeholder="g oder ml/Stück (opt.)" style="flex:1;" />
     </div>
@@ -1705,6 +1721,8 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <option value="Stück">Stück</option>
         <option value="Scheibe">Scheibe</option>
         <option value="Portion">Portion</option>
+        <option value="EL">EL (15g)</option>
+        <option value="TL">TL (5g)</option>
       </select>
       <input type="number" id="db-add-grams" placeholder="g oder ml/Stück (opt.)" style="flex:1;" oninput="updateAddHint()" />
     </div>
@@ -3972,6 +3990,22 @@ function loadState() {
     state.settings.goalWeek = state.settings.goal;
     state.settings.goalWeekend = state.settings.goal;
   }
+
+  // Makro-Tracking Backlog (Option A — vollständig)
+  const macroEntries = [
+    { id: 'bi-macro-1', text: 'Makro-Tracking Schritt 1: fatPer100 + carbsPer100 zu allen ~250 Default-DB-Einträgen ergänzen (per Skript/KI-Batch)', star: true },
+    { id: 'bi-macro-2', text: 'Makro-Tracking Schritt 2: DB-Formulare (Neu/Bearbeiten) um Fett + KH Felder erweitern', star: true },
+    { id: 'bi-macro-3', text: 'Makro-Tracking Schritt 3: Schnellerfassung um optionale Fett + KH Felder erweitern', star: true },
+    { id: 'bi-macro-4', text: 'Makro-Tracking Schritt 4: Alle KI-Prompts (Gemini, Claude, Perplexity, DeepSeek, Foto) nach Fett + KH fragen', star: true },
+    { id: 'bi-macro-5', text: 'Makro-Tracking Schritt 5: Übersicht — Kacheln für Fett heute + KH heute (analog Eiweiß)', star: true },
+    { id: 'bi-macro-6', text: 'Makro-Tracking Schritt 6: Ziele für Fett (g/Tag) und KH (g/Tag) in Einstellungen → Mein Profil', star: true },
+    { id: 'bi-macro-7', text: 'Makro-Tracking Schritt 7: Fett + KH pro Tag in Historiendatensätzen speichern und anzeigen', star: true },
+  ];
+  macroEntries.forEach(e => {
+    if(!state.backlogIdeas.find(i => i.id === e.id)) {
+      state.backlogIdeas.push({ id: e.id, text: e.text, star: e.star, ts: Date.now() });
+    }
+  });
 
   // Service Worker Backlog-Eintrag sicherstellen
   const swEntry = 'Service Worker: Offline-Fähigkeit & App-Caching (PWA vollständig)';
@@ -6512,6 +6546,10 @@ function updateAddHint() {
     hint.textContent = `→ wird gespeichert als ${per100} kcal/100g`;
   } else if(mode === 'total' && (unit==='Stück'||unit==='Scheibe'||unit==='Portion') && !grams) {
     hint.textContent = `→ wird gespeichert als ${kcal} kcal/${unit}`;
+  } else if(mode === 'total' && unit==='EL' && !grams) {
+    hint.textContent = `→ ${kcal} kcal pro EL (15g) · entspricht ${Math.round(kcal/15*100)} kcal/100g`;
+  } else if(mode === 'total' && unit==='TL' && !grams) {
+    hint.textContent = `→ ${kcal} kcal pro TL (5g) · entspricht ${Math.round(kcal/5*100)} kcal/100g`;
   } else if(mode === 'per100') {
     hint.textContent = `→ ${kcal} kcal pro 100g/ml`;
   }
@@ -7010,6 +7048,30 @@ function renderWeekChart() {
       const fd = new Date(first.date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
       const ld = new Date(last.date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
       if(realLabelEl) realLabelEl.textContent = `kg (${fd}→${ld})`;
+    }
+  }
+
+  // Echte Abnahme 7 Tage: erstes vs. letztes Gewicht der letzten 7 Tage
+  const el7d    = document.getElementById('real-weight-loss-7d');
+  const label7d = document.getElementById('real-weight-loss-7d-label');
+  if(el7d) {
+    const cutoff7d = new Date();
+    cutoff7d.setDate(cutoff7d.getDate() - 7);
+    const cutoffStr = cutoff7d.toISOString().slice(0,10);
+    const log7d = weightLog.filter(e => e.date >= cutoffStr);
+    if(log7d.length < 2) {
+      el7d.textContent = '—';
+      if(label7d) label7d.textContent = log7d.length === 0 ? 'kein Gewicht 7T' : 'erst 1 Eintrag';
+    } else {
+      const first7 = log7d[0];
+      const last7  = log7d[log7d.length - 1];
+      const diff7  = last7.weight - first7.weight;
+      const sign7  = diff7 > 0 ? '+' : '';
+      el7d.textContent = sign7 + diff7.toFixed(1);
+      el7d.style.color = diff7 <= 0 ? '#2563eb' : '#993C1D';
+      const fd7 = new Date(first7.date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
+      const ld7 = new Date(last7.date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
+      if(label7d) label7d.textContent = `kg (${fd7}→${ld7})`;
     }
   }
 
