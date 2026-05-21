@@ -3932,7 +3932,13 @@ async function autoLoadFromCloud() {
     }
 
     if(changed) {
+      // lastDate NICHT durch autoLoadFromCloud überschreiben —
+      // das würde den Rollover verhindern wenn die App nach 02:00 geöffnet wird.
+      // Nur die anderen State-Felder speichern, lastDate bleibt wie es ist.
+      const preservedLastDate = state.lastDate;
       saveState();
+      state.lastDate = preservedLastDate;
+      localStorage.setItem('fitmole_state', JSON.stringify(state));
       if(todayHasActivity()) dismissReminder();
       renderHome();
       renderExceptionDayBtn();
