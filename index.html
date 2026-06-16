@@ -1053,7 +1053,13 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.93 — Mai 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.93.2 — Mai 2026</div>
+        <div>· Fix: „Tag zurücksetzen" und einzelne Löschungen werden sofort in die Cloud hochgeladen</div>
+        <div>· Fix: Gelöschte Einträge werden per deletedLogIds-Liste verfolgt — kommen nach Auto-Sync nicht mehr zurück</div>
+        <div>· Fix: deletedLogIds wird beim Tageswechsel automatisch geleert</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.93.1 — Mai 2026</div>
+        <div>· Fix: saveState() überschreibt lastDate nicht mehr wenn todayLog noch Einträge vom Vortag enthält — verhindert fehlenden Rollover nach Einträgen nach 02:00 Uhr</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.93 — Mai 2026</div>
         <div>· NEU: Kachel „Echte Abnahme 7T" in der Wochenübersicht (erstes vs. letztes Gewicht der letzten 7 Tage)</div>
         <div>· NEU: TL (5g) und EL (15g) als Einheiten in DB-Formularen, Favoriten und Unbekannt-Dialog</div>
         <div>· Fix: Rudern (Maschine) auf 650 kcal/h aktualisiert (MET-basiert, 80kg)</div>
@@ -3636,6 +3642,7 @@ function performDayRollover() {
     state.history.unshift(archiveDayToHistory(state, state.settings));
     if(state.history.length > 90) state.history.splice(90);
     state.todayLog = []; state.activityLog = []; state.steps = 0; state.sessionItems = [];
+    state.deletedLogIds = [];
     delete state.exceptionDayGoal;
     cacheTodayGoal();
     saveStateAndSync();
@@ -3821,8 +3828,9 @@ async function autoLoadFromCloud() {
     if(cloudIsToday && cloud.todayLog && cloud.todayLog.length > 0) {
       // Einträge ohne ID bekommen eine neue (Selbstheilung für alte Einträge)
       cloud.todayLog.forEach((item, i) => { if(!item.id) item.id = 'lc'+(Date.now()+i); });
+      const deletedIds = new Set((state.deletedLogIds||[]).map(d=>d.id));
       const localIds = new Set((state.todayLog||[]).map(i=>i.id).filter(Boolean));
-      const cloudOnly = cloud.todayLog.filter(i => i.id && !localIds.has(i.id));
+      const cloudOnly = cloud.todayLog.filter(i => i.id && !localIds.has(i.id) && !deletedIds.has(i.id));
       if(cloudOnly.length > 0) {
         state.todayLog = [...(state.todayLog||[]), ...cloudOnly];
         state.todayLog.sort((a,b) => (a.id||'').localeCompare(b.id||''));
@@ -3833,8 +3841,9 @@ async function autoLoadFromCloud() {
     // Aktivitätslog heute: per ID mergen — ebenfalls nur wenn Cloud von heute
     if(cloudIsToday && cloud.activityLog && cloud.activityLog.length > 0) {
       cloud.activityLog.forEach((item, i) => { if(!item.id) item.id = 'ac'+(Date.now()+i); });
+      const deletedIds = new Set((state.deletedLogIds||[]).map(d=>d.id));
       const localIds = new Set((state.activityLog||[]).map(i=>i.id).filter(Boolean));
-      const cloudOnly = cloud.activityLog.filter(i => i.id && !localIds.has(i.id));
+      const cloudOnly = cloud.activityLog.filter(i => i.id && !localIds.has(i.id) && !deletedIds.has(i.id));
       if(cloudOnly.length > 0) {
         state.activityLog = [...(state.activityLog||[]), ...cloudOnly];
         changed = true;
@@ -3975,6 +3984,7 @@ function loadState() {
         loaded.activityLog = [];
         loaded.steps = 0;
         loaded.sessionItems = [];
+        loaded.deletedLogIds = [];
         delete loaded.exceptionDayGoal;
       }
       state = {...state, ...loaded};
@@ -3992,6 +4002,7 @@ function loadState() {
   if(!state.errorLog) state.errorLog = [];
   if(!state.weightLog) state.weightLog = [];
   if(!state.cocktails) state.cocktails = [];
+  if(!state.deletedLogIds) state.deletedLogIds = [];
   if(!state.settings.goalWeek && state.settings.goal) {
     state.settings.goalWeek = state.settings.goal;
     state.settings.goalWeekend = state.settings.goal;
@@ -6158,7 +6169,15 @@ function closeDialog(id) { document.getElementById(id).classList.remove('open');
 function deleteLog(i) {
   const item = state.todayLog[i];
   if(!item || !confirm(`"${item.name}" aus dem Tageslog entfernen?`)) return;
-  state.todayLog.splice(i,1); saveStateAndSync(); renderHome();
+  if(item.id) {
+    if(!state.deletedLogIds) state.deletedLogIds = [];
+    state.deletedLogIds.push({ id: item.id, ts: Date.now() });
+  }
+  state.todayLog.splice(i,1);
+  saveState();
+  clearTimeout(syncTimer);
+  syncToCloud();
+  renderHome();
 }
 function deleteSteps() {
   if(!confirm(`${state.steps.toLocaleString('de-DE')} Schritte löschen?`)) return;
@@ -6171,12 +6190,24 @@ function deleteSteps() {
 function deleteActivity(i) {
   const item = state.activityLog[i];
   if(!item || !confirm(`"${item.name}" aus den Aktivitäten entfernen?`)) return;
-  state.activityLog.splice(i,1); saveStateAndSync(); renderHome();
+  if(item.id) {
+    if(!state.deletedLogIds) state.deletedLogIds = [];
+    state.deletedLogIds.push({ id: item.id, ts: Date.now() });
+  }
+  state.activityLog.splice(i,1);
+  saveState();
+  clearTimeout(syncTimer);
+  syncToCloud();
+  renderHome();
 }
 function resetDay() {
   if(!confirm('Heutigen Tag wirklich zurücksetzen?')) return;
   state.todayLog = []; state.activityLog = []; state.steps = 0; state.sessionItems = [];
-  saveState(); renderAll(); toast("Tag zurückgesetzt");
+  saveState();
+  clearTimeout(syncTimer);
+  syncToCloud(); // sofort hochladen damit Cloud nicht alte Daten zurückspielt
+  renderAll();
+  toast("Tag zurückgesetzt");
 }
 
 // ─── TOAST & SPEECH ───────────────────────────────────────────────────────────
