@@ -4075,7 +4075,19 @@ function loadState() {
 }
 
 function saveState() {
-  state.lastDate = getFitMoleDay();
+  // lastDate nur auf neuen Tag setzen wenn todayLog leer ist (Rollover bereits passiert)
+  // oder wenn lastDate noch nicht gesetzt ist.
+  // Verhindert: Eintrag nach 02:00 Uhr setzt lastDate auf neuen Tag,
+  // obwohl todayLog noch Einträge vom Vortag enthält.
+  const fitMoleToday = getFitMoleDay();
+  if(!state.lastDate || state.todayLog.length === 0) {
+    state.lastDate = fitMoleToday;
+  } else if(state.lastDate !== fitMoleToday) {
+    // lastDate ist noch der alte Tag und todayLog hat Einträge → nicht überschreiben
+    // (Rollover wird durch performDayRollover/loadState gesteuert)
+  } else {
+    state.lastDate = fitMoleToday;
+  }
   // History-Logs älter als 30 Tage komprimieren (nur Summenwerte behalten)
   const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
   (state.history||[]).forEach(day => {
