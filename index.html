@@ -1141,7 +1141,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.94.3 — Juni 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.94.4 — Juni 2026</div>
+        <div>· Historie verschlankt: Kalenderwochen zeigen nur die letzten 2 offen, ältere ausklappbar</div>
+        <div>· Tageseinträge zeigen nur die letzten 7 offen, ältere unter „weitere Tage anzeigen"</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.94.3 — Juni 2026</div>
         <div>· NEU: 6. Kachel „Aktivität heute" — zeigt Schritte + Aktivitätsbonus kombiniert</div>
         <div>· Schritte grün wenn Tagesziel erreicht, mit Häkchen</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.94.2 — Juni 2026</div>
@@ -7223,7 +7226,7 @@ function renderWeekHistory() {
     return;
   }
 
-  container.innerHTML = completedWeeks.map(w => {
+  const weekCardHtml = (w) => {
     const totalBalance = w.days.reduce((s,d) => s + (d.eaten - d.burned), 0);
     const avg = Math.round(totalBalance / w.days.length);
     const kg = totalBalance / 7700;
@@ -7252,7 +7255,35 @@ function renderWeekHistory() {
       </div>
       <div style="font-size:10px;color:var(--text3);margin-top:3px;">${w.days.length} Tag${w.days.length!==1?'e':''} erfasst</div>
     </div>`;
-  }).join('');
+  };
+
+  const visibleCount = 2;
+  const visibleWeeks = completedWeeks.slice(0, visibleCount);
+  const hiddenWeeks = completedWeeks.slice(visibleCount);
+
+  let html = visibleWeeks.map(weekCardHtml).join('');
+  if(hiddenWeeks.length > 0) {
+    html += `
+      <div id="older-weeks-toggle" onclick="toggleOlderWeeks()" style="text-align:center;padding:8px;cursor:pointer;color:var(--accent);font-size:12px;font-weight:500;">
+        ▾ ${hiddenWeeks.length} weitere Woche${hiddenWeeks.length!==1?'n':''} anzeigen
+      </div>
+      <div id="older-weeks-content" style="display:none;">
+        ${hiddenWeeks.map(weekCardHtml).join('')}
+      </div>`;
+  }
+  container.innerHTML = html;
+}
+
+function toggleOlderWeeks() {
+  const content = document.getElementById('older-weeks-content');
+  const toggle = document.getElementById('older-weeks-toggle');
+  if(!content || !toggle) return;
+  const isOpen = content.style.display === 'block';
+  content.style.display = isOpen ? 'none' : 'block';
+  const count = content.children.length;
+  toggle.textContent = isOpen
+    ? `▾ ${count} weitere Woche${count!==1?'n':''} anzeigen`
+    : `▴ Weitere Wochen ausblenden`;
 }
 
 function renderHistory() {
@@ -7263,7 +7294,8 @@ function renderHistory() {
     container.innerHTML = '<div class="card"><div class="empty-state">Noch keine historischen Daten.<br>Ab morgen wird jeder Tag hier archiviert.</div></div>';
     return;
   }
-  container.innerHTML = state.history.map((day, i) => {
+
+  const dayCardHtml = (day, i) => {
     const dateObj = new Date(day.date);
     const dateStr = dateObj.toLocaleDateString('de-DE', {weekday:'short', day:'2-digit', month:'2-digit', year:'numeric'});
     const actLog = day.activityLog || [];
@@ -7331,7 +7363,35 @@ function renderHistory() {
           </div>
         </div>` : ''}
       </div>`;
-  }).join('');
+  };
+
+  const visibleDays = 7;
+  const recentDays = state.history.slice(0, visibleDays);
+  const olderDays = state.history.slice(visibleDays);
+
+  let html = recentDays.map((day,i) => dayCardHtml(day,i)).join('');
+  if(olderDays.length > 0) {
+    html += `
+      <div id="older-days-toggle" onclick="toggleOlderDays()" style="text-align:center;padding:10px;cursor:pointer;color:var(--accent);font-size:12px;font-weight:500;">
+        ▾ ${olderDays.length} weitere Tag${olderDays.length!==1?'e':''} anzeigen
+      </div>
+      <div id="older-days-content" style="display:none;">
+        ${olderDays.map((day,j) => dayCardHtml(day, visibleDays+j)).join('')}
+      </div>`;
+  }
+  container.innerHTML = html;
+}
+
+function toggleOlderDays() {
+  const content = document.getElementById('older-days-content');
+  const toggle = document.getElementById('older-days-toggle');
+  if(!content || !toggle) return;
+  const isOpen = content.style.display === 'block';
+  content.style.display = isOpen ? 'none' : 'block';
+  const count = content.children.length;
+  toggle.textContent = isOpen
+    ? `▾ ${count} weitere Tag${count!==1?'e':''} anzeigen`
+    : `▴ Weitere Tage ausblenden`;
 }
 
 function deleteHistoryDay(dateStr) {
