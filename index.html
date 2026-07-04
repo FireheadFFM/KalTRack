@@ -1141,7 +1141,12 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.94.5 — Juli 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.94.6 — Juli 2026</div>
+        <div>· Gründlicher Code-Review: alle changed=true Pfade in autoLoadFromCloud geprüft</div>
+        <div>· Fix: vacationMode aus personalKeys entfernt (war doppelt verarbeitet → unnötige saveState()-Aufrufe bei jedem Sync)</div>
+        <div>· Fix: vacationMode-Merge prüft jetzt ob wirklich Änderung vorliegt bevor changed=true gesetzt wird</div>
+        <div>· Ergebnis: 30-Sekunden-Sync triggert seltener saveState() → weniger lastDate-Manipulation</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.94.5 — Juli 2026</div>
         <div>· Fix: lastDate-Preservation in autoLoadFromCloud war zu aggressiv — setzte den Vortag zurück obwohl heute korrekt wäre → führte beim nächsten App-Start zu falschem Rollover und leerem todayLog</div>
         <div>· lastDate wird jetzt nur noch zurückgesetzt wenn todayLog noch Einträge vom Vortag enthält</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.94.4 — Juni 2026</div>
@@ -4031,7 +4036,7 @@ async function autoLoadFromCloud() {
     // Einstellungen: persönliche Werte aus Cloud übernehmen (bmr, goal, stepsGoal, voiceEnabled)
     // API-Keys und Toggles bleiben lokal (geräteabhängig)
     if(cloud.settings) {
-      const personalKeys = ['bmr','goal','stepsGoal','voiceEnabled','apiKey','geminiKey','nutritionixAppId','nutritionixKey','deepseekKey','deepseekEnabled','photoEnabled','proteinGoal','goalWeek','goalWeekend','bmrActivity','bmrWeight','bmrAge','bmrHeight','bmrGender','splashEnabled','bodyWeight','perplexityKey','perplexityEnabled','vacationMode'];
+      const personalKeys = ['bmr','goal','stepsGoal','voiceEnabled','apiKey','geminiKey','nutritionixAppId','nutritionixKey','deepseekKey','deepseekEnabled','photoEnabled','proteinGoal','goalWeek','goalWeekend','bmrActivity','bmrWeight','bmrAge','bmrHeight','bmrGender','splashEnabled','bodyWeight','perplexityKey','perplexityEnabled'];
       let settingsChanged = false;
       personalKeys.forEach(k => {
         if(cloud.settings[k] !== undefined && cloud.settings[k] !== state.settings[k]) {
@@ -4042,10 +4047,14 @@ async function autoLoadFromCloud() {
       if(settingsChanged) changed = true;
     }
 
-    // Urlaubsmodus: aus Cloud übernehmen
+    // Urlaubsmodus: aus Cloud übernehmen, aber nur wenn wirklich anders
     if(cloud.vacationMode && cloud.vacationMode.active !== undefined) {
-      state.vacationMode = cloud.vacationMode;
-      changed = true;
+      const localVm = JSON.stringify(state.vacationMode || {});
+      const cloudVm = JSON.stringify(cloud.vacationMode);
+      if(localVm !== cloudVm) {
+        state.vacationMode = cloud.vacationMode;
+        changed = true;
+      }
     }
 
     // Ausnahmetag: nur übernehmen wenn Cloud-Daten vom heutigen FitMole-Tag sind
