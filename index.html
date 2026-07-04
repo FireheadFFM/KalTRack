@@ -1141,7 +1141,10 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.94.4 — Juni 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.94.5 — Juli 2026</div>
+        <div>· Fix: lastDate-Preservation in autoLoadFromCloud war zu aggressiv — setzte den Vortag zurück obwohl heute korrekt wäre → führte beim nächsten App-Start zu falschem Rollover und leerem todayLog</div>
+        <div>· lastDate wird jetzt nur noch zurückgesetzt wenn todayLog noch Einträge vom Vortag enthält</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.94.4 — Juni 2026</div>
         <div>· Historie verschlankt: Kalenderwochen zeigen nur die letzten 2 offen, ältere ausklappbar</div>
         <div>· Tageseinträge zeigen nur die letzten 7 offen, ältere unter „weitere Tage anzeigen"</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.94.3 — Juni 2026</div>
@@ -4268,13 +4271,17 @@ async function autoLoadFromCloud() {
     }
 
     if(changed) {
-      // lastDate NICHT durch autoLoadFromCloud überschreiben —
-      // das würde den Rollover verhindern wenn die App nach 02:00 geöffnet wird.
-      // Nur die anderen State-Felder speichern, lastDate bleibt wie es ist.
-      const preservedLastDate = state.lastDate;
+      // lastDate schützen: nur wenn Cloud einen älteren Stand hat als lokal
+      // — verhindert dass autoLoadFromCloud den Rollover kaputt macht
+      const localLastDate = state.lastDate;
+      const fitMoleToday = getFitMoleDay();
       saveState();
-      state.lastDate = preservedLastDate;
-      localStorage.setItem('fitmole_state', JSON.stringify(state));
+      // saveState() setzt lastDate korrekt. Nur überschreiben wenn lokal noch
+      // der Vortag war UND todayLog Einträge hat (Rollover noch ausstehend)
+      if(localLastDate && localLastDate !== fitMoleToday && (state.todayLog||[]).length > 0) {
+        state.lastDate = localLastDate;
+        localStorage.setItem('fitmole_state', JSON.stringify(state));
+      }
       if(todayHasActivity()) dismissReminder();
       renderHome();
       renderExceptionDayBtn();
