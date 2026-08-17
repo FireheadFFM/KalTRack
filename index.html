@@ -1141,7 +1141,14 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.94.6 — Juli 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.94.8 — Juli 2026</div>
+        <div>· Diagnose: saveState() protokolliert exakt wenn und durch wen todayLog geleert wird (Callstack im Fehlerlog)</div>
+        <div>· Bitte nach nächstem Datenverlust sofort ⚙ → Fehlerlog prüfen</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.94.7 — Juli 2026</div>
+        <div>· Fix: localStorage.setItem hat jetzt Error Handling — stille Fehler bei vollem Speicher werden im Fehlerlog angezeigt</div>
+        <div>· Diagnose: State-Größe wird beim Start geprüft — Warnung im Fehlerlog wenn > 4MB</div>
+        <div>· Suche nach Datenverlust-Ursache läuft — bitte Fehlerlog beobachten</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.94.6 — Juli 2026</div>
         <div>· Gründlicher Code-Review: alle changed=true Pfade in autoLoadFromCloud geprüft</div>
         <div>· Fix: vacationMode aus personalKeys entfernt (war doppelt verarbeitet → unnötige saveState()-Aufrufe bei jedem Sync)</div>
         <div>· Fix: vacationMode-Merge prüft jetzt ob wirklich Änderung vorliegt bevor changed=true gesetzt wird</div>
@@ -2267,6 +2274,16 @@ let dbFilter = '';
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 async function init() {
   loadState();
+
+  // Diagnose: localStorage-Größe prüfen
+  try {
+    const stateStr = localStorage.getItem('fitmole_state') || '';
+    const sizeMB = (stateStr.length / 1024 / 1024).toFixed(2);
+    if(parseFloat(sizeMB) > 4) {
+      logError('localStorage', `State-Größe kritisch: ${sizeMB} MB (Limit ~5MB)`, 'init');
+    }
+  } catch(e) {}
+
   renderAll();
   updateMoleMood();
   cacheTodayGoal();
@@ -4433,7 +4450,17 @@ function loadState() {
 }
 
 function saveState() {
-  // lastDate: immer auf den FitMole-Tag des aktuellen todayLog setzen.
+  // Diagnose: todayLog-Änderungen tracken
+  const prevStr = localStorage.getItem('fitmole_state');
+  const prevLog = prevStr ? (JSON.parse(prevStr).todayLog||[]).length : -1;
+  const currLog = (state.todayLog||[]).length;
+  if(prevLog > 0 && currLog === 0) {
+    // todayLog wurde geleert — wer hat das getan?
+    const stack = new Error().stack.split('\n').slice(1,4).join(' | ');
+    logError('State-Diagnose', `todayLog von ${prevLog} auf 0 geleert`, stack);
+  }
+
+  // lastDate Logik
   // Wenn todayLog leer ist → aktuellen FitMole-Tag nehmen.
   // Wenn todayLog Einträge hat → lastDate NUR updaten wenn es noch nicht gesetzt
   // ist oder bereits dem heutigen FitMole-Tag entspricht (kein Rollover-Schutz brechen).
@@ -4451,7 +4478,12 @@ function saveState() {
       day.compressed = true;
     }
   });
-  localStorage.setItem('fitmole_state', JSON.stringify(state));
+  try {
+    localStorage.setItem('fitmole_state', JSON.stringify(state));
+  } catch(e) {
+    // localStorage voll oder nicht verfügbar — in Fehlerlog schreiben
+    logError('localStorage', 'Speichern fehlgeschlagen: ' + e.message, 'saveState');
+  }
 }
 
 // ─── UI ───────────────────────────────────────────────────────────────────────
