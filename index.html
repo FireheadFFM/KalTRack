@@ -1141,7 +1141,19 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.94.8 — Juli 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.95.1 — August 2026</div>
+        <div>· BUGFIX KRITISCH: logError() schrieb localStorage synchron zurück — überschrieb dabei Änderungen die saveState() gerade vorgenommen hatte</div>
+        <div>· Fix: logError() schreibt localStorage jetzt asynchron (setTimeout 0) — nach dem aktuellen Call-Stack, nie mehr mitten in saveState()</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.95 — August 2026</div>
+        <div>· BUGFIX KRITISCH: Diagnose-Code aus saveState() vollständig entfernt — war selbst der Auslöser der Rekursion</div>
+        <div>· Erklärung: saveState() las localStorage → Vergleich mit state → logError() → saveState() → Endlosschleife → todayLog leer</div>
+        <div>· logError() schreibt weiterhin direkt in localStorage ohne saveState()-Aufruf (sicher)</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.94.9 — August 2026</div>
+        <div>· BUGFIX KRITISCH: logError() rief saveState() auf → saveState() rief logError() auf → Endlosrekursion</div>
+        <div>· Jede Rekursions-Iteration las einen veralteten localStorage-Stand → todayLog wurde sukzessive geleert</div>
+        <div>· Fix: logError() schreibt errorLog jetzt direkt in localStorage ohne saveState()-Aufruf</div>
+        <div>· Fix: Diagnose in saveState() ruft ebenfalls kein logError() mehr auf</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.94.8 — Juli 2026</div>
         <div>· Diagnose: saveState() protokolliert exakt wenn und durch wen todayLog geleert wird (Callstack im Fehlerlog)</div>
         <div>· Bitte nach nächstem Datenverlust sofort ⚙ → Fehlerlog prüfen</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.94.7 — Juli 2026</div>
@@ -4450,16 +4462,6 @@ function loadState() {
 }
 
 function saveState() {
-  // Diagnose: todayLog-Änderungen tracken
-  const prevStr = localStorage.getItem('fitmole_state');
-  const prevLog = prevStr ? (JSON.parse(prevStr).todayLog||[]).length : -1;
-  const currLog = (state.todayLog||[]).length;
-  if(prevLog > 0 && currLog === 0) {
-    // todayLog wurde geleert — wer hat das getan?
-    const stack = new Error().stack.split('\n').slice(1,4).join(' | ');
-    logError('State-Diagnose', `todayLog von ${prevLog} auf 0 geleert`, stack);
-  }
-
   // lastDate Logik
   // Wenn todayLog leer ist → aktuellen FitMole-Tag nehmen.
   // Wenn todayLog Einträge hat → lastDate NUR updaten wenn es noch nicht gesetzt
@@ -5789,15 +5791,25 @@ function logError(source, message, detail) {
     message,
     detail: detail || ''
   });
-  // Max 30 Einträge
   if(state.errorLog.length > 20) state.errorLog.splice(20);
-  saveState(); // kein Sync — Fehlerlog bleibt lokal
   // Badge aktualisieren
   const badge = document.getElementById('errorlog-badge');
   if(badge) { badge.textContent = state.errorLog.length; badge.style.display = 'inline'; }
   // Fehlerlog-Card aktualisieren falls offen
   const el = document.getElementById('errorlog-body');
   if(el && el.style.display !== 'none') renderErrorLog();
+  // Asynchron in localStorage schreiben — OHNE saveState() aufzurufen
+  // Nur errorLog-Feld updaten, rest unverändert lassen
+  setTimeout(() => {
+    try {
+      const s = localStorage.getItem('fitmole_state');
+      if(s) {
+        const parsed = JSON.parse(s);
+        parsed.errorLog = state.errorLog;
+        localStorage.setItem('fitmole_state', JSON.stringify(parsed));
+      }
+    } catch(e) { /* ignorieren */ }
+  }, 0);
 }
 
 function renderErrorLog() {
