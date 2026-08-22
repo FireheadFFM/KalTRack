@@ -1141,7 +1141,11 @@ html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-s
         <span style="font-size:12px;color:var(--text3);">▾</span>
       </div>
       <div id="changelog-body" style="display:none;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;">
-        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.95.1 — August 2026</div>
+        <div style="font-weight:500;color:var(--text);margin-bottom:4px;">v1.95.2 — August 2026</div>
+        <div>· BUGFIX KRITISCH: autoLoadFromCloud schrieb lastDate=Vortag direkt in localStorage → nächster App-Start erkannte falschen Tageswechsel → todayLog geleert</div>
+        <div>· Fix: lastDate-Override-Block in autoLoadFromCloud komplett entfernt</div>
+        <div>· Fix: saveState() setzt lastDate jetzt immer einfach auf getFitMoleDay() — keine komplexe Bedingungslogik mehr</div>
+        <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.95.1 — August 2026</div></div>
         <div>· BUGFIX KRITISCH: logError() schrieb localStorage synchron zurück — überschrieb dabei Änderungen die saveState() gerade vorgenommen hatte</div>
         <div>· Fix: logError() schreibt localStorage jetzt asynchron (setTimeout 0) — nach dem aktuellen Call-Stack, nie mehr mitten in saveState()</div>
         <div style="font-weight:500;color:var(--text);margin:10px 0 4px;">v1.95 — August 2026</div>
@@ -4309,17 +4313,7 @@ async function autoLoadFromCloud() {
     }
 
     if(changed) {
-      // lastDate schützen: nur wenn Cloud einen älteren Stand hat als lokal
-      // — verhindert dass autoLoadFromCloud den Rollover kaputt macht
-      const localLastDate = state.lastDate;
-      const fitMoleToday = getFitMoleDay();
       saveState();
-      // saveState() setzt lastDate korrekt. Nur überschreiben wenn lokal noch
-      // der Vortag war UND todayLog Einträge hat (Rollover noch ausstehend)
-      if(localLastDate && localLastDate !== fitMoleToday && (state.todayLog||[]).length > 0) {
-        state.lastDate = localLastDate;
-        localStorage.setItem('fitmole_state', JSON.stringify(state));
-      }
       if(todayHasActivity()) dismissReminder();
       renderHome();
       renderExceptionDayBtn();
@@ -4462,15 +4456,10 @@ function loadState() {
 }
 
 function saveState() {
-  // lastDate Logik
-  // Wenn todayLog leer ist → aktuellen FitMole-Tag nehmen.
-  // Wenn todayLog Einträge hat → lastDate NUR updaten wenn es noch nicht gesetzt
-  // ist oder bereits dem heutigen FitMole-Tag entspricht (kein Rollover-Schutz brechen).
-  const fitMoleToday = getFitMoleDay();
-  if(!state.lastDate || state.todayLog.length === 0 || state.lastDate === fitMoleToday) {
-    state.lastDate = fitMoleToday;
-  }
-  // else: todayLog hat Einträge vom Vortag → lastDate bleibt, Rollover kommt noch
+  // lastDate immer auf den aktuellen FitMole-Tag setzen.
+  // Der Rollover wird durch loadState() und performDayRollover() gesteuert —
+  // nicht durch lastDate-Manipulation in saveState().
+  state.lastDate = getFitMoleDay();
   // History-Logs älter als 30 Tage komprimieren (nur Summenwerte behalten)
   const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
   (state.history||[]).forEach(day => {
